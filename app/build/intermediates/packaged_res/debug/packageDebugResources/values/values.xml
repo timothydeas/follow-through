@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#7A9E7E</color>
+    <string name="app_name">Follow Through</string>
+    <style name="Theme.GroundedApp" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#F5F2EC</item>
+        <item name="android:navigationBarColor">#F5F2EC</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>
