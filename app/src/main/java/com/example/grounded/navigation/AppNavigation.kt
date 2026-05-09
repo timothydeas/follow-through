@@ -42,6 +42,7 @@ import com.example.grounded.ui.list.ListViewModel
 import com.example.grounded.ui.onboarding.OnboardingScreen1
 import com.example.grounded.ui.onboarding.OnboardingScreen2
 import com.example.grounded.ui.onboarding.OnboardingScreen3
+import com.example.grounded.ui.settings.CustomizeQuestionsScreen
 import com.example.grounded.ui.settings.SettingsScreen
 import com.example.grounded.ui.stats.StatsScreen
 import com.example.grounded.ui.stepflow.StepFlowScreen
@@ -62,6 +63,7 @@ private const val ROUTE_ONBOARDING_1 = "onboarding_1"
 private const val ROUTE_ONBOARDING_2 = "onboarding_2"
 private const val ROUTE_ONBOARDING_3 = "onboarding_3"
 private const val ROUTE_SETTINGS = "settings"
+private const val ROUTE_CUSTOMIZE_QUESTIONS = "customize_questions"
 private const val ROUTE_STATS = "stats"
 
 internal const val PREFS_NAME = "grounded_prefs"
@@ -141,6 +143,14 @@ fun AppNavigation(
 
         composable(ROUTE_SETTINGS) {
             SettingsScreen(
+                container = container,
+                onBack = { navController.popBackStack() },
+                onCustomizeQuestions = { navController.navigate(ROUTE_CUSTOMIZE_QUESTIONS) }
+            )
+        }
+
+        composable(ROUTE_CUSTOMIZE_QUESTIONS) {
+            CustomizeQuestionsScreen(
                 container = container,
                 onBack = { navController.popBackStack() }
             )

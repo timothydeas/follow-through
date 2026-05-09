@@ -27,14 +27,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -77,7 +76,8 @@ import com.example.grounded.navigation.PREFS_NAME
 @Composable
 fun SettingsScreen(
     container: AppContainer,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onCustomizeQuestions: () -> Unit
 ) {
     val context = LocalContext.current
     val settingsVm: SettingsViewModel = viewModel(
@@ -88,11 +88,9 @@ fun SettingsScreen(
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
     var biometricEnabled by remember { mutableStateOf(prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false)) }
     var showBiometricTooltip by remember { mutableStateOf(false) }
-    var showQuestionsTooltip by remember { mutableStateOf(false) }
     var showRemindersTooltip by remember { mutableStateOf(false) }
     val backFocus = remember { FocusRequester() }
     val biometricInfoFocus = remember { FocusRequester() }
-    val questionsInfoFocus = remember { FocusRequester() }
     val remindersInfoFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
 
@@ -190,64 +188,6 @@ fun SettingsScreen(
         )
     }
 
-    if (showQuestionsTooltip) {
-        val confirmFocus = remember { FocusRequester() }
-        LaunchedEffect(Unit) { runCatching { confirmFocus.requestFocus() } }
-        AlertDialog(
-            onDismissRequest = {
-                showQuestionsTooltip = false
-                runCatching { questionsInfoFocus.requestFocus() }
-            },
-            text = {
-                Text(
-                    "These questions are a starting point, not a checklist. Edit them to better match what you're working through, or turn off any that don't apply to you. You know yourself best.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showQuestionsTooltip = false
-                        runCatching { questionsInfoFocus.requestFocus() }
-                    },
-                    modifier = Modifier.focusRequester(confirmFocus)
-                ) { Text("Got it") }
-            }
-        )
-    }
-
-    // Edit label dialog
-    if (uiState.editingKey != null) {
-        val key = uiState.editingKey!!
-        val labelFocus = remember { FocusRequester() }
-        LaunchedEffect(Unit) { runCatching { labelFocus.requestFocus() } }
-        AlertDialog(
-            onDismissRequest = settingsVm::cancelEditing,
-            title = { Text("Edit question label", style = MaterialTheme.typography.headlineSmall) },
-            text = {
-                OutlinedTextField(
-                    value = uiState.editingLabel,
-                    onValueChange = settingsVm::onEditingLabelChange,
-                    label = { Text("Label") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(labelFocus)
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = settingsVm::saveLabel) { Text("Save") }
-            },
-            dismissButton = {
-                Row {
-                    TextButton(onClick = { settingsVm.resetLabel(key); settingsVm.cancelEditing() }) {
-                        Text("Reset to default")
-                    }
-                    TextButton(onClick = settingsVm::cancelEditing) { Text("Cancel") }
-                }
-            }
-        )
-    }
-
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -340,83 +280,29 @@ fun SettingsScreen(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
-            // Customize questions section
-            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-                ) {
-                    Text(
-                        text = "Customize your questions",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontFamily = PoppinsFontFamily,
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier
-                            .weight(1f)
-                            .semantics { heading() }
+            // Customize questions row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        onClickLabel = "Open Customize Questions",
+                        role = Role.Button,
+                        onClick = onCustomizeQuestions
                     )
-                    IconButton(
-                        onClick = { showQuestionsTooltip = true },
-                        modifier = Modifier
-                            .size(48.dp)
-                            .focusRequester(questionsInfoFocus)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = "More information",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-
-                uiState.questionConfigs.forEach { config ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = config.label,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (config.isEnabled)
-                                    MaterialTheme.colorScheme.onSurface
-                                else
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        IconButton(
-                            onClick = { settingsVm.startEditing(config.key) },
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Edit,
-                                contentDescription = "Edit",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        Switch(
-                            checked = config.isEnabled,
-                            onCheckedChange = { settingsVm.toggleQuestion(config.key, it) },
-                            modifier = Modifier
-                                .padding(start = 4.dp)
-                                .semantics {
-                                    contentDescription = config.label
-                                    stateDescription = if (config.isEnabled) "On" else "Off"
-                                    role = Role.Switch
-                                }
-                        )
-                    }
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        thickness = 0.5.dp
-                    )
-                }
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Customize questions",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontFamily = PoppinsFontFamily),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)

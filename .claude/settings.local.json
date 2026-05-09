@@ -88,7 +88,10 @@
       "Bash(\"/c/Program Files/Android/Android Studio/jbr/bin/javap.exe\" -p /tmp/reorderable-extract/classes/sh/calvin/reorderable/ReorderableLazyListKt.class)",
       "Bash(\"/c/Program Files/Android/Android Studio/jbr/bin/javap.exe\" -p -c /tmp/reorderable-extract/classes/sh/calvin/reorderable/ReorderableLazyCollectionKt.class)",
       "PowerShell(.\\\\gradlew.bat :app:compileDebugKotlin --console=plain 2>&1 | Select-Object -Last 80)",
-      "Bash(dir C:UsersssdeaGroundedApp *)"
+      "Bash(dir C:UsersssdeaGroundedApp *)",
+      "Bash(./gradlew compileDebugKotlin --console=plain)",
+      "Bash(./gradlew :app:compileDebugKotlin -x mergeDebugResources -x processDebugResources --console=plain)",
+      "Bash(./gradlew :app:assembleDebug --console=plain)"
     ]
   }
 }

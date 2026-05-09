@@ -1,55 +1,23 @@
 [
     {
-        "merged": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-debug-68:\\mipmap-hdpi_ic_launcher_foreground.png.flat",
-        "source": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-main-70:\\mipmap-hdpi\\ic_launcher_foreground.png"
+        "merged": "com.example.grounded.app-debug-68:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "com.example.grounded.app-main-70:/drawable/ic_launcher_foreground.xml"
     },
     {
-        "merged": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-debug-68:\\font_poppins_regular.ttf.flat",
-        "source": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-main-70:\\font\\poppins_regular.ttf"
+        "merged": "com.example.grounded.app-debug-68:/font_dmsans_variable.ttf.flat",
+        "source": "com.example.grounded.app-main-70:/font/dmsans_variable.ttf"
     },
     {
-        "merged": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-debug-68:\\mipmap-mdpi_ic_launcher_foreground.png.flat",
-        "source": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-main-70:\\mipmap-mdpi\\ic_launcher_foreground.png"
+        "merged": "com.example.grounded.app-debug-68:/font_lora_variable_italic.ttf.flat",
+        "source": "com.example.grounded.app-main-70:/font/lora_variable_italic.ttf"
     },
     {
-        "merged": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-debug-68:\\mipmap-anydpi-v26_ic_launcher.xml.flat",
-        "source": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-main-70:\\mipmap-anydpi-v26\\ic_launcher.xml"
+        "merged": "com.example.grounded.app-debug-68:/mipmap-anydpi-v26_ic_launcher_background.xml.flat",
+        "source": "com.example.grounded.app-main-70:/mipmap-anydpi-v26/ic_launcher_background.xml"
     },
     {
-        "merged": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-debug-68:\\mipmap-xxxhdpi_ic_launcher_foreground.png.flat",
-        "source": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-main-70:\\mipmap-xxxhdpi\\ic_launcher_foreground.png"
-    },
-    {
-        "merged": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-debug-68:\\font_poppins_semibold.ttf.flat",
-        "source": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-main-70:\\font\\poppins_semibold.ttf"
-    },
-    {
-        "merged": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-debug-68:\\mipmap-anydpi-v26_ic_launcher_round.xml.flat",
-        "source": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-main-70:\\mipmap-anydpi-v26\\ic_launcher_round.xml"
-    },
-    {
-        "merged": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-debug-68:\\drawable_ic_launcher_foreground.xml.flat",
-        "source": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-main-70:\\drawable\\ic_launcher_foreground.xml"
-    },
-    {
-        "merged": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-debug-68:\\font_lora_variable_italic.ttf.flat",
-        "source": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-main-70:\\font\\lora_variable_italic.ttf"
-    },
-    {
-        "merged": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-debug-68:\\drawable_ic_launcher_background.xml.flat",
-        "source": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-main-70:\\drawable\\ic_launcher_background.xml"
-    },
-    {
-        "merged": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-debug-68:\\mipmap-anydpi-v26_ic_launcher_background.xml.flat",
-        "source": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-main-70:\\mipmap-anydpi-v26\\ic_launcher_background.xml"
-    },
-    {
-        "merged": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-debug-68:\\mipmap-xhdpi_ic_launcher_foreground.png.flat",
-        "source": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-main-70:\\mipmap-xhdpi\\ic_launcher_foreground.png"
-    },
-    {
-        "merged": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-debug-68:\\font_lora_variable.ttf.flat",
-        "source": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-main-70:\\font\\lora_variable.ttf"
+        "merged": "com.example.grounded.app-debug-68:/font_lora_variable.ttf.flat",
+        "source": "com.example.grounded.app-main-70:/font/lora_variable.ttf"
     },
     {
         "merged": "com.example.grounded.app-debug-68:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
@@ -60,11 +28,15 @@
         "source": "com.example.grounded.app-main-70:/mipmap-anydpi-v26/ic_launcher.xml"
     },
     {
-        "merged": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-debug-68:\\mipmap-xxhdpi_ic_launcher_foreground.png.flat",
-        "source": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-main-70:\\mipmap-xxhdpi\\ic_launcher_foreground.png"
+        "merged": "com.example.grounded.app-debug-68:/font_poppins_regular.ttf.flat",
+        "source": "com.example.grounded.app-main-70:/font/poppins_regular.ttf"
     },
     {
-        "merged": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-debug-68:\\font_dmsans_variable.ttf.flat",
-        "source": "C:\\Users\\ssdea\\.gradle\\daemon\\8.9\\com.example.grounded.app-main-70:\\font\\dmsans_variable.ttf"
+        "merged": "com.example.grounded.app-debug-68:/drawable_ic_launcher_background.xml.flat",
+        "source": "com.example.grounded.app-main-70:/drawable/ic_launcher_background.xml"
+    },
+    {
+        "merged": "com.example.grounded.app-debug-68:/font_poppins_semibold.ttf.flat",
+        "source": "com.example.grounded.app-main-70:/font/poppins_semibold.ttf"
     }
 ]
