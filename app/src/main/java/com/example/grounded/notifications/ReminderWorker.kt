@@ -58,7 +58,7 @@ class ReminderWorker(
 
         val notification = NotificationCompat.Builder(applicationContext, NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setColor(0xFF88C288.toInt())
+            .setColor(0xFFA8431E.toInt())
             .setContentTitle("Follow Through")
             .setContentText("Check in on your top goal")
             .setContentIntent(tapPendingIntent)

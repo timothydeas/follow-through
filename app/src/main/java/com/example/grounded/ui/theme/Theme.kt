@@ -27,7 +27,7 @@ private val GroundedColorScheme = lightColorScheme(
 )
 
 private val GroundedDarkColorScheme = darkColorScheme(
-    primary = SageGreen,
+    primary = SageGreenDarkScheme,
     onPrimary = White,
     primaryContainer = DarkTagChip,
     onPrimaryContainer = DarkPrimaryText,

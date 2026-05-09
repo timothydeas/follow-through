@@ -451,7 +451,7 @@ private fun GoalCardContent(
             modifier = Modifier.fillMaxWidth()
         ) {
             if (row.rank != null) {
-                val rankColor = if (isSystemInDarkTheme()) SageGreen else SageGreenAccessibleText
+                val rankColor = SageGreen
                 Text(
                     text = "${row.rank}",
                     style = MaterialTheme.typography.headlineSmall.copy(

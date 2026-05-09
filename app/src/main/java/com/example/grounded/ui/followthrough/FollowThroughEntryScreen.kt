@@ -47,7 +47,7 @@ import com.example.grounded.ui.theme.PoppinsFontFamily
 import com.example.grounded.ui.theme.SageGreen
 import kotlinx.coroutines.delay
 
-private val ReassuranceBg = Color(0xFF7A9E7E)
+private val ReassuranceBg = Color(0xFFA8431E)
 
 @Composable
 fun FollowThroughEntryScreen(

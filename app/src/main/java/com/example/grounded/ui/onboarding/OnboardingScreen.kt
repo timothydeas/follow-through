@@ -50,8 +50,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.LaunchedEffect
 import com.example.grounded.ui.theme.PoppinsFontFamily
 
-private val OnboardingBackground = Color(0xFF7A9E7E)
-private val OnboardingButtonBg = Color(0xFF6A8E6E)
+private val OnboardingBackground = Color(0xFFA8431E)
+private val OnboardingButtonBg = Color(0xFFA8431E)
 private val OnboardingSwitchTrack = Color(0xFF5C7D60)
 
 @Composable
