@@ -299,9 +299,10 @@ data class StreakResult(val days: Int, val flexDayUsed: Boolean)
 
 /**
  * Streak counts consecutive days ending today (or yesterday, if nothing
- * happened today yet) on which the user did the activity. One missed day in
- * the window is allowed (the "flex day") — the streak only resets when two
- * or more consecutive missed days are encountered. flexDayUsed is true when
+ * happened today yet) on which the user did the activity. Up to two
+ * consecutive missed days in the window are allowed (the "flex" buffer) —
+ * the streak only resets when three or more consecutive missed days are
+ * encountered. The buffer resets after each hit. flexDayUsed is true when
  * the flex actually bridged a miss back to a hit (extending the streak).
  */
 internal fun computeStreakWithFlex(timestamps: List<Long>): StreakResult {
@@ -322,20 +323,20 @@ internal fun computeStreakWithFlex(timestamps: List<Long>): StreakResult {
     var hitCount = 0
     var flexUsed = false
     var current = startDay
-    var pendingMiss = false
+    var consecutiveMisses = 0
 
     while (true) {
         val isHit = activityDays.contains(current)
         if (isHit) {
-            if (pendingMiss) {
+            if (consecutiveMisses > 0) {
                 flexUsed = true
-                pendingMiss = false
+                consecutiveMisses = 0
             }
             hitCount++
             current -= dayMs
         } else {
-            if (pendingMiss) break
-            pendingMiss = true
+            if (consecutiveMisses >= 2) break
+            consecutiveMisses++
             current -= dayMs
         }
     }

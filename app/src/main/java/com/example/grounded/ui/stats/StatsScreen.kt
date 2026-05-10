@@ -94,7 +94,7 @@ fun StatsScreen(
                 StatRow("Current streak", "${state.checkInCurrentStreak}")
                 if (state.checkInCurrentStreakFlexUsed) {
                     Text(
-                        text = "Missed a day? Your streak is protected — one missed day won't reset your progress.",
+                        text = "Missed a day or two? Your streak is protected — up to two missed days won't reset your progress.",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = 8.dp)
