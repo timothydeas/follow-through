@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.grounded.data.CheckInDao
 import com.example.grounded.data.GoalDao
+import com.example.grounded.ui.list.computeStreakWithFlex
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -13,8 +14,11 @@ import java.util.Calendar
 
 data class StatsUiState(
     val checkInCurrentStreak: Int = 0,
+    val checkInCurrentStreakFlexUsed: Boolean = false,
     val checkInLongestStreak: Int = 0,
     val checkInTotal: Int = 0,
+    val followThroughCurrentStreak: Int = 0,
+    val followThroughCurrentStreakFlexUsed: Boolean = false,
     val followThroughTotal: Int = 0,
     val followThroughThisWeek: Int = 0,
     val followThroughThisMonth: Int = 0
@@ -36,10 +40,16 @@ class StatsViewModel(
 
         val now = System.currentTimeMillis()
 
+        val checkInStreak = computeStreakWithFlex(checkInTimes)
+        val followThroughStreak = computeStreakWithFlex(followThroughTimes)
+
         StatsUiState(
-            checkInCurrentStreak = currentStreak(checkInTimes),
+            checkInCurrentStreak = checkInStreak.days,
+            checkInCurrentStreakFlexUsed = checkInStreak.flexDayUsed,
             checkInLongestStreak = longestStreak(checkInTimes),
             checkInTotal = checkIns.size,
+            followThroughCurrentStreak = followThroughStreak.days,
+            followThroughCurrentStreakFlexUsed = followThroughStreak.flexDayUsed,
             followThroughTotal = goals.count { it.followedThrough },
             followThroughThisWeek = followThroughTimes.count { it >= startOfWeek(now) },
             followThroughThisMonth = followThroughTimes.count { it >= startOfMonth(now) }
@@ -92,25 +102,6 @@ private fun startOfMonth(ts: Long): Long {
     cal.set(Calendar.MILLISECOND, 0)
     cal.set(Calendar.DAY_OF_MONTH, 1)
     return cal.timeInMillis
-}
-
-private fun currentStreak(timestamps: List<Long>): Int {
-    if (timestamps.isEmpty()) return 0
-    val days = timestamps.map { startOfDay(it) }.toHashSet()
-    val today = startOfDay(System.currentTimeMillis())
-    val yesterday = today - DAY_MS
-    val start = when {
-        days.contains(today) -> today
-        days.contains(yesterday) -> yesterday
-        else -> return 0
-    }
-    var streak = 0
-    var cursor = start
-    while (days.contains(cursor)) {
-        streak++
-        cursor -= DAY_MS
-    }
-    return streak
 }
 
 private fun longestStreak(timestamps: List<Long>): Int {

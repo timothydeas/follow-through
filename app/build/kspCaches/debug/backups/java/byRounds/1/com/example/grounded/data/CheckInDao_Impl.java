@@ -42,7 +42,7 @@ public final class CheckInDao_Impl implements CheckInDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `check_ins` (`id`,`goalId`,`goalOrChange`,`madeProgress`,`avoiding`,`confidence`,`temptationAndSelfTalk`,`competingPriority`,`implementationIntention`,`accountability`,`createdAt`,`updatedAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `check_ins` (`id`,`goalId`,`goalOrChange`,`madeProgress`,`avoiding`,`confidence`,`competingPriority`,`implementationIntention`,`accountability`,`createdAt`,`updatedAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -66,28 +66,23 @@ public final class CheckInDao_Impl implements CheckInDao {
         } else {
           statement.bindString(6, entity.getConfidence());
         }
-        if (entity.getTemptationAndSelfTalk() == null) {
+        if (entity.getCompetingPriority() == null) {
           statement.bindNull(7);
         } else {
-          statement.bindString(7, entity.getTemptationAndSelfTalk());
-        }
-        if (entity.getCompetingPriority() == null) {
-          statement.bindNull(8);
-        } else {
-          statement.bindString(8, entity.getCompetingPriority());
+          statement.bindString(7, entity.getCompetingPriority());
         }
         if (entity.getImplementationIntention() == null) {
-          statement.bindNull(9);
+          statement.bindNull(8);
         } else {
-          statement.bindString(9, entity.getImplementationIntention());
+          statement.bindString(8, entity.getImplementationIntention());
         }
         if (entity.getAccountability() == null) {
-          statement.bindNull(10);
+          statement.bindNull(9);
         } else {
-          statement.bindString(10, entity.getAccountability());
+          statement.bindString(9, entity.getAccountability());
         }
-        statement.bindLong(11, entity.getCreatedAt());
-        statement.bindLong(12, entity.getUpdatedAt());
+        statement.bindLong(10, entity.getCreatedAt());
+        statement.bindLong(11, entity.getUpdatedAt());
       }
     };
     this.__preparedStmtOfDeleteById = new SharedSQLiteStatement(__db) {
@@ -159,7 +154,6 @@ public final class CheckInDao_Impl implements CheckInDao {
           final int _cursorIndexOfMadeProgress = CursorUtil.getColumnIndexOrThrow(_cursor, "madeProgress");
           final int _cursorIndexOfAvoiding = CursorUtil.getColumnIndexOrThrow(_cursor, "avoiding");
           final int _cursorIndexOfConfidence = CursorUtil.getColumnIndexOrThrow(_cursor, "confidence");
-          final int _cursorIndexOfTemptationAndSelfTalk = CursorUtil.getColumnIndexOrThrow(_cursor, "temptationAndSelfTalk");
           final int _cursorIndexOfCompetingPriority = CursorUtil.getColumnIndexOrThrow(_cursor, "competingPriority");
           final int _cursorIndexOfImplementationIntention = CursorUtil.getColumnIndexOrThrow(_cursor, "implementationIntention");
           final int _cursorIndexOfAccountability = CursorUtil.getColumnIndexOrThrow(_cursor, "accountability");
@@ -192,12 +186,6 @@ public final class CheckInDao_Impl implements CheckInDao {
             } else {
               _tmpConfidence = _cursor.getString(_cursorIndexOfConfidence);
             }
-            final String _tmpTemptationAndSelfTalk;
-            if (_cursor.isNull(_cursorIndexOfTemptationAndSelfTalk)) {
-              _tmpTemptationAndSelfTalk = null;
-            } else {
-              _tmpTemptationAndSelfTalk = _cursor.getString(_cursorIndexOfTemptationAndSelfTalk);
-            }
             final String _tmpCompetingPriority;
             if (_cursor.isNull(_cursorIndexOfCompetingPriority)) {
               _tmpCompetingPriority = null;
@@ -220,7 +208,7 @@ public final class CheckInDao_Impl implements CheckInDao {
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
             final long _tmpUpdatedAt;
             _tmpUpdatedAt = _cursor.getLong(_cursorIndexOfUpdatedAt);
-            _item = new CheckIn(_tmpId,_tmpGoalId,_tmpGoalOrChange,_tmpMadeProgress,_tmpAvoiding,_tmpConfidence,_tmpTemptationAndSelfTalk,_tmpCompetingPriority,_tmpImplementationIntention,_tmpAccountability,_tmpCreatedAt,_tmpUpdatedAt);
+            _item = new CheckIn(_tmpId,_tmpGoalId,_tmpGoalOrChange,_tmpMadeProgress,_tmpAvoiding,_tmpConfidence,_tmpCompetingPriority,_tmpImplementationIntention,_tmpAccountability,_tmpCreatedAt,_tmpUpdatedAt);
             _result.add(_item);
           }
           return _result;
@@ -254,7 +242,6 @@ public final class CheckInDao_Impl implements CheckInDao {
           final int _cursorIndexOfMadeProgress = CursorUtil.getColumnIndexOrThrow(_cursor, "madeProgress");
           final int _cursorIndexOfAvoiding = CursorUtil.getColumnIndexOrThrow(_cursor, "avoiding");
           final int _cursorIndexOfConfidence = CursorUtil.getColumnIndexOrThrow(_cursor, "confidence");
-          final int _cursorIndexOfTemptationAndSelfTalk = CursorUtil.getColumnIndexOrThrow(_cursor, "temptationAndSelfTalk");
           final int _cursorIndexOfCompetingPriority = CursorUtil.getColumnIndexOrThrow(_cursor, "competingPriority");
           final int _cursorIndexOfImplementationIntention = CursorUtil.getColumnIndexOrThrow(_cursor, "implementationIntention");
           final int _cursorIndexOfAccountability = CursorUtil.getColumnIndexOrThrow(_cursor, "accountability");
@@ -287,12 +274,6 @@ public final class CheckInDao_Impl implements CheckInDao {
             } else {
               _tmpConfidence = _cursor.getString(_cursorIndexOfConfidence);
             }
-            final String _tmpTemptationAndSelfTalk;
-            if (_cursor.isNull(_cursorIndexOfTemptationAndSelfTalk)) {
-              _tmpTemptationAndSelfTalk = null;
-            } else {
-              _tmpTemptationAndSelfTalk = _cursor.getString(_cursorIndexOfTemptationAndSelfTalk);
-            }
             final String _tmpCompetingPriority;
             if (_cursor.isNull(_cursorIndexOfCompetingPriority)) {
               _tmpCompetingPriority = null;
@@ -315,7 +296,7 @@ public final class CheckInDao_Impl implements CheckInDao {
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
             final long _tmpUpdatedAt;
             _tmpUpdatedAt = _cursor.getLong(_cursorIndexOfUpdatedAt);
-            _item = new CheckIn(_tmpId,_tmpGoalId,_tmpGoalOrChange,_tmpMadeProgress,_tmpAvoiding,_tmpConfidence,_tmpTemptationAndSelfTalk,_tmpCompetingPriority,_tmpImplementationIntention,_tmpAccountability,_tmpCreatedAt,_tmpUpdatedAt);
+            _item = new CheckIn(_tmpId,_tmpGoalId,_tmpGoalOrChange,_tmpMadeProgress,_tmpAvoiding,_tmpConfidence,_tmpCompetingPriority,_tmpImplementationIntention,_tmpAccountability,_tmpCreatedAt,_tmpUpdatedAt);
             _result.add(_item);
           }
           return _result;
@@ -350,7 +331,6 @@ public final class CheckInDao_Impl implements CheckInDao {
           final int _cursorIndexOfMadeProgress = CursorUtil.getColumnIndexOrThrow(_cursor, "madeProgress");
           final int _cursorIndexOfAvoiding = CursorUtil.getColumnIndexOrThrow(_cursor, "avoiding");
           final int _cursorIndexOfConfidence = CursorUtil.getColumnIndexOrThrow(_cursor, "confidence");
-          final int _cursorIndexOfTemptationAndSelfTalk = CursorUtil.getColumnIndexOrThrow(_cursor, "temptationAndSelfTalk");
           final int _cursorIndexOfCompetingPriority = CursorUtil.getColumnIndexOrThrow(_cursor, "competingPriority");
           final int _cursorIndexOfImplementationIntention = CursorUtil.getColumnIndexOrThrow(_cursor, "implementationIntention");
           final int _cursorIndexOfAccountability = CursorUtil.getColumnIndexOrThrow(_cursor, "accountability");
@@ -382,12 +362,6 @@ public final class CheckInDao_Impl implements CheckInDao {
             } else {
               _tmpConfidence = _cursor.getString(_cursorIndexOfConfidence);
             }
-            final String _tmpTemptationAndSelfTalk;
-            if (_cursor.isNull(_cursorIndexOfTemptationAndSelfTalk)) {
-              _tmpTemptationAndSelfTalk = null;
-            } else {
-              _tmpTemptationAndSelfTalk = _cursor.getString(_cursorIndexOfTemptationAndSelfTalk);
-            }
             final String _tmpCompetingPriority;
             if (_cursor.isNull(_cursorIndexOfCompetingPriority)) {
               _tmpCompetingPriority = null;
@@ -410,7 +384,7 @@ public final class CheckInDao_Impl implements CheckInDao {
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
             final long _tmpUpdatedAt;
             _tmpUpdatedAt = _cursor.getLong(_cursorIndexOfUpdatedAt);
-            _result = new CheckIn(_tmpId,_tmpGoalId,_tmpGoalOrChange,_tmpMadeProgress,_tmpAvoiding,_tmpConfidence,_tmpTemptationAndSelfTalk,_tmpCompetingPriority,_tmpImplementationIntention,_tmpAccountability,_tmpCreatedAt,_tmpUpdatedAt);
+            _result = new CheckIn(_tmpId,_tmpGoalId,_tmpGoalOrChange,_tmpMadeProgress,_tmpAvoiding,_tmpConfidence,_tmpCompetingPriority,_tmpImplementationIntention,_tmpAccountability,_tmpCreatedAt,_tmpUpdatedAt);
           } else {
             _result = null;
           }
@@ -441,7 +415,6 @@ public final class CheckInDao_Impl implements CheckInDao {
           final int _cursorIndexOfMadeProgress = CursorUtil.getColumnIndexOrThrow(_cursor, "madeProgress");
           final int _cursorIndexOfAvoiding = CursorUtil.getColumnIndexOrThrow(_cursor, "avoiding");
           final int _cursorIndexOfConfidence = CursorUtil.getColumnIndexOrThrow(_cursor, "confidence");
-          final int _cursorIndexOfTemptationAndSelfTalk = CursorUtil.getColumnIndexOrThrow(_cursor, "temptationAndSelfTalk");
           final int _cursorIndexOfCompetingPriority = CursorUtil.getColumnIndexOrThrow(_cursor, "competingPriority");
           final int _cursorIndexOfImplementationIntention = CursorUtil.getColumnIndexOrThrow(_cursor, "implementationIntention");
           final int _cursorIndexOfAccountability = CursorUtil.getColumnIndexOrThrow(_cursor, "accountability");
@@ -473,12 +446,6 @@ public final class CheckInDao_Impl implements CheckInDao {
             } else {
               _tmpConfidence = _cursor.getString(_cursorIndexOfConfidence);
             }
-            final String _tmpTemptationAndSelfTalk;
-            if (_cursor.isNull(_cursorIndexOfTemptationAndSelfTalk)) {
-              _tmpTemptationAndSelfTalk = null;
-            } else {
-              _tmpTemptationAndSelfTalk = _cursor.getString(_cursorIndexOfTemptationAndSelfTalk);
-            }
             final String _tmpCompetingPriority;
             if (_cursor.isNull(_cursorIndexOfCompetingPriority)) {
               _tmpCompetingPriority = null;
@@ -501,7 +468,7 @@ public final class CheckInDao_Impl implements CheckInDao {
             _tmpCreatedAt = _cursor.getLong(_cursorIndexOfCreatedAt);
             final long _tmpUpdatedAt;
             _tmpUpdatedAt = _cursor.getLong(_cursorIndexOfUpdatedAt);
-            _result = new CheckIn(_tmpId,_tmpGoalId,_tmpGoalOrChange,_tmpMadeProgress,_tmpAvoiding,_tmpConfidence,_tmpTemptationAndSelfTalk,_tmpCompetingPriority,_tmpImplementationIntention,_tmpAccountability,_tmpCreatedAt,_tmpUpdatedAt);
+            _result = new CheckIn(_tmpId,_tmpGoalId,_tmpGoalOrChange,_tmpMadeProgress,_tmpAvoiding,_tmpConfidence,_tmpCompetingPriority,_tmpImplementationIntention,_tmpAccountability,_tmpCreatedAt,_tmpUpdatedAt);
           } else {
             _result = null;
           }

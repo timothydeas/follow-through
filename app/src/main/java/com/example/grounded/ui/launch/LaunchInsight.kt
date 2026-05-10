@@ -27,13 +27,13 @@ const val KEY_LAST_INSIGHT_INDEX = "last_insight_index"
 
 val LAUNCH_INSIGHTS = listOf(
     "You're a work in progress — always learning and improving.",
-    "We often avoid information that would help us most because it might sting. But what you don't face tends to cost you more in the long run.",
-    "Confidence in your ability to figure something out is a better predictor of success than your actual ability right now. That same inner confidence is available to you.",
+    "It's human to look away from things that might hurt to see. But the things we avoid tend to cost us more than the things we face.",
+    "Believing you can figure something out matters more than whether you already know how. That belief is always available to you.",
     "Willpower runs low by the end of the day. If you can plan ahead for the moments when you're tired or depleted, you give yourself a real fighting chance.",
-    "Every time you do this in the same situation, your brain needs a little less effort to do it again. Repetition is how deliberate choices become automatic ones.",
+    "Doing the same thing in the same situation, over and over, is how a choice stops feeling like a choice. That's how habits form.",
     "Whatever you decide to do today, imagine doing it every single time you face this same moment. Your future self is shaped by what you do right now.",
     "Negative feedback isn't a reflection of who you are. The less your ego is tangled up in it, the more you can actually learn from it and keep moving.",
-    "Goals driven by genuine interest are the ones we actually reach. From quick wins like a new pottery class to bigger pursuits like running a marathon, we go further when we genuinely want to."
+    "The goals that tend to stick are the ones you actually want — not the ones you feel you should want. Genuine interest is what carries you through."
 )
 
 /**

@@ -192,7 +192,6 @@ private fun ReadView(
         ReadField(label = labelFor(QuestionKeys.AVOIDING), content = checkIn.avoiding ?: "")
         ReadField(label = labelFor(QuestionKeys.CONFIDENCE), content = checkIn.confidence ?: "")
         ReadField(label = labelFor(QuestionKeys.MADE_PROGRESS), content = checkIn.madeProgress ?: "")
-        ReadField(label = labelFor(QuestionKeys.TEMPTATION_AND_SELF_TALK), content = checkIn.temptationAndSelfTalk ?: "")
         ReadField(label = labelFor(QuestionKeys.COMPETING_PRIORITY), content = checkIn.competingPriority ?: "")
         ReadField(label = labelFor(QuestionKeys.IMPLEMENTATION_INTENTION), content = checkIn.implementationIntention ?: "")
         ReadField(label = labelFor(QuestionKeys.ACCOUNTABILITY), content = checkIn.accountability ?: "")
@@ -238,12 +237,6 @@ private fun EditView(
             value = uiState.editMadeProgress,
             placeholder = placeholderFor(QuestionKeys.MADE_PROGRESS),
             onValueChange = viewModel::onEditMadeProgressChange
-        )
-        EditField(
-            label = labelFor(QuestionKeys.TEMPTATION_AND_SELF_TALK),
-            value = uiState.editTemptationAndSelfTalk,
-            placeholder = placeholderFor(QuestionKeys.TEMPTATION_AND_SELF_TALK),
-            onValueChange = viewModel::onEditTemptationChange
         )
         EditField(
             label = labelFor(QuestionKeys.COMPETING_PRIORITY),

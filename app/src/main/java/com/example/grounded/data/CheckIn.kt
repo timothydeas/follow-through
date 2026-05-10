@@ -21,7 +21,6 @@ data class CheckIn(
     val madeProgress: String? = null,
     val avoiding: String? = null,
     val confidence: String? = null,
-    val temptationAndSelfTalk: String? = null,
     val competingPriority: String? = null,
     val implementationIntention: String? = null,
     val accountability: String? = null,

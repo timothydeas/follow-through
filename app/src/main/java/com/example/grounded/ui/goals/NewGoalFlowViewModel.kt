@@ -28,7 +28,6 @@ data class NewGoalFlowUiState(
     val avoiding: String = "",
     val confidence: String = "",
     val madeProgress: String = "",
-    val temptationAndSelfTalk: String = "",
     val competingPriority: String = "",
     val implementationIntention: String = "",
     val accountability: String = "",
@@ -64,7 +63,6 @@ class NewGoalFlowViewModel(
     fun onAvoidingChange(value: String) = _uiState.update { it.copy(avoiding = value) }
     fun onConfidenceChange(value: String) = _uiState.update { it.copy(confidence = value) }
     fun onMadeProgressChange(value: String) = _uiState.update { it.copy(madeProgress = value) }
-    fun onTemptationChange(value: String) = _uiState.update { it.copy(temptationAndSelfTalk = value) }
     fun onCompetingPriorityChange(value: String) = _uiState.update { it.copy(competingPriority = value) }
     fun onImplementationIntentionChange(value: String) = _uiState.update { it.copy(implementationIntention = value) }
     fun onAccountabilityChange(value: String) = _uiState.update { it.copy(accountability = value) }
@@ -125,7 +123,6 @@ class NewGoalFlowViewModel(
                 avoiding = state.avoiding.ifBlank { null },
                 confidence = state.confidence.ifBlank { null },
                 madeProgress = state.madeProgress.ifBlank { null },
-                temptationAndSelfTalk = state.temptationAndSelfTalk.ifBlank { null },
                 competingPriority = state.competingPriority.ifBlank { null },
                 implementationIntention = state.implementationIntention.ifBlank { null },
                 accountability = state.accountability.ifBlank { null },

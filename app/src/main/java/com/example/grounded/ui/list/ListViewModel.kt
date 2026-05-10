@@ -36,6 +36,7 @@ data class ListUiState(
     val goals: List<GoalRowData> = emptyList(),
     val query: String = "",
     val streakDays: Int = 0,
+    val streakFlexDayUsed: Boolean = false,
     val totalFollowThroughs: Int = 0
 )
 
@@ -69,7 +70,7 @@ class ListViewModel(
     ) { goals, allCheckIns, query, dragState ->
         val checkInsByGoal = allCheckIns.groupBy { it.goalId }
         val total = goals.count { it.followedThrough }
-        val streak = computeCheckInStreak(allCheckIns.map { it.createdAt })
+        val streak = computeStreakWithFlex(allCheckIns.map { it.createdAt })
 
         val filtered = if (query.isBlank()) goals
         else goals.filter { it.title.lowercase().contains(query.lowercase()) }
@@ -96,7 +97,8 @@ class ListViewModel(
         ListUiState(
             goals = rows,
             query = query,
-            streakDays = streak,
+            streakDays = streak.days,
+            streakFlexDayUsed = streak.flexDayUsed,
             totalFollowThroughs = total
         )
     }.stateIn(
@@ -293,15 +295,20 @@ private fun startOfDay(ts: Long): Long {
     return cal.timeInMillis
 }
 
+data class StreakResult(val days: Int, val flexDayUsed: Boolean)
+
 /**
  * Streak counts consecutive days ending today (or yesterday, if nothing
- * happened today yet) on which the user created at least one check-in.
+ * happened today yet) on which the user did the activity. One missed day in
+ * the window is allowed (the "flex day") — the streak only resets when two
+ * or more consecutive missed days are encountered. flexDayUsed is true when
+ * the flex actually bridged a miss back to a hit (extending the streak).
  */
-private fun computeCheckInStreak(checkInTimestamps: List<Long>): Int {
+internal fun computeStreakWithFlex(timestamps: List<Long>): StreakResult {
     val dayMs = 24L * 60 * 60 * 1000
 
-    val activityDays = checkInTimestamps.map { startOfDay(it) }.toHashSet()
-    if (activityDays.isEmpty()) return 0
+    val activityDays = timestamps.map { startOfDay(it) }.toHashSet()
+    if (activityDays.isEmpty()) return StreakResult(0, false)
 
     val today = startOfDay(System.currentTimeMillis())
     val yesterday = today - dayMs
@@ -309,14 +316,28 @@ private fun computeCheckInStreak(checkInTimestamps: List<Long>): Int {
     val startDay = when {
         activityDays.contains(today) -> today
         activityDays.contains(yesterday) -> yesterday
-        else -> return 0
+        else -> return StreakResult(0, false)
     }
 
-    var streak = 0
+    var hitCount = 0
+    var flexUsed = false
     var current = startDay
-    while (activityDays.contains(current)) {
-        streak++
-        current -= dayMs
+    var pendingMiss = false
+
+    while (true) {
+        val isHit = activityDays.contains(current)
+        if (isHit) {
+            if (pendingMiss) {
+                flexUsed = true
+                pendingMiss = false
+            }
+            hitCount++
+            current -= dayMs
+        } else {
+            if (pendingMiss) break
+            pendingMiss = true
+            current -= dayMs
+        }
     }
-    return streak
+    return StreakResult(hitCount, flexUsed)
 }

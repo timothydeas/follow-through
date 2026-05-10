@@ -150,22 +150,14 @@ fun GoalDetailScreen(
             },
             title = { Text("Edit goal", style = MaterialTheme.typography.headlineSmall) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = uiState.editTitle,
-                        onValueChange = viewModel::onEditTitleChange,
-                        label = { Text("Goal title") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(titleFocus)
-                    )
-                    OutlinedTextField(
-                        value = uiState.editAccountableTo,
-                        onValueChange = viewModel::onEditAccountableToChange,
-                        label = { Text("Accountable to (optional)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                OutlinedTextField(
+                    value = uiState.editTitle,
+                    onValueChange = viewModel::onEditTitleChange,
+                    label = { Text("Goal title") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(titleFocus)
+                )
             },
             confirmButton = {
                 TextButton(onClick = {

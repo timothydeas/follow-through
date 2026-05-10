@@ -273,7 +273,6 @@ private fun getFieldValue(state: NewGoalFlowUiState, key: String): String = when
     QuestionKeys.AVOIDING -> state.avoiding
     QuestionKeys.CONFIDENCE -> state.confidence
     QuestionKeys.MADE_PROGRESS -> state.madeProgress
-    QuestionKeys.TEMPTATION_AND_SELF_TALK -> state.temptationAndSelfTalk
     QuestionKeys.COMPETING_PRIORITY -> state.competingPriority
     QuestionKeys.IMPLEMENTATION_INTENTION -> state.implementationIntention
     QuestionKeys.ACCOUNTABILITY -> state.accountability
@@ -285,7 +284,6 @@ private fun setFieldValue(vm: NewGoalFlowViewModel, key: String, value: String) 
     QuestionKeys.AVOIDING -> vm.onAvoidingChange(value)
     QuestionKeys.CONFIDENCE -> vm.onConfidenceChange(value)
     QuestionKeys.MADE_PROGRESS -> vm.onMadeProgressChange(value)
-    QuestionKeys.TEMPTATION_AND_SELF_TALK -> vm.onTemptationChange(value)
     QuestionKeys.COMPETING_PRIORITY -> vm.onCompetingPriorityChange(value)
     QuestionKeys.IMPLEMENTATION_INTENTION -> vm.onImplementationIntentionChange(value)
     QuestionKeys.ACCOUNTABILITY -> vm.onAccountabilityChange(value)
@@ -295,8 +293,6 @@ private fun setFieldValue(vm: NewGoalFlowViewModel, key: String, value: String) 
 private fun tooltipFor(key: String): String = when (key) {
     QuestionKeys.GOAL_OR_CHANGE ->
         "This can be anything — a goal, a habit, a pattern, something you want to do differently. There are no wrong answers here."
-    QuestionKeys.TEMPTATION_AND_SELF_TALK ->
-        "Knowing your temptations before they hit is one of the most powerful things you can do. And having something to say to yourself in that moment makes all the difference."
     QuestionKeys.IMPLEMENTATION_INTENTION ->
         "Link a specific moment to a specific action. The more vivid and specific the cue, the more likely you are to follow through when that moment arrives."
     QuestionKeys.ACCOUNTABILITY ->
@@ -313,10 +309,8 @@ private fun placeholderFor(key: String): String = when (key) {
         "You don't need proof you can do this before you start. What does your gut say?"
     QuestionKeys.MADE_PROGRESS ->
         "Yes, No, or describe where you feel you are right now"
-    QuestionKeys.TEMPTATION_AND_SELF_TALK ->
-        "What situations make it hardest? What would you say to yourself when you feel like giving in?"
     QuestionKeys.COMPETING_PRIORITY ->
-        "Be honest — it's ok if it does. This helps you decide where to focus."
+        "Be honest — sometimes our perception or anticipation of a situation matters more than the situation itself."
     QuestionKeys.IMPLEMENTATION_INTENTION ->
         "When I feel the urge to back out, I will remind myself I've been here before and I know what to do."
     QuestionKeys.ACCOUNTABILITY ->

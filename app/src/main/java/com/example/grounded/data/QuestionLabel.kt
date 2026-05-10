@@ -16,7 +16,6 @@ object QuestionKeys {
     const val AVOIDING = "avoiding"
     const val CONFIDENCE = "confidence"
     const val MADE_PROGRESS = "madeProgress"
-    const val TEMPTATION_AND_SELF_TALK = "temptationAndSelfTalk"
     const val COMPETING_PRIORITY = "competingPriority"
     const val IMPLEMENTATION_INTENTION = "implementationIntention"
     const val ACCOUNTABILITY = "accountability"
@@ -26,7 +25,6 @@ object QuestionKeys {
         MADE_PROGRESS,
         AVOIDING,
         CONFIDENCE,
-        TEMPTATION_AND_SELF_TALK,
         COMPETING_PRIORITY,
         IMPLEMENTATION_INTENTION,
         ACCOUNTABILITY
@@ -37,8 +35,7 @@ object QuestionKeys {
         MADE_PROGRESS to "Do you feel you've made progress?",
         AVOIDING to "Is there something you already know would help you here, but you've been avoiding finding out or facing?",
         CONFIDENCE to "How confident do you feel you'll figure this out?",
-        TEMPTATION_AND_SELF_TALK to "What pulls you away most — and what can you tell yourself in that moment?",
-        COMPETING_PRIORITY to "What's getting in the way of this goal right now, and does it matter more than the goal itself?",
+        COMPETING_PRIORITY to "What's getting in your way right now — is it the situation itself, or how you're seeing it or expecting it to go?",
         IMPLEMENTATION_INTENTION to "When this moment comes, I will —",
         ACCOUNTABILITY to "Who holds you accountable?"
     )

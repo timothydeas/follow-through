@@ -40,18 +40,18 @@ public final class GroundedDatabase_Impl extends GroundedDatabase {
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(18) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(19) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `notes` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `body` TEXT NOT NULL, `tag` TEXT, `isPinned` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `type` TEXT NOT NULL, `isDraft` INTEGER NOT NULL, `reflection` TEXT NOT NULL, `whatStoppedYou` TEXT NOT NULL, `whatYouLearned` TEXT NOT NULL, `nextSteps` TEXT NOT NULL, `whenField` TEXT NOT NULL, `willField` TEXT NOT NULL, `followedThrough` INTEGER NOT NULL, `followedThroughAt` INTEGER, `implementationIntention` TEXT NOT NULL, PRIMARY KEY(`id`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS `follow_throughs` (`id` TEXT NOT NULL, `noteId` TEXT NOT NULL, `body` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`noteId`) REFERENCES `notes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_follow_throughs_noteId` ON `follow_throughs` (`noteId`)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `goals` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `accountableTo` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `priority` INTEGER, `followedThrough` INTEGER NOT NULL, `followedThroughAt` INTEGER, PRIMARY KEY(`id`))");
-        db.execSQL("CREATE TABLE IF NOT EXISTS `check_ins` (`id` TEXT NOT NULL, `goalId` TEXT NOT NULL, `goalOrChange` TEXT NOT NULL, `madeProgress` TEXT, `avoiding` TEXT, `confidence` TEXT, `temptationAndSelfTalk` TEXT, `competingPriority` TEXT, `implementationIntention` TEXT, `accountability` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`goalId`) REFERENCES `goals`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `check_ins` (`id` TEXT NOT NULL, `goalId` TEXT NOT NULL, `goalOrChange` TEXT NOT NULL, `madeProgress` TEXT, `avoiding` TEXT, `confidence` TEXT, `competingPriority` TEXT, `implementationIntention` TEXT, `accountability` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`goalId`) REFERENCES `goals`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_check_ins_goalId` ON `check_ins` (`goalId`)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `question_labels` (`id` TEXT NOT NULL, `questionKey` TEXT NOT NULL, `customLabel` TEXT NOT NULL, `isEnabled` INTEGER NOT NULL, PRIMARY KEY(`id`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '934abb0861ecc329d98598d89ae12bcc')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e47efc6cedc7b86904ab024e2f520db6')");
       }
 
       @Override
@@ -167,14 +167,13 @@ public final class GroundedDatabase_Impl extends GroundedDatabase {
                   + " Expected:\n" + _infoGoals + "\n"
                   + " Found:\n" + _existingGoals);
         }
-        final HashMap<String, TableInfo.Column> _columnsCheckIns = new HashMap<String, TableInfo.Column>(12);
+        final HashMap<String, TableInfo.Column> _columnsCheckIns = new HashMap<String, TableInfo.Column>(11);
         _columnsCheckIns.put("id", new TableInfo.Column("id", "TEXT", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsCheckIns.put("goalId", new TableInfo.Column("goalId", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsCheckIns.put("goalOrChange", new TableInfo.Column("goalOrChange", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsCheckIns.put("madeProgress", new TableInfo.Column("madeProgress", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsCheckIns.put("avoiding", new TableInfo.Column("avoiding", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsCheckIns.put("confidence", new TableInfo.Column("confidence", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
-        _columnsCheckIns.put("temptationAndSelfTalk", new TableInfo.Column("temptationAndSelfTalk", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsCheckIns.put("competingPriority", new TableInfo.Column("competingPriority", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsCheckIns.put("implementationIntention", new TableInfo.Column("implementationIntention", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsCheckIns.put("accountability", new TableInfo.Column("accountability", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
@@ -207,7 +206,7 @@ public final class GroundedDatabase_Impl extends GroundedDatabase {
         }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "934abb0861ecc329d98598d89ae12bcc", "91802dbe5e9cce9d60c6e1e073703c99");
+    }, "e47efc6cedc7b86904ab024e2f520db6", "c055b467f05669f833878eeb921e74fc");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;

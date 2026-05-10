@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DragHandle
@@ -209,10 +210,11 @@ fun ListScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(
-                            onClickLabel = "Open stats",
+                            onClickLabel = "Tap to see full stats",
                             role = Role.Button,
                             onClick = onStatsClick
                         )
+                        .semantics { contentDescription = "Tap to see full stats" }
                         .padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(20.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -228,6 +230,13 @@ fun ListScreen(
                         value = uiState.totalFollowThroughs,
                         label = "follow-throughs",
                         a11y = "Follow-throughs ${uiState.totalFollowThroughs}"
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }

@@ -26,7 +26,6 @@ data class CheckInReadUiState(
     val editAvoiding: String = "",
     val editConfidence: String = "",
     val editMadeProgress: String = "",
-    val editTemptationAndSelfTalk: String = "",
     val editCompetingPriority: String = "",
     val editImplementationIntention: String = "",
     val editAccountability: String = "",
@@ -71,7 +70,6 @@ class CheckInReadViewModel(
                 editAvoiding = c.avoiding ?: "",
                 editConfidence = c.confidence ?: "",
                 editMadeProgress = c.madeProgress ?: "",
-                editTemptationAndSelfTalk = c.temptationAndSelfTalk ?: "",
                 editCompetingPriority = c.competingPriority ?: "",
                 editImplementationIntention = c.implementationIntention ?: "",
                 editAccountability = c.accountability ?: ""
@@ -85,7 +83,6 @@ class CheckInReadViewModel(
     fun onEditAvoidingChange(v: String) = _uiState.update { it.copy(editAvoiding = v) }
     fun onEditConfidenceChange(v: String) = _uiState.update { it.copy(editConfidence = v) }
     fun onEditMadeProgressChange(v: String) = _uiState.update { it.copy(editMadeProgress = v) }
-    fun onEditTemptationChange(v: String) = _uiState.update { it.copy(editTemptationAndSelfTalk = v) }
     fun onEditCompetingPriorityChange(v: String) = _uiState.update { it.copy(editCompetingPriority = v) }
     fun onEditImplementationIntentionChange(v: String) = _uiState.update { it.copy(editImplementationIntention = v) }
     fun onEditAccountabilityChange(v: String) = _uiState.update { it.copy(editAccountability = v) }
@@ -100,7 +97,6 @@ class CheckInReadViewModel(
                     avoiding = state.editAvoiding.ifBlank { null },
                     confidence = state.editConfidence.ifBlank { null },
                     madeProgress = state.editMadeProgress.ifBlank { null },
-                    temptationAndSelfTalk = state.editTemptationAndSelfTalk.ifBlank { null },
                     competingPriority = state.editCompetingPriority.ifBlank { null },
                     implementationIntention = state.editImplementationIntention.ifBlank { null },
                     accountability = state.editAccountability.ifBlank { null },

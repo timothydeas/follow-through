@@ -408,6 +408,54 @@ private val MIGRATION_17_18 = object : Migration(17, 18) {
     }
 }
 
+private val MIGRATION_18_19 = object : Migration(18, 19) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Drop the temptationAndSelfTalk column. SQLite ALTER TABLE DROP COLUMN
+        // is unavailable on older Android versions, so recreate the table
+        // preserving every other column, the foreign key, and the index.
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS check_ins_new (
+                id TEXT NOT NULL PRIMARY KEY,
+                goalId TEXT NOT NULL,
+                goalOrChange TEXT NOT NULL DEFAULT '',
+                madeProgress TEXT,
+                avoiding TEXT,
+                confidence TEXT,
+                competingPriority TEXT,
+                implementationIntention TEXT,
+                accountability TEXT,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL,
+                FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            INSERT INTO check_ins_new (
+                id, goalId, goalOrChange, madeProgress, avoiding, confidence,
+                competingPriority, implementationIntention, accountability,
+                createdAt, updatedAt
+            )
+            SELECT
+                id, goalId, goalOrChange, madeProgress, avoiding, confidence,
+                competingPriority, implementationIntention, accountability,
+                createdAt, updatedAt
+            FROM check_ins
+            """.trimIndent()
+        )
+        db.execSQL("DROP TABLE check_ins")
+        db.execSQL("ALTER TABLE check_ins_new RENAME TO check_ins")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_check_ins_goalId ON check_ins(goalId)")
+
+        // Remove the now-defunct question_labels row for the dropped key so
+        // resolveConfigs (which iterates only the new ALL_KEYS list) does not
+        // see stale data.
+        db.execSQL("DELETE FROM question_labels WHERE questionKey = 'temptationAndSelfTalk'")
+    }
+}
+
 private val MIGRATION_13_14 = object : Migration(13, 14) {
     override fun migrate(db: SupportSQLiteDatabase) {
         // Create goals table
@@ -514,7 +562,7 @@ private val MIGRATION_13_14 = object : Migration(13, 14) {
         CheckIn::class,
         QuestionLabel::class
     ],
-    version = 18,
+    version = 19,
     exportSchema = false
 )
 abstract class GroundedDatabase : RoomDatabase() {
@@ -540,7 +588,7 @@ abstract class GroundedDatabase : RoomDatabase() {
                         MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
                         MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
                         MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16,
-                        MIGRATION_16_17, MIGRATION_17_18
+                        MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19
                     )
                     .build().also { INSTANCE = it }
             }
