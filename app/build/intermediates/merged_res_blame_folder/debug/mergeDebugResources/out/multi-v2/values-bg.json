@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.example.grounded.app-mergeDebugResources-66:/values-bg/values-bg.xml",
+            "outputFile": "com.example.grounded.app-mergeDebugResources-63:/values-bg/values-bg.xml",
             "map": [
                 {
                     "source": "C:\\Users\\ssdea\\.gradle\\caches\\8.9\\transforms\\e8774e161a3f1d31687cd635a453b5aa\\transformed\\biometric-1.1.0\\res\\values-bg\\values-bg.xml",

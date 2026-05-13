@@ -310,9 +310,9 @@ private fun placeholderFor(key: String): String = when (key) {
     QuestionKeys.MADE_PROGRESS ->
         "Yes, No, or describe where you feel you are right now"
     QuestionKeys.COMPETING_PRIORITY ->
-        "Be honest — sometimes our perception or anticipation of a situation matters more than the situation itself."
+        "Be honest — sometimes our perception or anticipation of a situation matters more than the situation itself. And if nothing is in your way right now, think ahead."
     QuestionKeys.IMPLEMENTATION_INTENTION ->
-        "When I feel the urge to back out, I will remind myself I've been here before and I know what to do."
+        "I will go for a walk when I finish my morning coffee."
     QuestionKeys.ACCOUNTABILITY ->
         "A person, a memory, a strategy — whatever keeps you going"
     else -> ""

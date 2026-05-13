@@ -39,6 +39,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -62,16 +63,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.grounded.BuildConfig
 import com.example.grounded.di.AppContainer
+import com.example.grounded.notifications.PREFS_REMINDERS
 import com.example.grounded.notifications.ReminderScheduler
+import com.example.grounded.notifications.canScheduleExactAlarmsCompat
 import com.example.grounded.ui.theme.PoppinsFontFamily
 import com.example.grounded.ui.theme.PrimaryForge
 import java.util.Calendar
 import java.util.Locale
 import com.example.grounded.navigation.KEY_BIOMETRIC_ENABLED
 import com.example.grounded.navigation.PREFS_NAME
+
+private const val KEY_REMINDERS_PENDING_PERMISSION = "reminders_pending_permission"
 
 @Composable
 fun SettingsScreen(
@@ -86,6 +94,7 @@ fun SettingsScreen(
     val uiState by settingsVm.uiState.collectAsState()
 
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
+    val remindersPrefs = remember { context.getSharedPreferences(PREFS_REMINDERS, Context.MODE_PRIVATE) }
     var biometricEnabled by remember { mutableStateOf(prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false)) }
     var showBiometricTooltip by remember { mutableStateOf(false) }
     var showRemindersTooltip by remember { mutableStateOf(false) }
@@ -94,21 +103,50 @@ fun SettingsScreen(
     val remindersInfoFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val pending = remindersPrefs.getBoolean(KEY_REMINDERS_PENDING_PERMISSION, false)
+                if (pending && canScheduleExactAlarmsCompat(context)) {
+                    val currentState = settingsVm.uiState.value
+                    settingsVm.setRemindersEnabled(true)
+                    try {
+                        ReminderScheduler.scheduleReminders(
+                            context.applicationContext,
+                            currentState.reminderHour,
+                            currentState.reminderMinute,
+                            currentState.reminderDays
+                        )
+                    } catch (_: Exception) { /* scheduling failed — leave toggle on */ }
+                    remindersPrefs.edit().putBoolean(KEY_REMINDERS_PENDING_PERMISSION, false).apply()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     var showNotificationDeniedDialog by remember { mutableStateOf(false) }
+    var showExactAlarmDialog by remember { mutableStateOf(false) }
 
     val notificationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted && areNotificationsFullyEnabled(context)) {
-            settingsVm.setRemindersEnabled(true)
-            try {
-                ReminderScheduler.scheduleReminders(
-                    context.applicationContext,
-                    uiState.reminderHour,
-                    uiState.reminderMinute,
-                    uiState.reminderDays
-                )
-            } catch (_: Exception) { /* WorkManager unavailable — leave toggle on */ }
+            if (canScheduleExactAlarmsCompat(context)) {
+                settingsVm.setRemindersEnabled(true)
+                try {
+                    ReminderScheduler.scheduleReminders(
+                        context.applicationContext,
+                        uiState.reminderHour,
+                        uiState.reminderMinute,
+                        uiState.reminderDays
+                    )
+                } catch (_: Exception) { /* scheduling failed — leave toggle off */ }
+            } else {
+                showExactAlarmDialog = true
+            }
         } else {
             showNotificationDeniedDialog = true
         }
@@ -132,6 +170,29 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showNotificationDeniedDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showExactAlarmDialog) {
+        AlertDialog(
+            onDismissRequest = { showExactAlarmDialog = false },
+            title = { Text("Allow exact alarms", style = MaterialTheme.typography.titleMedium) },
+            text = {
+                Text(
+                    "For accurate reminders, Follow Through needs permission to schedule exact alarms. Tap below to enable it in Settings — it takes just a second.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showExactAlarmDialog = false
+                    remindersPrefs.edit().putBoolean(KEY_REMINDERS_PENDING_PERMISSION, true).apply()
+                    openExactAlarmSettings(context)
+                }) { Text("Enable in Settings") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExactAlarmDialog = false }) { Text("Cancel") }
             }
         )
     }
@@ -358,10 +419,12 @@ fun SettingsScreen(
                                     settingsVm = settingsVm,
                                     uiState = uiState,
                                     notificationLauncher = notificationLauncher,
-                                    onNotificationDenied = { showNotificationDeniedDialog = true }
+                                    onNotificationDenied = { showNotificationDeniedDialog = true },
+                                    onExactAlarmDenied = { showExactAlarmDialog = true }
                                 )
                             } else {
                                 settingsVm.setRemindersEnabled(false)
+                                remindersPrefs.edit().putBoolean(KEY_REMINDERS_PENDING_PERMISSION, false).apply()
                                 try {
                                     ReminderScheduler.cancelReminders(context.applicationContext)
                                 } catch (_: Exception) { /* ignore */ }
@@ -536,12 +599,17 @@ private fun enableReminders(
     settingsVm: SettingsViewModel,
     uiState: SettingsUiState,
     notificationLauncher: androidx.activity.result.ActivityResultLauncher<String>,
-    onNotificationDenied: () -> Unit
+    onNotificationDenied: () -> Unit,
+    onExactAlarmDenied: () -> Unit
 ) {
     // Eager gate: on the very first toggle tap, decide synchronously whether
     // notifications are usable. The toggle never flips on (and the time/day
     // picker never appears) unless this returns true.
     if (areNotificationsFullyEnabled(context)) {
+        if (!canScheduleExactAlarmsCompat(context)) {
+            onExactAlarmDenied()
+            return
+        }
         settingsVm.setRemindersEnabled(true)
         try {
             ReminderScheduler.scheduleReminders(
@@ -550,7 +618,7 @@ private fun enableReminders(
                 uiState.reminderMinute,
                 uiState.reminderDays
             )
-        } catch (_: Exception) { /* WorkManager unavailable — leave toggle on */ }
+        } catch (_: Exception) { /* scheduling failed — leave toggle on */ }
         return
     }
 
@@ -574,6 +642,25 @@ private fun enableReminders(
         }
     } else {
         onNotificationDenied()
+    }
+}
+
+private fun openExactAlarmSettings(context: Context) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+    val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+        data = Uri.parse("package:${context.packageName}")
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    try {
+        context.startActivity(intent)
+    } catch (_: Exception) {
+        try {
+            val fallback = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:${context.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(fallback)
+        } catch (_: Exception) { /* nothing more to do */ }
     }
 }
 

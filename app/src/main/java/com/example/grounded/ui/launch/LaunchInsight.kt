@@ -33,7 +33,8 @@ val LAUNCH_INSIGHTS = listOf(
     "Doing the same thing in the same situation, over and over, is how a choice stops feeling like a choice. That's how habits form.",
     "Whatever you decide to do today, imagine doing it every single time you face this same moment. Your future self is shaped by what you do right now.",
     "Negative feedback isn't a reflection of who you are. The less your ego is tangled up in it, the more you can actually learn from it and keep moving.",
-    "The goals that tend to stick are the ones you actually want — not the ones you feel you should want. Genuine interest is what carries you through."
+    "The more personally meaningful a goal feels — even a necessary one — the more likely you are to follow through on it. Finding your own reason to want it makes all the difference.",
+    "What you expect from yourself has a way of becoming what you do. Believing change is possible is often what makes it possible."
 )
 
 /**

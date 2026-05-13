@@ -65,7 +65,7 @@ private const val ROUTE_STATS = "stats"
 internal const val PREFS_NAME = "grounded_prefs"
 internal const val KEY_ONBOARDING_VERSION = "onboarding_version"
 internal const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
-internal const val CURRENT_ONBOARDING_VERSION = 38
+internal const val CURRENT_ONBOARDING_VERSION = 39
 
 @Composable
 fun AppNavigation(
