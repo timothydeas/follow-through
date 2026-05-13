@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.grounded"
+    namespace = "com.ideasinc.followthrough"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.grounded"
+        applicationId = "com.ideasinc.followthrough"
         minSdk = 31
         targetSdk = 35
         versionCode = 1

@@ -28,7 +28,7 @@
             android:name=".notifications.ReminderReceiver"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.example.grounded.action.REMINDER" />
+                <action android:name="com.ideasinc.followthrough.action.REMINDER" />
             </intent-filter>
         </receiver>
 

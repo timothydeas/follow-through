@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.example.grounded.app-mergeDebugResources-63:/values/values.xml",
+            "outputFile": "com.ideasinc.followthrough.app-mergeDebugResources-63:/values/values.xml",
             "map": [
                 {
                     "source": "C:\\Users\\ssdea\\.gradle\\caches\\8.9\\transforms\\797ccad214662700f1faf68756514a21\\transformed\\navigation-runtime-2.8.3\\res\\values\\values.xml",

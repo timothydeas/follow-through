@@ -1,12 +1,12 @@
-package com.example.grounded.ui.list
+﻿package com.ideasinc.followthrough.ui.list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.grounded.data.CheckIn
-import com.example.grounded.data.CheckInDao
-import com.example.grounded.data.Goal
-import com.example.grounded.data.GoalDao
+import com.ideasinc.followthrough.data.CheckIn
+import com.ideasinc.followthrough.data.CheckInDao
+import com.ideasinc.followthrough.data.Goal
+import com.ideasinc.followthrough.data.GoalDao
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,8 +21,8 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 
 // Number of leading positions in the unified list that are treated as
-// "priority" — highlighted in sage green and rank-numbered. Position 0 → rank
-// 1, position 1 → rank 2.
+// "priority" â€” highlighted in sage green and rank-numbered. Position 0 â†’ rank
+// 1, position 1 â†’ rank 2.
 private const val PRIORITY_SLOT_COUNT = 2
 
 data class GoalRowData(
@@ -300,7 +300,7 @@ data class StreakResult(val days: Int, val flexDayUsed: Boolean)
 /**
  * Streak counts consecutive days ending today (or yesterday, if nothing
  * happened today yet) on which the user did the activity. Up to two
- * consecutive missed days in the window are allowed (the "flex" buffer) —
+ * consecutive missed days in the window are allowed (the "flex" buffer) â€”
  * the streak only resets when three or more consecutive missed days are
  * encountered. The buffer resets after each hit. flexDayUsed is true when
  * the flex actually bridged a miss back to a hit (extending the streak).

@@ -1,6 +1,6 @@
-@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+﻿@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 
-package com.example.grounded.ui.list
+package com.ideasinc.followthrough.ui.list
 
 import android.content.Context
 import androidx.compose.animation.core.Spring
@@ -82,10 +82,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.example.grounded.ui.rememberIsTouchExplorationEnabled
-import com.example.grounded.ui.theme.SageGreen
-import com.example.grounded.ui.theme.SageGreenAccessibleText
-import com.example.grounded.ui.theme.SageGreenLight
+import com.ideasinc.followthrough.ui.rememberIsTouchExplorationEnabled
+import com.ideasinc.followthrough.ui.theme.SageGreen
+import com.ideasinc.followthrough.ui.theme.SageGreenAccessibleText
+import com.ideasinc.followthrough.ui.theme.SageGreenLight
 import kotlinx.coroutines.flow.drop
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -213,7 +213,7 @@ fun ListScreen(
                 ) {
                     if (uiState.streakDays > 0) {
                         Text(
-                            text = "🔥 ${uiState.streakDays} day streak",
+                            text = "ðŸ”¥ ${uiState.streakDays} day streak",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.semantics {
@@ -299,7 +299,7 @@ private data class MoveDialogTarget(val goalId: String, val totalCount: Int)
 private fun lazyToFlat(lazyIndex: Int): Int? =
     if (lazyIndex == 0) null else lazyIndex - 1
 
-// ─── Focus goals label ─────────────────────────────────────────────────────
+// â”€â”€â”€ Focus goals label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @Composable
 private fun FocusGoalsLabel() {
@@ -346,7 +346,7 @@ private fun FocusGoalsLabel() {
     }
 }
 
-// ─── Goal card ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Goal card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @Composable
 private fun DraggableGoalCard(
@@ -505,7 +505,7 @@ private fun DragHandleIcon() {
     }
 }
 
-// ─── Accessibility arrow buttons ──────────────────────────────────────────
+// â”€â”€â”€ Accessibility arrow buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @Composable
 private fun A11yReorderArrows(
@@ -567,7 +567,7 @@ private fun ArrowButton(
     }
 }
 
-// ─── Move-to-position dialog ──────────────────────────────────────────────
+// â”€â”€â”€ Move-to-position dialog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @Composable
 private fun MoveToPositionDialog(
@@ -617,7 +617,7 @@ private fun MoveToPositionDialog(
     )
 }
 
-// ─── Search bar / empty state / formatting ────────────────────────────────
+// â”€â”€â”€ Search bar / empty state / formatting â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @Composable
 private fun SearchBar(
@@ -644,7 +644,7 @@ private fun SearchBar(
             Box(modifier = Modifier.weight(1f)) {
                 if (query.isEmpty()) {
                     Text(
-                        text = "Search goals…",
+                        text = "Search goalsâ€¦",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.grounded"
+    package="com.ideasinc.followthrough"
     android:versionCode="1"
     android:versionName="1.0" >
 
@@ -15,13 +15,13 @@
     <uses-permission android:name="android.permission.USE_FINGERPRINT" />
 
     <permission
-        android:name="com.example.grounded.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        android:name="com.ideasinc.followthrough.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
         android:protectionLevel="signature" />
 
-    <uses-permission android:name="com.example.grounded.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+    <uses-permission android:name="com.ideasinc.followthrough.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
 
     <application
-        android:name="com.example.grounded.GroundedApplication"
+        android:name="com.ideasinc.followthrough.GroundedApplication"
         android:allowBackup="true"
         android:appComponentFactory="androidx.core.app.CoreComponentFactory"
         android:debuggable="true"
@@ -33,7 +33,7 @@
         android:testOnly="true"
         android:theme="@style/Theme.GroundedApp" >
         <activity
-            android:name="com.example.grounded.MainActivity"
+            android:name="com.ideasinc.followthrough.MainActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize" >
             <intent-filter>
@@ -44,14 +44,14 @@
         </activity>
 
         <receiver
-            android:name="com.example.grounded.notifications.ReminderReceiver"
+            android:name="com.ideasinc.followthrough.notifications.ReminderReceiver"
             android:exported="false" >
             <intent-filter>
-                <action android:name="com.example.grounded.action.REMINDER" />
+                <action android:name="com.ideasinc.followthrough.action.REMINDER" />
             </intent-filter>
         </receiver>
         <receiver
-            android:name="com.example.grounded.notifications.BootReceiver"
+            android:name="com.ideasinc.followthrough.notifications.BootReceiver"
             android:exported="true" >
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -66,7 +66,7 @@
 
         <provider
             android:name="androidx.startup.InitializationProvider"
-            android:authorities="com.example.grounded.androidx-startup"
+            android:authorities="com.ideasinc.followthrough.androidx-startup"
             android:exported="false" >
             <meta-data
                 android:name="androidx.emoji2.text.EmojiCompatInitializer"

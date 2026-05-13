@@ -137,7 +137,7 @@ MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\ssdea\.gradle\cach
 		ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:15:9-49
 	android:name
 		ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:9:9-44
-activity#com.example.grounded.MainActivity
+activity#com.ideasinc.followthrough.MainActivity
 ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:17:9-25:20
 	android:windowSoftInputMode
 		ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:20:13-55
@@ -155,19 +155,19 @@ category#android.intent.category.LAUNCHER
 ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:23:17-77
 	android:name
 		ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:23:27-74
-receiver#com.example.grounded.notifications.ReminderReceiver
+receiver#com.ideasinc.followthrough.notifications.ReminderReceiver
 ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:27:9-33:20
 	android:exported
 		ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:29:13-37
 	android:name
 		ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:28:13-59
-intent-filter#action:name:com.example.grounded.action.REMINDER
+intent-filter#action:name:com.ideasinc.followthrough.action.REMINDER
 ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:30:13-32:29
-action#com.example.grounded.action.REMINDER
-ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:31:17-79
+action#com.ideasinc.followthrough.action.REMINDER
+ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:31:17-85
 	android:name
-		ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:31:25-76
-receiver#com.example.grounded.notifications.BootReceiver
+		ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:31:25-82
+receiver#com.ideasinc.followthrough.notifications.BootReceiver
 ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:35:9-43:20
 	android:exported
 		ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:37:13-36
@@ -403,7 +403,7 @@ ADDED from [androidx.core:core:1.13.1] C:\Users\ssdea\.gradle\caches\8.9\transfo
 		ADDED from [androidx.core:core:1.13.1] C:\Users\ssdea\.gradle\caches\8.9\transforms\b1eb1ce7673b1c6490ad510052a0c339\transformed\core-1.13.1\AndroidManifest.xml:24:9-44
 	android:name
 		ADDED from [androidx.core:core:1.13.1] C:\Users\ssdea\.gradle\caches\8.9\transforms\b1eb1ce7673b1c6490ad510052a0c339\transformed\core-1.13.1\AndroidManifest.xml:23:9-81
-permission#com.example.grounded.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+permission#com.ideasinc.followthrough.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.13.1] C:\Users\ssdea\.gradle\caches\8.9\transforms\b1eb1ce7673b1c6490ad510052a0c339\transformed\core-1.13.1\AndroidManifest.xml:22:5-24:47
 	android:protectionLevel
 		ADDED from [androidx.core:core:1.13.1] C:\Users\ssdea\.gradle\caches\8.9\transforms\b1eb1ce7673b1c6490ad510052a0c339\transformed\core-1.13.1\AndroidManifest.xml:24:9-44
@@ -413,7 +413,7 @@ uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.13.1] C:\Users\ssdea\.gradle\caches\8.9\transforms\b1eb1ce7673b1c6490ad510052a0c339\transformed\core-1.13.1\AndroidManifest.xml:26:5-97
 	android:name
 		ADDED from [androidx.core:core:1.13.1] C:\Users\ssdea\.gradle\caches\8.9\transforms\b1eb1ce7673b1c6490ad510052a0c339\transformed\core-1.13.1\AndroidManifest.xml:26:22-94
-uses-permission#com.example.grounded.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+uses-permission#com.ideasinc.followthrough.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.13.1] C:\Users\ssdea\.gradle\caches\8.9\transforms\b1eb1ce7673b1c6490ad510052a0c339\transformed\core-1.13.1\AndroidManifest.xml:26:5-97
 	android:name
 		ADDED from [androidx.core:core:1.13.1] C:\Users\ssdea\.gradle\caches\8.9\transforms\b1eb1ce7673b1c6490ad510052a0c339\transformed\core-1.13.1\AndroidManifest.xml:26:22-94
