@@ -90,8 +90,8 @@ fun StatsScreen(
         ) {
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
-            StatsSection(title = "Check-ins") {
-                StatRow("Current streak", "${state.checkInCurrentStreak}")
+            StatsSection(title = "Check-Ins") {
+                StatRow("Current Streak", "${state.checkInCurrentStreak}")
                 if (state.checkInCurrentStreakFlexUsed) {
                     Text(
                         text = "Missed a day or two? Your streak is protected — up to two missed days won't reset your progress.",
@@ -100,17 +100,17 @@ fun StatsScreen(
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                 }
-                StatRow("Longest streak", "${state.checkInLongestStreak}")
-                StatRow("Total all time", "${state.checkInTotal}")
+                StatRow("Longest Streak", "${state.checkInLongestStreak}")
+                StatRow("Total All Time", "${state.checkInTotal}")
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
-            StatsSection(title = "Follow-throughs") {
-                StatRow("Current streak", "${state.followThroughCurrentStreak}")
-                StatRow("Total all time", "${state.followThroughTotal}")
-                StatRow("This week", "${state.followThroughThisWeek}")
-                StatRow("This month", "${state.followThroughThisMonth}")
+            StatsSection(title = "Follow Throughs") {
+                StatRow("Current Streak", "${state.followThroughCurrentStreak}")
+                StatRow("Total All Time", "${state.followThroughTotal}")
+                StatRow("This Week", "${state.followThroughThisWeek}")
+                StatRow("This Month", "${state.followThroughThisMonth}")
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)

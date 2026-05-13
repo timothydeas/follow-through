@@ -39,9 +39,7 @@ import com.example.grounded.ui.goals.NewGoalFlowScreen
 import com.example.grounded.ui.goals.NewGoalFlowViewModel
 import com.example.grounded.ui.list.ListScreen
 import com.example.grounded.ui.list.ListViewModel
-import com.example.grounded.ui.onboarding.OnboardingScreen1
-import com.example.grounded.ui.onboarding.OnboardingScreen2
-import com.example.grounded.ui.onboarding.OnboardingScreen3
+import com.example.grounded.ui.onboarding.OnboardingScreen
 import com.example.grounded.ui.settings.CustomizeQuestionsScreen
 import com.example.grounded.ui.settings.SettingsScreen
 import com.example.grounded.ui.stats.StatsScreen
@@ -59,9 +57,7 @@ private const val ARG_NOTE_ID = "noteId"
 private const val ARG_GOAL_ID = "goalId"
 private const val ARG_CHECKIN_ID = "checkInId"
 private const val NEW_NOTE_SENTINEL = "new"
-private const val ROUTE_ONBOARDING_1 = "onboarding_1"
-private const val ROUTE_ONBOARDING_2 = "onboarding_2"
-private const val ROUTE_ONBOARDING_3 = "onboarding_3"
+private const val ROUTE_ONBOARDING = "onboarding"
 private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_CUSTOMIZE_QUESTIONS = "customize_questions"
 private const val ROUTE_STATS = "stats"
@@ -69,7 +65,7 @@ private const val ROUTE_STATS = "stats"
 internal const val PREFS_NAME = "grounded_prefs"
 internal const val KEY_ONBOARDING_VERSION = "onboarding_version"
 internal const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
-internal const val CURRENT_ONBOARDING_VERSION = 30
+internal const val CURRENT_ONBOARDING_VERSION = 38
 
 @Composable
 fun AppNavigation(
@@ -81,7 +77,7 @@ fun AppNavigation(
 
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
     val savedVersion = prefs.getInt(KEY_ONBOARDING_VERSION, 0)
-    val startDestination = if (savedVersion >= CURRENT_ONBOARDING_VERSION) ROUTE_LIST else ROUTE_ONBOARDING_1
+    val startDestination = if (savedVersion >= CURRENT_ONBOARDING_VERSION) ROUTE_LIST else ROUTE_ONBOARDING
 
     val isTablet = windowWidthSizeClass != WindowWidthSizeClass.Compact
 
@@ -93,29 +89,19 @@ fun AppNavigation(
     )
 
     NavHost(navController = navController, startDestination = startDestination) {
-        composable(ROUTE_ONBOARDING_1) {
-            OnboardingScreen1(onContinue = { navController.navigate(ROUTE_ONBOARDING_2) })
-        }
-
-        composable(ROUTE_ONBOARDING_2) {
-            OnboardingScreen2(
-                onUnderstand = { biometricEnabled ->
+        composable(ROUTE_ONBOARDING) {
+            OnboardingScreen(
+                onBiometricPersist = { biometricEnabled ->
                     prefs.edit()
                         .putBoolean(KEY_BIOMETRIC_ENABLED, biometricEnabled)
                         .apply()
-                    navController.navigate(ROUTE_ONBOARDING_3)
-                }
-            )
-        }
-
-        composable(ROUTE_ONBOARDING_3) {
-            OnboardingScreen3(
-                onContinue = {
+                },
+                onComplete = {
                     prefs.edit()
                         .putInt(KEY_ONBOARDING_VERSION, CURRENT_ONBOARDING_VERSION)
                         .apply()
                     navController.navigate(ROUTE_LIST) {
-                        popUpTo(ROUTE_ONBOARDING_1) { inclusive = true }
+                        popUpTo(ROUTE_ONBOARDING) { inclusive = true }
                     }
                 }
             )

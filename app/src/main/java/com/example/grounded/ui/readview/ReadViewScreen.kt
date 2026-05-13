@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.sp
 import com.example.grounded.data.GroundedNote
 import com.example.grounded.ui.rememberA11yAnnouncer
 import com.example.grounded.ui.theme.DmSansFontFamily
-import com.example.grounded.ui.theme.SageGreen
+import com.example.grounded.ui.theme.PrimaryForge
 import kotlinx.coroutines.delay
 
 @Composable
@@ -161,7 +161,7 @@ private fun FollowThroughButton(
     if (followedThrough) {
         Button(
             onClick = {},
-            colors = ButtonDefaults.buttonColors(containerColor = SageGreen),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryForge),
             modifier = Modifier
                 .fillMaxWidth()
                 .semantics { contentDescription = "Followed through" }
@@ -180,7 +180,7 @@ private fun FollowThroughButton(
     } else {
         Button(
             onClick = onFollowThrough,
-            colors = ButtonDefaults.buttonColors(containerColor = SageGreen),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryForge),
             modifier = Modifier
                 .fillMaxWidth()
                 .semantics { contentDescription = "Mark as followed through" }

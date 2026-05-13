@@ -57,7 +57,7 @@ import com.example.grounded.data.QuestionConfig
 import com.example.grounded.data.QuestionKeys
 import com.example.grounded.ui.rememberA11yAnnouncer
 import com.example.grounded.ui.theme.DmSansFontFamily
-import com.example.grounded.ui.theme.SageGreen
+import com.example.grounded.ui.theme.PrimaryForge
 
 @Composable
 fun CheckInFlowScreen(
@@ -181,7 +181,7 @@ fun CheckInFlowScreen(
                 ) {
                     Button(
                         onClick = if (isLast) viewModel::onSave else viewModel::onNext,
-                        colors = ButtonDefaults.buttonColors(containerColor = SageGreen)
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryForge)
                     ) {
                         Text(
                             if (isLast) "Save" else "Next",
@@ -277,7 +277,7 @@ private fun ColumnScope.StepContent(
                 fontFamily = DmSansFontFamily,
                 color = MaterialTheme.colorScheme.onSurface
             ),
-            cursorBrush = SolidColor(SageGreen),
+            cursorBrush = SolidColor(PrimaryForge),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             modifier = Modifier
                 .fillMaxSize()

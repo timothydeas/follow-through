@@ -55,7 +55,7 @@ import androidx.compose.ui.unit.sp
 import com.example.grounded.data.QuestionConfig
 import com.example.grounded.data.QuestionKeys
 import com.example.grounded.ui.theme.DmSansFontFamily
-import com.example.grounded.ui.theme.SageGreen
+import com.example.grounded.ui.theme.PrimaryForge
 
 @Composable
 fun NewGoalFlowScreen(
@@ -159,7 +159,7 @@ fun NewGoalFlowScreen(
             ) {
                 Button(
                     onClick = if (isLast) viewModel::onSave else viewModel::onNextCheckInStep,
-                    colors = ButtonDefaults.buttonColors(containerColor = SageGreen)
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryForge)
                 ) {
                     Text(
                         if (isLast) "Save" else "Next",
@@ -258,7 +258,7 @@ private fun ColumnScope.CheckInStepContent(
                 fontFamily = DmSansFontFamily,
                 color = MaterialTheme.colorScheme.onSurface
             ),
-            cursorBrush = SolidColor(SageGreen),
+            cursorBrush = SolidColor(PrimaryForge),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             modifier = Modifier
                 .fillMaxSize()

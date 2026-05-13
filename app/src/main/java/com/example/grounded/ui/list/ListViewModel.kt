@@ -313,10 +313,12 @@ internal fun computeStreakWithFlex(timestamps: List<Long>): StreakResult {
 
     val today = startOfDay(System.currentTimeMillis())
     val yesterday = today - dayMs
+    val dayBeforeYesterday = today - 2 * dayMs
 
     val startDay = when {
         activityDays.contains(today) -> today
         activityDays.contains(yesterday) -> yesterday
+        activityDays.contains(dayBeforeYesterday) -> dayBeforeYesterday
         else -> return StreakResult(0, false)
     }
 

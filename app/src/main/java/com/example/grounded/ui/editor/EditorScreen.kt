@@ -48,7 +48,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.grounded.ui.theme.DmSansFontFamily
-import com.example.grounded.ui.theme.SageGreen
+import com.example.grounded.ui.theme.PrimaryForge
 
 @Composable
 fun EditorScreen(
@@ -192,7 +192,7 @@ private fun PlaceholderField(
             onValueChange = onValueChange,
             singleLine = singleLine,
             textStyle = textStyle,
-            cursorBrush = SolidColor(SageGreen),
+            cursorBrush = SolidColor(PrimaryForge),
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -247,7 +247,7 @@ private fun EditorTopBar(
 
         TextButton(
             onClick = onSave,
-            colors = ButtonDefaults.textButtonColors(contentColor = SageGreen)
+            colors = ButtonDefaults.textButtonColors(contentColor = PrimaryForge)
         ) {
             Text(
                 text = "Save",

@@ -66,7 +66,7 @@ import com.example.grounded.data.CheckIn
 import com.example.grounded.ui.launch.insightDisplayDurationMs
 import com.example.grounded.ui.rememberA11yAnnouncer
 import com.example.grounded.ui.theme.DmSansFontFamily
-import com.example.grounded.ui.theme.SageGreen
+import com.example.grounded.ui.theme.PrimaryForge
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -256,9 +256,9 @@ fun GoalDetailScreen(
                     Button(
                         onClick = { if (!followedThrough) viewModel.followThrough() },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = SageGreen,
+                            containerColor = PrimaryForge,
                             contentColor = Color.White,
-                            disabledContainerColor = SageGreen,
+                            disabledContainerColor = PrimaryForge,
                             disabledContentColor = Color.White
                         ),
                         modifier = Modifier

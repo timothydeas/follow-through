@@ -84,9 +84,9 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.grounded.ui.rememberIsTouchExplorationEnabled
-import com.example.grounded.ui.theme.SageGreen
-import com.example.grounded.ui.theme.SageGreenAccessibleText
-import com.example.grounded.ui.theme.SageGreenLight
+import com.example.grounded.ui.theme.PrimaryForge
+import com.example.grounded.ui.theme.PrimaryForgeAccessible
+import com.example.grounded.ui.theme.PrimaryForgeLight
 import kotlinx.coroutines.flow.drop
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -222,14 +222,14 @@ fun ListScreen(
                     StatChip(
                         emoji = "🔥",
                         value = uiState.streakDays,
-                        label = "check-in streak",
-                        a11y = "Check-in streak ${uiState.streakDays}"
+                        label = "Check-In Streak",
+                        a11y = "Check-In Streak ${uiState.streakDays}"
                     )
                     StatChip(
                         emoji = "✓",
                         value = uiState.totalFollowThroughs,
-                        label = "follow-throughs",
-                        a11y = "Follow-throughs ${uiState.totalFollowThroughs}"
+                        label = "Follow Throughs",
+                        a11y = "Follow Throughs ${uiState.totalFollowThroughs}"
                     )
                     Spacer(modifier = Modifier.weight(1f))
                     Icon(
@@ -400,7 +400,7 @@ private fun DraggableGoalCard(
     )
 
     val baseBg = if (isPriority)
-        SageGreenLight.copy(alpha = 0.35f)
+        PrimaryForgeLight.copy(alpha = 0.35f)
     else
         MaterialTheme.colorScheme.surfaceVariant
 
@@ -460,7 +460,7 @@ private fun GoalCardContent(
             modifier = Modifier.fillMaxWidth()
         ) {
             if (row.rank != null) {
-                val rankColor = SageGreen
+                val rankColor = PrimaryForge
                 Text(
                     text = "${row.rank}",
                     style = MaterialTheme.typography.headlineSmall.copy(

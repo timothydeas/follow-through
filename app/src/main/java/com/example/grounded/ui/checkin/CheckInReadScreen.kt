@@ -47,7 +47,7 @@ import com.example.grounded.data.QuestionConfig
 import com.example.grounded.data.QuestionKeys
 import com.example.grounded.ui.rememberA11yAnnouncer
 import com.example.grounded.ui.theme.DmSansFontFamily
-import com.example.grounded.ui.theme.SageGreen
+import com.example.grounded.ui.theme.PrimaryForge
 
 @Composable
 fun CheckInReadScreen(
@@ -271,7 +271,7 @@ private fun EditView(
             }
             Button(
                 onClick = viewModel::saveEdit,
-                colors = ButtonDefaults.buttonColors(containerColor = SageGreen),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryForge),
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
@@ -317,7 +317,7 @@ private fun EditField(
                     fontFamily = DmSansFontFamily,
                     color = MaterialTheme.colorScheme.onSurface
                 ),
-                cursorBrush = SolidColor(SageGreen),
+                cursorBrush = SolidColor(PrimaryForge),
                 modifier = Modifier.fillMaxWidth()
             )
         }

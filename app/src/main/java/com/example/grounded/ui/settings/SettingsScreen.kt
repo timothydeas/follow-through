@@ -67,7 +67,7 @@ import com.example.grounded.BuildConfig
 import com.example.grounded.di.AppContainer
 import com.example.grounded.notifications.ReminderScheduler
 import com.example.grounded.ui.theme.PoppinsFontFamily
-import com.example.grounded.ui.theme.SageGreen
+import com.example.grounded.ui.theme.PrimaryForge
 import java.util.Calendar
 import java.util.Locale
 import com.example.grounded.navigation.KEY_BIOMETRIC_ENABLED
@@ -447,7 +447,7 @@ fun SettingsScreen(
                                     modifier = Modifier
                                         .size(36.dp)
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(if (selected) SageGreen else MaterialTheme.colorScheme.surfaceVariant)
+                                        .background(if (selected) PrimaryForge else MaterialTheme.colorScheme.surfaceVariant)
                                         .semantics {
                                             contentDescription = fullName
                                             stateDescription = if (selected) "Selected" else "Not selected"

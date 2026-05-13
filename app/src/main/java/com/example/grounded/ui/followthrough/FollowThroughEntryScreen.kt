@@ -44,7 +44,7 @@ import androidx.compose.ui.unit.sp
 import com.example.grounded.ui.rememberA11yAnnouncer
 import com.example.grounded.ui.theme.DmSansFontFamily
 import com.example.grounded.ui.theme.PoppinsFontFamily
-import com.example.grounded.ui.theme.SageGreen
+import com.example.grounded.ui.theme.PrimaryForge
 import kotlinx.coroutines.delay
 
 private val ReassuranceBg = Color(0xFFA8431E)
@@ -83,7 +83,7 @@ fun FollowThroughEntryScreen(
                     TextButton(
                         onClick = viewModel::save,
                         colors = ButtonDefaults.textButtonColors(
-                            contentColor = SageGreen
+                            contentColor = PrimaryForge
                         )
                     ) {
                         Text(
@@ -135,7 +135,7 @@ fun FollowThroughEntryScreen(
                             fontFamily = DmSansFontFamily,
                             color = MaterialTheme.colorScheme.onSurface
                         ),
-                        cursorBrush = SolidColor(SageGreen),
+                        cursorBrush = SolidColor(PrimaryForge),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

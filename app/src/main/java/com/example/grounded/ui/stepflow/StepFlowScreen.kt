@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.grounded.ui.rememberA11yAnnouncer
 import com.example.grounded.ui.theme.DmSansFontFamily
-import com.example.grounded.ui.theme.SageGreen
+import com.example.grounded.ui.theme.PrimaryForge
 import kotlinx.coroutines.delay
 
 @Composable
@@ -171,7 +171,7 @@ private fun StepBottomBar(currentStep: Int, onNext: () -> Unit, onSave: () -> Un
     ) {
         Button(
             onClick = if (currentStep == 5) onSave else onNext,
-            colors = ButtonDefaults.buttonColors(containerColor = SageGreen)
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryForge)
         ) {
             Text(
                 text = if (currentStep == 5) "Save" else "Next",
@@ -313,7 +313,7 @@ private fun LargeTextField(
                 fontFamily = DmSansFontFamily,
                 color = MaterialTheme.colorScheme.onSurface
             ),
-            cursorBrush = SolidColor(SageGreen),
+            cursorBrush = SolidColor(PrimaryForge),
             modifier = Modifier.fillMaxWidth()
         )
     }
