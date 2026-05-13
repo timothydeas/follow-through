@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -80,6 +81,7 @@ import com.ideasinc.followthrough.navigation.KEY_BIOMETRIC_ENABLED
 import com.ideasinc.followthrough.navigation.PREFS_NAME
 
 private const val KEY_REMINDERS_PENDING_PERMISSION = "reminders_pending_permission"
+private const val TAG = "SettingsScreen"
 
 @Composable
 fun SettingsScreen(
@@ -108,8 +110,11 @@ fun SettingsScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 val pending = remindersPrefs.getBoolean(KEY_REMINDERS_PENDING_PERMISSION, false)
-                if (pending && canScheduleExactAlarmsCompat(context)) {
+                val canSchedule = canScheduleExactAlarmsCompat(context)
+                Log.d(TAG, "ON_RESUME fired — pending=$pending canScheduleExactAlarms=$canSchedule")
+                if (pending && canSchedule) {
                     val currentState = settingsVm.uiState.value
+                    Log.d(TAG, "Auto-enabling reminders after permission grant")
                     settingsVm.setRemindersEnabled(true)
                     try {
                         ReminderScheduler.scheduleReminders(
@@ -118,8 +123,12 @@ fun SettingsScreen(
                             currentState.reminderMinute,
                             currentState.reminderDays
                         )
-                    } catch (_: Exception) { /* scheduling failed — leave toggle on */ }
+                        Log.d(TAG, "Alarm scheduled after auto-enable")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Scheduling failed after auto-enable", e)
+                    }
                     remindersPrefs.edit().putBoolean(KEY_REMINDERS_PENDING_PERMISSION, false).apply()
+                    Log.d(TAG, "Pending flag cleared after auto-enable")
                 }
             }
         }
@@ -144,10 +153,12 @@ fun SettingsScreen(
                         uiState.reminderDays
                     )
                 } catch (_: Exception) { /* scheduling failed — leave toggle off */ }
+                remindersPrefs.edit().putBoolean(KEY_REMINDERS_PENDING_PERMISSION, false).apply()
             } else {
                 showExactAlarmDialog = true
             }
         } else {
+            remindersPrefs.edit().putBoolean(KEY_REMINDERS_PENDING_PERMISSION, false).apply()
             showNotificationDeniedDialog = true
         }
     }
@@ -414,15 +425,21 @@ fun SettingsScreen(
                         checked = uiState.remindersEnabled,
                         onCheckedChange = { enabled ->
                             if (enabled) {
+                                Log.d(TAG, "Reminders toggle tapped ON — setting pending flag")
+                                remindersPrefs.edit()
+                                    .putBoolean(KEY_REMINDERS_PENDING_PERMISSION, true)
+                                    .apply()
                                 enableReminders(
                                     context = context,
                                     settingsVm = settingsVm,
                                     uiState = uiState,
                                     notificationLauncher = notificationLauncher,
+                                    remindersPrefs = remindersPrefs,
                                     onNotificationDenied = { showNotificationDeniedDialog = true },
                                     onExactAlarmDenied = { showExactAlarmDialog = true }
                                 )
                             } else {
+                                Log.d(TAG, "Reminders toggle tapped OFF — clearing pending flag")
                                 settingsVm.setRemindersEnabled(false)
                                 remindersPrefs.edit().putBoolean(KEY_REMINDERS_PENDING_PERMISSION, false).apply()
                                 try {
@@ -599,6 +616,7 @@ private fun enableReminders(
     settingsVm: SettingsViewModel,
     uiState: SettingsUiState,
     notificationLauncher: androidx.activity.result.ActivityResultLauncher<String>,
+    remindersPrefs: android.content.SharedPreferences,
     onNotificationDenied: () -> Unit,
     onExactAlarmDenied: () -> Unit
 ) {
@@ -619,6 +637,7 @@ private fun enableReminders(
                 uiState.reminderDays
             )
         } catch (_: Exception) { /* scheduling failed — leave toggle on */ }
+        remindersPrefs.edit().putBoolean(KEY_REMINDERS_PENDING_PERMISSION, false).apply()
         return
     }
 

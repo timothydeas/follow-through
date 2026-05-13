@@ -220,7 +220,7 @@ fun ListScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     StatChip(
-                        emoji = "ðŸ”¥",
+                        emoji = "🔥",
                         value = uiState.streakDays,
                         label = "Check-In Streak",
                         a11y = "Check-In Streak ${uiState.streakDays}"
