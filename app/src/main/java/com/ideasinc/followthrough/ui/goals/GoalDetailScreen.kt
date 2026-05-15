@@ -1,5 +1,7 @@
 ﻿package com.ideasinc.followthrough.ui.goals
 
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +43,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -53,11 +56,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,7 +70,6 @@ import com.ideasinc.followthrough.ui.launch.insightDisplayDurationMs
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
 import com.ideasinc.followthrough.ui.theme.PrimaryForge
-import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -95,16 +97,6 @@ fun GoalDetailScreen(
         if (uiState.shouldNavigateToList) {
             announce("Deleted")
             onNavigateToList()
-        }
-    }
-
-    LaunchedEffect(uiState.showReassurance) {
-        if (uiState.showReassurance) {
-            val message = "You followed through. Whatever happens next — you showed up for yourself. That's what matters."
-            announce(message)
-            delay(insightDisplayDurationMs(message))
-            viewModel.onReassuranceDone()
-            runCatching { backFocus.requestFocus() }
         }
     }
 
@@ -380,14 +372,34 @@ private fun CheckInCard(checkIn: CheckIn, onClick: () -> Unit) {
 @Composable
 private fun ReassuranceOverlay(onDismiss: () -> Unit) {
     val message = "You followed through. Whatever happens next — you showed up for yourself. That's what matters."
+
+    // Auto-dismiss via a plain Handler so the countdown lives outside the
+    // composition — no LaunchedEffect, no coroutine state, nothing that
+    // could trigger recomposition during the countdown. TalkBack discovers
+    // the message naturally via clearAndSetSemantics contentDescription.
+    DisposableEffect(Unit) {
+        val handler = Handler(Looper.getMainLooper())
+        val runnable = Runnable { onDismiss() }
+        handler.postDelayed(runnable, insightDisplayDurationMs(message))
+        onDispose {
+            handler.removeCallbacks(runnable)
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.6f))
             .clickable(onClickLabel = "Dismiss", onClick = onDismiss)
-            .semantics {
+            // Whole overlay is one opaque accessibility node so TalkBack
+            // reads only the reassurance message, not the inner card/Text.
+            // onClick is re-declared to preserve double-tap-to-dismiss.
+            .clearAndSetSemantics {
                 contentDescription = message
-                liveRegion = LiveRegionMode.Assertive
+                onClick(label = "Dismiss") {
+                    onDismiss()
+                    true
+                }
             },
         contentAlignment = Alignment.Center
     ) {

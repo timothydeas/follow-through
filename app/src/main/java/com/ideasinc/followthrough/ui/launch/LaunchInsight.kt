@@ -1,31 +1,37 @@
-﻿package com.ideasinc.followthrough.ui.launch
+package com.ideasinc.followthrough.ui.launch
 
 import android.content.SharedPreferences
-import android.view.accessibility.AccessibilityEvent
+import android.os.Handler
+import android.os.Looper
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
-import kotlinx.coroutines.delay
+import androidx.compose.ui.unit.sp
+import com.ideasinc.followthrough.R
+import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
 
 const val KEY_LAST_INSIGHT_INDEX = "last_insight_index"
 
@@ -68,52 +74,89 @@ internal fun insightDisplayDurationMs(text: String): Long {
     return withBuffer.coerceIn(3_000L, 8_000L)
 }
 
+private val ForgeBrown = Color(0xFF9A3A1B)
+
 @Composable
-fun LaunchInsightOverlay(text: String, onDismiss: () -> Unit) {
-    // Capture the insight once so recomposition can't restart the dismiss
-    // timer or re-trigger the live-region announcement.
+fun LaunchInsightScreen(text: String, onDismiss: () -> Unit) {
+    // Capture the insight once so the timer keys off a stable value.
     val insightText = remember { text }
-    val view = LocalView.current
 
-    LaunchedEffect(insightText) {
-        delay(insightDisplayDurationMs(insightText))
-        onDismiss()
-    }
-
+    // Auto-dismiss via a plain Handler so the countdown lives outside the
+    // composition — no LaunchedEffect, no coroutine state, nothing that
+    // could trigger recomposition during the countdown. TalkBack discovers
+    // the content naturally via clearAndSetSemantics contentDescription.
     DisposableEffect(Unit) {
+        val handler = Handler(Looper.getMainLooper())
+        val runnable = Runnable { onDismiss() }
+        handler.postDelayed(runnable, insightDisplayDurationMs(insightText))
         onDispose {
-            // Hand accessibility focus back to the main list screen.
-            view.clearFocus()
-            view.sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_FOCUSED)
+            handler.removeCallbacks(runnable)
         }
     }
+
+    // System back is a no-op on this screen.
+    BackHandler(enabled = true) { /* intentionally empty */ }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
-            .clickable(onClickLabel = "Dismiss", onClick = onDismiss)
-            .semantics(mergeDescendants = true) {
+            .background(ForgeBrown)
+            .clickable(onClickLabel = "Continue", onClick = onDismiss)
+            // Whole screen is one opaque accessibility node so TalkBack
+            // reads only the insight text — not the icon, title, or caption.
+            .clearAndSetSemantics {
                 contentDescription = insightText
-                liveRegion = LiveRegionMode.Polite
-            },
-        contentAlignment = Alignment.Center
+                onClick(label = "Continue") {
+                    onDismiss()
+                    true
+                }
+            }
     ) {
-        Box(
+        Column(
             modifier = Modifier
-                .padding(32.dp)
-                .background(Color(0xFF2C2C28), RoundedCornerShape(20.dp))
-                .padding(horizontal = 32.dp, vertical = 28.dp),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                // Brown background extends behind the system bars; content
+                // stays inside the safe area so the icon and caption are
+                // never clipped by status/navigation bar.
+                .systemBarsPadding()
+                .padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(Modifier.height(96.dp))
+            Image(
+                painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                contentDescription = null,
+                modifier = Modifier.size(120.dp)
+            )
+            Spacer(Modifier.height(16.dp))
             Text(
-                text = insightText,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontFamily = DmSansFontFamily,
-                    color = Color.White
-                ),
+                text = "Follow Through",
+                color = Color.White,
+                fontFamily = PoppinsFontFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 28.sp,
                 textAlign = TextAlign.Center
             )
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = insightText,
+                color = Color.White,
+                fontFamily = PoppinsFontFamily,
+                fontWeight = FontWeight.Normal,
+                fontSize = 18.sp,
+                lineHeight = 28.sp,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = "Tap anywhere to continue",
+                color = Color.White.copy(alpha = 0.65f),
+                fontFamily = PoppinsFontFamily,
+                fontWeight = FontWeight.Normal,
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(48.dp))
         }
     }
 }

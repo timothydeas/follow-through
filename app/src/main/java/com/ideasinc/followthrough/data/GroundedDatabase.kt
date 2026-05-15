@@ -436,6 +436,54 @@ private val MIGRATION_19_20 = object : Migration(19, 20) {
     }
 }
 
+private val MIGRATION_20_21 = object : Migration(20, 21) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // The implementation intention default label was reworded from a
+        // bracketed-template form to a fill-in-the-blanks form. Rewrite any
+        // question_labels row that still holds the prior default text so the
+        // UI reflects the new wording. Rows with genuinely custom text are
+        // left untouched.
+        db.execSQL(
+            "UPDATE question_labels SET customLabel = " +
+                "'I will _____ when _____.' " +
+                "WHERE questionKey = 'implementationIntention' AND customLabel = " +
+                "'I will [what I''ll do] when [moment or situation] occurs.'"
+        )
+    }
+}
+
+private val MIGRATION_21_22 = object : Migration(21, 22) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // The implementation intention default label was reverted to the
+        // earlier "When this moment comes, I will —" wording. Rewrite any
+        // question_labels row still holding either of the two prior default
+        // texts so the UI reflects the new wording. Rows with genuinely
+        // custom text are left untouched.
+        db.execSQL(
+            "UPDATE question_labels SET customLabel = " +
+                "'When this moment comes, I will —' " +
+                "WHERE questionKey = 'implementationIntention' AND customLabel IN (" +
+                "'I will _____ when _____.', " +
+                "'I will [what I''ll do] when [moment or situation] occurs.'" +
+                ")"
+        )
+    }
+}
+
+private val MIGRATION_22_23 = object : Migration(22, 23) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Force every implementation intention question_labels row to the new
+        // example-bracketed default. Unlike the prior migrations this does
+        // not filter by customLabel — it overwrites any existing value for
+        // this key, including user-customized ones.
+        db.execSQL(
+            "UPDATE question_labels SET customLabel = " +
+                "'I will [e.g., what I''ll do] when [e.g., moment or situation] occurs.' " +
+                "WHERE questionKey = 'implementationIntention'"
+        )
+    }
+}
+
 private val MIGRATION_18_19 = object : Migration(18, 19) {
     override fun migrate(db: SupportSQLiteDatabase) {
         // Drop the temptationAndSelfTalk column. SQLite ALTER TABLE DROP COLUMN
@@ -590,7 +638,7 @@ private val MIGRATION_13_14 = object : Migration(13, 14) {
         CheckIn::class,
         QuestionLabel::class
     ],
-    version = 20,
+    version = 23,
     exportSchema = false
 )
 abstract class GroundedDatabase : RoomDatabase() {
@@ -617,7 +665,8 @@ abstract class GroundedDatabase : RoomDatabase() {
                         MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
                         MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16,
                         MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19,
-                        MIGRATION_19_20
+                        MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22,
+                        MIGRATION_22_23
                     )
                     .build().also { INSTANCE = it }
             }

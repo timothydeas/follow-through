@@ -40,7 +40,7 @@ public final class GroundedDatabase_Impl extends GroundedDatabase {
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(20) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(23) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `notes` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `body` TEXT NOT NULL, `tag` TEXT, `isPinned` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `type` TEXT NOT NULL, `isDraft` INTEGER NOT NULL, `reflection` TEXT NOT NULL, `whatStoppedYou` TEXT NOT NULL, `whatYouLearned` TEXT NOT NULL, `nextSteps` TEXT NOT NULL, `whenField` TEXT NOT NULL, `willField` TEXT NOT NULL, `followedThrough` INTEGER NOT NULL, `followedThroughAt` INTEGER, `implementationIntention` TEXT NOT NULL, PRIMARY KEY(`id`))");

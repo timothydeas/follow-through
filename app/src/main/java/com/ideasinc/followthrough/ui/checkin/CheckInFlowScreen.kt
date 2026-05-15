@@ -259,7 +259,7 @@ private fun ColumnScope.StepContent(
                 indication = null
             ) { fieldFocus.requestFocus() }
     ) {
-        val placeholder = placeholderFor(config.key)
+        val placeholder = ""
         if (value.isEmpty() && placeholder.isNotBlank()) {
             Text(
                 text = placeholder,

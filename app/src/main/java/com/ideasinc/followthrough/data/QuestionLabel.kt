@@ -36,7 +36,7 @@ object QuestionKeys {
         AVOIDING to "Is there something you already know would help you here, but you've been avoiding finding out or facing?",
         CONFIDENCE to "How confident do you feel you'll figure this out?",
         COMPETING_PRIORITY to "What's getting in your way right now — is it the situation itself, or how you're seeing it or expecting it to go? If nothing is, what might get in the way later?",
-        IMPLEMENTATION_INTENTION to "I will [what I'll do] when [moment or situation] occurs.",
+        IMPLEMENTATION_INTENTION to "I will [e.g., what I'll do] when [e.g., moment or situation] occurs.",
         ACCOUNTABILITY to "Who holds you accountable?"
     )
 }

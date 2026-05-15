@@ -16,23 +16,25 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import com.ideasinc.followthrough.navigation.AppNavigation
 import com.ideasinc.followthrough.navigation.CURRENT_ONBOARDING_VERSION
 import com.ideasinc.followthrough.navigation.KEY_BIOMETRIC_ENABLED
 import com.ideasinc.followthrough.navigation.KEY_ONBOARDING_VERSION
 import com.ideasinc.followthrough.navigation.PREFS_NAME
-import com.ideasinc.followthrough.ui.launch.LaunchInsightOverlay
-import com.ideasinc.followthrough.ui.launch.pickLaunchInsight
 import com.ideasinc.followthrough.ui.theme.GroundedTheme
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 class MainActivity : FragmentActivity() {
 
     private var authCleared by mutableStateOf(false)
-    private var launchInsight by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Edge-to-edge so the launch insight screen's brown background paints
+        // under the status and navigation bars for a true full-screen takeover.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val container = (application as GroundedApplication).container
 
@@ -45,28 +47,14 @@ class MainActivity : FragmentActivity() {
         val needsBiometric = onboardingComplete && biometricEnabled && !alreadyAuthenticated
         authCleared = !needsBiometric
 
-        // Cold-start only — config changes/process recreations preserve state
-        // via savedInstanceState and shouldn't trigger another insight.
-        if (savedInstanceState == null && onboardingComplete) {
-            launchInsight = pickLaunchInsight(prefs)
-        }
-
         setContent {
             GroundedTheme {
                 if (authCleared) {
                     val windowSizeClass = calculateWindowSizeClass(this)
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        AppNavigation(
-                            container = container,
-                            windowWidthSizeClass = windowSizeClass.widthSizeClass
-                        )
-                        launchInsight?.let { text ->
-                            LaunchInsightOverlay(
-                                text = text,
-                                onDismiss = { launchInsight = null }
-                            )
-                        }
-                    }
+                    AppNavigation(
+                        container = container,
+                        windowWidthSizeClass = windowSizeClass.widthSizeClass
+                    )
                 } else {
                     Box(
                         modifier = Modifier

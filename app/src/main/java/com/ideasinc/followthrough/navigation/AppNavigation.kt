@@ -37,6 +37,8 @@ import com.ideasinc.followthrough.ui.goals.GoalDetailScreen
 import com.ideasinc.followthrough.ui.goals.GoalDetailViewModel
 import com.ideasinc.followthrough.ui.goals.NewGoalFlowScreen
 import com.ideasinc.followthrough.ui.goals.NewGoalFlowViewModel
+import com.ideasinc.followthrough.ui.launch.LaunchInsightScreen
+import com.ideasinc.followthrough.ui.launch.pickLaunchInsight
 import com.ideasinc.followthrough.ui.list.ListScreen
 import com.ideasinc.followthrough.ui.list.ListViewModel
 import com.ideasinc.followthrough.ui.onboarding.OnboardingScreen
@@ -47,6 +49,7 @@ import com.ideasinc.followthrough.ui.stepflow.StepFlowScreen
 import com.ideasinc.followthrough.ui.stepflow.StepFlowViewModel
 
 private const val ROUTE_LIST = "list"
+private const val ROUTE_LAUNCH_INSIGHT = "launch_insight"
 private const val ROUTE_EDITOR = "editor/{noteId}"
 private const val ROUTE_STEP_FLOW = "step_flow/{noteId}"
 private const val ROUTE_NEW_GOAL = "new_goal"
@@ -65,7 +68,7 @@ private const val ROUTE_STATS = "stats"
 internal const val PREFS_NAME = "grounded_prefs"
 internal const val KEY_ONBOARDING_VERSION = "onboarding_version"
 internal const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
-internal const val CURRENT_ONBOARDING_VERSION = 40
+internal const val CURRENT_ONBOARDING_VERSION = 41
 
 @Composable
 fun AppNavigation(
@@ -77,7 +80,7 @@ fun AppNavigation(
 
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
     val savedVersion = prefs.getInt(KEY_ONBOARDING_VERSION, 0)
-    val startDestination = if (savedVersion >= CURRENT_ONBOARDING_VERSION) ROUTE_LIST else ROUTE_ONBOARDING
+    val startDestination = if (savedVersion >= CURRENT_ONBOARDING_VERSION) ROUTE_LAUNCH_INSIGHT else ROUTE_ONBOARDING
 
     val isTablet = windowWidthSizeClass != WindowWidthSizeClass.Compact
 
@@ -100,8 +103,22 @@ fun AppNavigation(
                     prefs.edit()
                         .putInt(KEY_ONBOARDING_VERSION, CURRENT_ONBOARDING_VERSION)
                         .apply()
-                    navController.navigate(ROUTE_LIST) {
+                    navController.navigate(ROUTE_LAUNCH_INSIGHT) {
                         popUpTo(ROUTE_ONBOARDING) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(ROUTE_LAUNCH_INSIGHT) {
+            // Picked once per destination instance; pickLaunchInsight also
+            // persists the chosen index so the next launch avoids it.
+            val insight = remember { pickLaunchInsight(prefs) }
+            LaunchInsightScreen(
+                text = insight,
+                onDismiss = {
+                    navController.navigate(ROUTE_LIST) {
+                        popUpTo(ROUTE_LAUNCH_INSIGHT) { inclusive = true }
                     }
                 }
             )
