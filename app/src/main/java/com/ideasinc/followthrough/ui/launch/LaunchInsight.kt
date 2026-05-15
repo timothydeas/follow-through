@@ -1,6 +1,7 @@
 ﻿package com.ideasinc.followthrough.ui.launch
 
 import android.content.SharedPreferences
+import android.view.accessibility.AccessibilityEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -10,10 +11,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
@@ -34,7 +38,9 @@ val LAUNCH_INSIGHTS = listOf(
     "Whatever you decide to do today, imagine doing it every single time you face this same moment. Your future self is shaped by what you do right now.",
     "Negative feedback isn't a reflection of who you are. The less your ego is tangled up in it, the more you can actually learn from it and keep moving.",
     "The more personally meaningful a goal feels — even a necessary one — the more likely you are to follow through on it. Finding your own reason to want it makes all the difference.",
-    "What you expect from yourself has a way of becoming what you do. Believing change is possible is often what makes it possible."
+    "What you expect from yourself has a way of becoming what you do. Believing change is possible is often what makes it possible.",
+    "The moment you feel like quitting is usually the moment right before the breakthrough. Don't let the obvious insights of hindsight be the only time you recognize your own progress.",
+    "Persist through the unknown until it becomes the obvious."
 )
 
 /**
@@ -64,18 +70,32 @@ internal fun insightDisplayDurationMs(text: String): Long {
 
 @Composable
 fun LaunchInsightOverlay(text: String, onDismiss: () -> Unit) {
-    LaunchedEffect(text) {
-        delay(insightDisplayDurationMs(text))
+    // Capture the insight once so recomposition can't restart the dismiss
+    // timer or re-trigger the live-region announcement.
+    val insightText = remember { text }
+    val view = LocalView.current
+
+    LaunchedEffect(insightText) {
+        delay(insightDisplayDurationMs(insightText))
         onDismiss()
     }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            // Hand accessibility focus back to the main list screen.
+            view.clearFocus()
+            view.sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_FOCUSED)
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.6f))
             .clickable(onClickLabel = "Dismiss", onClick = onDismiss)
-            .semantics {
-                contentDescription = text
-                liveRegion = LiveRegionMode.Assertive
+            .semantics(mergeDescendants = true) {
+                contentDescription = insightText
+                liveRegion = LiveRegionMode.Polite
             },
         contentAlignment = Alignment.Center
     ) {
@@ -87,7 +107,7 @@ fun LaunchInsightOverlay(text: String, onDismiss: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = text,
+                text = insightText,
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontFamily = DmSansFontFamily,
                     color = Color.White
