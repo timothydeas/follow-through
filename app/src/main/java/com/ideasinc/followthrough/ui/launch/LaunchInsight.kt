@@ -74,7 +74,7 @@ internal fun insightDisplayDurationMs(text: String): Long {
     return withBuffer.coerceIn(3_000L, 8_000L)
 }
 
-private val ForgeBrown = Color(0xFF9A3A1B)
+private val ForgeBrown = Color(0xFF9B3A2E)
 
 @Composable
 fun LaunchInsightScreen(text: String, onDismiss: () -> Unit) {
@@ -150,7 +150,7 @@ fun LaunchInsightScreen(text: String, onDismiss: () -> Unit) {
             Spacer(Modifier.weight(1f))
             Text(
                 text = "Tap anywhere to continue",
-                color = Color.White.copy(alpha = 0.65f),
+                color = Color.White,
                 fontFamily = PoppinsFontFamily,
                 fontWeight = FontWeight.Normal,
                 fontSize = 13.sp,

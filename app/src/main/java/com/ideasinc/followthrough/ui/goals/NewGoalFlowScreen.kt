@@ -55,7 +55,7 @@ import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
-import com.ideasinc.followthrough.ui.theme.PrimaryForge
+import com.ideasinc.followthrough.ui.theme.TrackRed
 
 @Composable
 fun NewGoalFlowScreen(
@@ -65,7 +65,6 @@ fun NewGoalFlowScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val backFocus = remember { FocusRequester() }
-    var showGlobalInfo by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
 
@@ -74,19 +73,6 @@ fun NewGoalFlowScreen(
     }
     LaunchedEffect(uiState.savedGoalId) {
         uiState.savedGoalId?.let { onGoalCreated(it) }
-    }
-
-    if (showGlobalInfo) {
-        AlertDialog(
-            onDismissRequest = { showGlobalInfo = false },
-            text = {
-                Text(
-                    "These questions are a starting point, not a checklist. Leave any blank and keep going. You can edit your answers or customize the questions in Settings.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = { TextButton(onClick = { showGlobalInfo = false }) { Text("Got it") } }
-        )
     }
 
     Scaffold(
@@ -129,17 +115,6 @@ fun NewGoalFlowScreen(
                             liveRegion = LiveRegionMode.Polite
                         }
                 )
-                IconButton(
-                    onClick = { showGlobalInfo = true },
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Info,
-                        contentDescription = "More information",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
             }
         },
         bottomBar = {
@@ -159,7 +134,7 @@ fun NewGoalFlowScreen(
             ) {
                 Button(
                     onClick = if (isLast) viewModel::onSave else viewModel::onNextCheckInStep,
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryForge)
+                    colors = ButtonDefaults.buttonColors(containerColor = TrackRed)
                 ) {
                     Text(
                         if (isLast) "Save" else "Next",
@@ -197,16 +172,7 @@ private fun ColumnScope.CheckInStepContent(
     value: String,
     onValueChange: (String) -> Unit
 ) {
-    var showStepTooltip by remember(config.key) { mutableStateOf(false) }
     val fieldFocus = remember { FocusRequester() }
-
-    if (showStepTooltip) {
-        AlertDialog(
-            onDismissRequest = { showStepTooltip = false },
-            text = { Text(tooltipFor(config.key), style = MaterialTheme.typography.bodyMedium) },
-            confirmButton = { TextButton(onClick = { showStepTooltip = false }) { Text("Got it") } }
-        )
-    }
 
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -217,17 +183,6 @@ private fun ColumnScope.CheckInStepContent(
                 .weight(1f)
                 .semantics { heading() }
         )
-        val tooltip = tooltipFor(config.key)
-        if (tooltip.isNotBlank()) {
-            IconButton(onClick = { showStepTooltip = true }, modifier = Modifier.size(48.dp)) {
-                Icon(
-                    imageVector = Icons.Outlined.Info,
-                    contentDescription = "More information",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
     }
     Spacer(modifier = Modifier.height(24.dp))
 
@@ -258,7 +213,7 @@ private fun ColumnScope.CheckInStepContent(
                 fontFamily = DmSansFontFamily,
                 color = MaterialTheme.colorScheme.onSurface
             ),
-            cursorBrush = SolidColor(PrimaryForge),
+            cursorBrush = SolidColor(TrackRed),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             modifier = Modifier
                 .fillMaxSize()
@@ -290,30 +245,3 @@ private fun setFieldValue(vm: NewGoalFlowViewModel, key: String, value: String) 
     else -> {}
 }
 
-private fun tooltipFor(key: String): String = when (key) {
-    QuestionKeys.GOAL_OR_CHANGE ->
-        "This can be anything — a goal, a habit, a pattern, something you want to do differently. There are no wrong answers here."
-    QuestionKeys.IMPLEMENTATION_INTENTION ->
-        "Link a specific moment to a specific action. The more vivid and specific the cue, the more likely you are to follow through when that moment arrives."
-    QuestionKeys.ACCOUNTABILITY ->
-        "Naming who or what holds you accountable makes it real. It could be a person who believes in you, a past experience, or your own inner voice."
-    else -> ""
-}
-
-private fun placeholderFor(key: String): String = when (key) {
-    QuestionKeys.GOAL_OR_CHANGE ->
-        "A goal, a habit, something you want to change, or something you're struggling with"
-    QuestionKeys.AVOIDING ->
-        "Something you've been putting off looking at, even though part of you knows it matters"
-    QuestionKeys.CONFIDENCE ->
-        "You don't need proof you can do this before you start. What does your gut say?"
-    QuestionKeys.MADE_PROGRESS ->
-        "Yes, No, or describe where you feel you are right now"
-    QuestionKeys.COMPETING_PRIORITY ->
-        "Be honest — sometimes our perception or anticipation of a situation matters more than the situation itself. And if nothing is in your way right now, think ahead."
-    QuestionKeys.IMPLEMENTATION_INTENTION ->
-        "I will go for a walk when I finish my morning coffee."
-    QuestionKeys.ACCOUNTABILITY ->
-        "A person, a memory, a strategy — whatever keeps you going"
-    else -> ""
-}

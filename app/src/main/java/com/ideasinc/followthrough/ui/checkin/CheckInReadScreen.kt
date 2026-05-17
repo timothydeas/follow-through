@@ -47,7 +47,7 @@ import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
-import com.ideasinc.followthrough.ui.theme.PrimaryForge
+import com.ideasinc.followthrough.ui.theme.TrackRed
 
 @Composable
 fun CheckInReadScreen(
@@ -271,7 +271,7 @@ private fun EditView(
             }
             Button(
                 onClick = viewModel::saveEdit,
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryForge),
+                colors = ButtonDefaults.buttonColors(containerColor = TrackRed),
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
@@ -317,7 +317,7 @@ private fun EditField(
                     fontFamily = DmSansFontFamily,
                     color = MaterialTheme.colorScheme.onSurface
                 ),
-                cursorBrush = SolidColor(PrimaryForge),
+                cursorBrush = SolidColor(TrackRed),
                 modifier = Modifier.fillMaxWidth()
             )
         }

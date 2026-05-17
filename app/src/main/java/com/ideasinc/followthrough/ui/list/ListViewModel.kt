@@ -21,15 +21,15 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 
 // Number of leading positions in the unified list that are treated as
-// "priority" — highlighted in sage green and rank-numbered. Position 0 → rank
-// 1, position 1 → rank 2.
-private const val PRIORITY_SLOT_COUNT = 2
+// "priority" — highlighted and rank-numbered. Position 0 → rank 1, position
+// 1 → rank 2, position 2 → rank 3.
+private const val PRIORITY_SLOT_COUNT = 3
 
 data class GoalRowData(
     val goal: Goal,
     val checkInCount: Int,
     val latestCheckInDate: Long?,
-    val rank: Int?  // 1 or 2 for the top two positions; null for everything below
+    val rank: Int?  // 1, 2, or 3 for the top three positions; null for everything below
 )
 
 data class ListUiState(

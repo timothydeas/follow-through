@@ -67,6 +67,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -84,9 +85,10 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.ideasinc.followthrough.ui.rememberIsTouchExplorationEnabled
-import com.ideasinc.followthrough.ui.theme.PrimaryForge
-import com.ideasinc.followthrough.ui.theme.PrimaryForgeAccessible
-import com.ideasinc.followthrough.ui.theme.PrimaryForgeLight
+import com.ideasinc.followthrough.ui.theme.Accent
+import com.ideasinc.followthrough.ui.theme.TrackRed
+import com.ideasinc.followthrough.ui.theme.TrackRedAccessible
+import com.ideasinc.followthrough.ui.theme.TrackRedLight
 import kotlinx.coroutines.flow.drop
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -103,7 +105,7 @@ fun ListScreen(
     onStatsClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val accentColor = MaterialTheme.colorScheme.primary
+    val accentColor = if (isSystemInDarkTheme()) Color(0xFFFFFFFF) else MaterialTheme.colorScheme.primary
     val lazyListState = rememberLazyListState()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -214,19 +216,21 @@ fun ListScreen(
                             role = Role.Button,
                             onClick = onStatsClick
                         )
-                        .semantics { contentDescription = "Tap to see full stats" }
+                        .semantics(mergeDescendants = true) { }
                         .padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     StatChip(
                         emoji = "🔥",
+                        emojiTint = Accent,
                         value = uiState.streakDays,
                         label = "Check-In Streak",
                         a11y = "Check-In Streak ${uiState.streakDays}"
                     )
                     StatChip(
                         emoji = "✓",
+                        emojiTint = null,
                         value = uiState.totalFollowThroughs,
                         label = "Follow Throughs",
                         a11y = "Follow Throughs ${uiState.totalFollowThroughs}"
@@ -297,14 +301,25 @@ fun ListScreen(
 }
 
 @Composable
-private fun StatChip(emoji: String, value: Int, label: String, a11y: String) {
+private fun StatChip(
+    emoji: String,
+    emojiTint: androidx.compose.ui.graphics.Color?,
+    value: Int,
+    label: String,
+    a11y: String
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = Modifier.semantics { contentDescription = a11y }
+        modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = a11y }
     ) {
         Text(
-            text = "$emoji $value",
+            text = emoji,
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = emojiTint ?: MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = "$value",
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -328,23 +343,6 @@ private fun lazyToFlat(lazyIndex: Int): Int? =
 
 @Composable
 private fun FocusGoalsLabel() {
-    var showTooltip by remember { mutableStateOf(false) }
-
-    if (showTooltip) {
-        AlertDialog(
-            onDismissRequest = { showTooltip = false },
-            text = {
-                Text(
-                    "The more goals competing for your attention, the harder it gets to make real progress on any of them. These are the ones you've chosen to focus on right now.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { showTooltip = false }) { Text("Got it") }
-            }
-        )
-    }
-
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -357,17 +355,6 @@ private fun FocusGoalsLabel() {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.semantics { heading() }
         )
-        IconButton(
-            onClick = { showTooltip = true },
-            modifier = Modifier.size(36.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Info,
-                contentDescription = "About focus goals",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(14.dp)
-            )
-        }
     }
 }
 
@@ -400,7 +387,7 @@ private fun DraggableGoalCard(
     )
 
     val baseBg = if (isPriority)
-        PrimaryForgeLight.copy(alpha = 0.35f)
+        Color(0xFF9B3A2E)
     else
         MaterialTheme.colorScheme.surfaceVariant
 
@@ -444,6 +431,13 @@ private fun GoalCardContent(
     onMoveDown: () -> Unit,
     onArrowLongPress: () -> Unit
 ) {
+    val isPriority = row.rank != null
+    val primaryTextColor = if (isPriority) Color(0xFFFFFFFF) else MaterialTheme.colorScheme.onSurface
+    val secondaryTextColor = if (isPriority)
+        Color(0xFFFFFFFF).copy(alpha = 0.8f)
+    else
+        MaterialTheme.colorScheme.onSurfaceVariant
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -460,12 +454,11 @@ private fun GoalCardContent(
             modifier = Modifier.fillMaxWidth()
         ) {
             if (row.rank != null) {
-                val rankColor = PrimaryForge
                 Text(
                     text = "${row.rank}",
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        color = rankColor
+                        color = Color(0xFFFFFFFF)
                     ),
                     modifier = Modifier
                         .padding(end = 10.dp)
@@ -475,7 +468,7 @@ private fun GoalCardContent(
             Text(
                 text = row.goal.title,
                 style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = primaryTextColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
@@ -486,11 +479,12 @@ private fun GoalCardContent(
                     canMoveDown = canMoveDown,
                     onMoveUp = onMoveUp,
                     onMoveDown = onMoveDown,
-                    onLongPress = onArrowLongPress
+                    onLongPress = onArrowLongPress,
+                    isPriority = isPriority
                 )
                 Spacer(Modifier.width(4.dp))
             }
-            DragHandleIcon()
+            DragHandleIcon(isPriority = isPriority)
         }
 
         Row(
@@ -500,13 +494,13 @@ private fun GoalCardContent(
             Text(
                 text = "${row.checkInCount} check-in${if (row.checkInCount == 1) "" else "s"}",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = secondaryTextColor
             )
             row.latestCheckInDate?.let {
                 Text(
                     text = formatDate(it),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = secondaryTextColor
                 )
             }
         }
@@ -514,7 +508,11 @@ private fun GoalCardContent(
 }
 
 @Composable
-private fun DragHandleIcon() {
+private fun DragHandleIcon(isPriority: Boolean = false) {
+    val tint = if (isPriority)
+        Color(0xFFFFFFFF)
+    else
+        MaterialTheme.colorScheme.onSurfaceVariant
     Box(
         modifier = Modifier
             .size(36.dp)
@@ -524,7 +522,7 @@ private fun DragHandleIcon() {
         Icon(
             imageVector = Icons.Filled.DragHandle,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+            tint = tint,
             modifier = Modifier.size(20.dp)
         )
     }
@@ -538,7 +536,8 @@ private fun A11yReorderArrows(
     canMoveDown: Boolean,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    isPriority: Boolean = false
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         ArrowButton(
@@ -546,7 +545,8 @@ private fun A11yReorderArrows(
             description = "Move up",
             enabled = canMoveUp,
             onClick = onMoveUp,
-            onLongPress = onLongPress
+            onLongPress = onLongPress,
+            isPriority = isPriority
         )
         Spacer(Modifier.width(2.dp))
         ArrowButton(
@@ -554,7 +554,8 @@ private fun A11yReorderArrows(
             description = "Move down",
             enabled = canMoveDown,
             onClick = onMoveDown,
-            onLongPress = onLongPress
+            onLongPress = onLongPress,
+            isPriority = isPriority
         )
     }
 }
@@ -565,13 +566,21 @@ private fun ArrowButton(
     description: String,
     enabled: Boolean,
     onClick: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    isPriority: Boolean = false
 ) {
-    val tint = if (enabled) LocalContentColor.current.copy(alpha = 0.7f)
-        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+    val enabledColor = if (isPriority)
+        Color(0xFFFFFFFF)
+    else
+        MaterialTheme.colorScheme.onSurfaceVariant
+    val disabledColor = if (isPriority)
+        Color(0xFFFFFFFF).copy(alpha = 0.5f)
+    else
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+    val tint = if (enabled) enabledColor else disabledColor
     Box(
         modifier = Modifier
-            .size(36.dp)
+            .size(48.dp)
             .clip(CircleShape)
             .combinedClickable(
                 enabled = enabled,

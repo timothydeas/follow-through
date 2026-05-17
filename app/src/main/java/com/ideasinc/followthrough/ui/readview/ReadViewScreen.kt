@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.data.GroundedNote
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
-import com.ideasinc.followthrough.ui.theme.PrimaryForge
+import com.ideasinc.followthrough.ui.theme.TrackRed
 import kotlinx.coroutines.delay
 
 @Composable
@@ -161,7 +161,7 @@ private fun FollowThroughButton(
     if (followedThrough) {
         Button(
             onClick = {},
-            colors = ButtonDefaults.buttonColors(containerColor = PrimaryForge),
+            colors = ButtonDefaults.buttonColors(containerColor = TrackRed),
             modifier = Modifier
                 .fillMaxWidth()
                 .semantics { contentDescription = "Followed through" }
@@ -180,7 +180,7 @@ private fun FollowThroughButton(
     } else {
         Button(
             onClick = onFollowThrough,
-            colors = ButtonDefaults.buttonColors(containerColor = PrimaryForge),
+            colors = ButtonDefaults.buttonColors(containerColor = TrackRed),
             modifier = Modifier
                 .fillMaxWidth()
                 .semantics { contentDescription = "Mark as followed through" }

@@ -57,7 +57,7 @@ import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
-import com.ideasinc.followthrough.ui.theme.PrimaryForge
+import com.ideasinc.followthrough.ui.theme.TrackRed
 
 @Composable
 fun CheckInFlowScreen(
@@ -67,7 +67,6 @@ fun CheckInFlowScreen(
     val uiState by viewModel.uiState.collectAsState()
     val announce = rememberA11yAnnouncer()
     val backFocus = remember { FocusRequester() }
-    var showGlobalInfo by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
 
@@ -77,19 +76,6 @@ fun CheckInFlowScreen(
     }
 
     val enabled = uiState.activeStepIndices()
-
-    if (showGlobalInfo) {
-        AlertDialog(
-            onDismissRequest = { showGlobalInfo = false },
-            text = {
-                Text(
-                    "These questions are a starting point, not a checklist. Leave any blank and keep going. You can edit your answers or customize the questions in Settings.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = { TextButton(onClick = { showGlobalInfo = false }) { Text("Got it") } }
-        )
-    }
 
     val onCurrentStep = enabled.isNotEmpty() && uiState.currentStepIndex < enabled.size
     val currentConfig: QuestionConfig? =
@@ -138,17 +124,6 @@ fun CheckInFlowScreen(
                                 }
                         )
                     }
-                    IconButton(
-                        onClick = { showGlobalInfo = true },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Info,
-                            contentDescription = "More information",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
                 }
                 if (uiState.goalTitle.isNotBlank()) {
                     Text(
@@ -181,7 +156,7 @@ fun CheckInFlowScreen(
                 ) {
                     Button(
                         onClick = if (isLast) viewModel::onSave else viewModel::onNext,
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryForge)
+                        colors = ButtonDefaults.buttonColors(containerColor = TrackRed)
                     ) {
                         Text(
                             if (isLast) "Save" else "Next",
@@ -216,16 +191,7 @@ private fun ColumnScope.StepContent(
     value: String,
     onValueChange: (String) -> Unit
 ) {
-    var showStepTooltip by remember(config.key) { mutableStateOf(false) }
     val fieldFocus = remember { FocusRequester() }
-
-    if (showStepTooltip) {
-        AlertDialog(
-            onDismissRequest = { showStepTooltip = false },
-            text = { Text(tooltipFor(config.key), style = MaterialTheme.typography.bodyMedium) },
-            confirmButton = { TextButton(onClick = { showStepTooltip = false }) { Text("Got it") } }
-        )
-    }
 
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -236,17 +202,6 @@ private fun ColumnScope.StepContent(
                 .weight(1f)
                 .semantics { heading() }
         )
-        val tooltip = tooltipFor(config.key)
-        if (tooltip.isNotBlank()) {
-            IconButton(onClick = { showStepTooltip = true }, modifier = Modifier.size(48.dp)) {
-                Icon(
-                    imageVector = Icons.Outlined.Info,
-                    contentDescription = "More information",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
     }
     Spacer(modifier = Modifier.height(24.dp))
 
@@ -277,7 +232,7 @@ private fun ColumnScope.StepContent(
                 fontFamily = DmSansFontFamily,
                 color = MaterialTheme.colorScheme.onSurface
             ),
-            cursorBrush = SolidColor(PrimaryForge),
+            cursorBrush = SolidColor(TrackRed),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             modifier = Modifier
                 .fillMaxSize()
@@ -307,16 +262,6 @@ private fun setFieldValue(vm: CheckInFlowViewModel, key: String, value: String) 
     QuestionKeys.IMPLEMENTATION_INTENTION -> vm.onImplementationIntentionChange(value)
     QuestionKeys.ACCOUNTABILITY -> vm.onAccountabilityChange(value)
     else -> {}
-}
-
-internal fun tooltipFor(key: String): String = when (key) {
-    QuestionKeys.GOAL_OR_CHANGE ->
-        "This can be anything — a goal, a habit, a pattern, something you want to do differently. There are no wrong answers here."
-    QuestionKeys.IMPLEMENTATION_INTENTION ->
-        "Link a specific moment to a specific action. The more vivid and specific the cue, the more likely you are to follow through when that moment arrives."
-    QuestionKeys.ACCOUNTABILITY ->
-        "Naming who or what holds you accountable makes it real. It could be a person who believes in you, a past experience, or your own inner voice."
-    else -> ""
 }
 
 internal fun placeholderFor(key: String): String = when (key) {

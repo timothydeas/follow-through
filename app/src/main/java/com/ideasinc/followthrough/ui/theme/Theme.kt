@@ -8,9 +8,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val GroundedColorScheme = lightColorScheme(
-    primary = PrimaryForge,
+    primary = TrackRed,
     onPrimary = White,
-    primaryContainer = PrimaryForgeLight,
+    primaryContainer = TrackRedLight,
     onPrimaryContainer = Stone,
     secondary = MutedStone,
     onSecondary = White,
@@ -27,7 +27,7 @@ private val GroundedColorScheme = lightColorScheme(
 )
 
 private val GroundedDarkColorScheme = darkColorScheme(
-    primary = PrimaryForgeDark,
+    primary = TrackRed,
     onPrimary = White,
     primaryContainer = DarkTagChip,
     onPrimaryContainer = DarkPrimaryText,

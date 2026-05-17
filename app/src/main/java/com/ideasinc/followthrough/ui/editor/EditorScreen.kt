@@ -1,6 +1,7 @@
 ﻿package com.ideasinc.followthrough.ui.editor
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,7 +49,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
-import com.ideasinc.followthrough.ui.theme.PrimaryForge
+import com.ideasinc.followthrough.ui.theme.TrackRed
 
 @Composable
 fun EditorScreen(
@@ -192,7 +193,7 @@ private fun PlaceholderField(
             onValueChange = onValueChange,
             singleLine = singleLine,
             textStyle = textStyle,
-            cursorBrush = SolidColor(PrimaryForge),
+            cursorBrush = SolidColor(TrackRed),
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -245,9 +246,10 @@ private fun EditorTopBar(
             )
         }
 
+        val saveTextColor = if (isSystemInDarkTheme()) Color(0xFFFFFFFF) else TrackRed
         TextButton(
             onClick = onSave,
-            colors = ButtonDefaults.textButtonColors(contentColor = PrimaryForge)
+            colors = ButtonDefaults.textButtonColors(contentColor = saveTextColor)
         ) {
             Text(
                 text = "Save",

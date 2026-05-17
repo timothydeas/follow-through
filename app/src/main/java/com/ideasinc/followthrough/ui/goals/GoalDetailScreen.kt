@@ -69,7 +69,7 @@ import com.ideasinc.followthrough.data.CheckIn
 import com.ideasinc.followthrough.ui.launch.insightDisplayDurationMs
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
-import com.ideasinc.followthrough.ui.theme.PrimaryForge
+import com.ideasinc.followthrough.ui.theme.TrackRed
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -216,7 +216,7 @@ fun GoalDetailScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete",
+                        contentDescription = "Delete goal",
                         tint = Color(0xFFC0392B),
                         modifier = Modifier.size(22.dp)
                     )
@@ -248,9 +248,9 @@ fun GoalDetailScreen(
                     Button(
                         onClick = { if (!followedThrough) viewModel.followThrough() },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = PrimaryForge,
+                            containerColor = TrackRed,
                             contentColor = Color.White,
-                            disabledContainerColor = PrimaryForge,
+                            disabledContainerColor = TrackRed,
                             disabledContentColor = Color.White
                         ),
                         modifier = Modifier

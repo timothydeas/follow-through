@@ -10,6 +10,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,11 +69,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.R
 import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
+import com.ideasinc.followthrough.ui.theme.TrackRed
 
-private val ForgeColor = Color(0xFF9A3A1B)
-private val CreamBackground = Color(0xFFF5F2EC)
-private val BodyTextColor = Color(0xFF2C2C28)
-private val OnboardingSwitchTrack = Color(0xFF9A3A1B)
+private val ForgeColor = Color(0xFF9B3A2E)
+private val CreamBackground = Color(0xFFFFFFFF)
+private val BodyTextColor = Color(0xFF1A1A1A)
 
 private const val FADE_MS = 350
 
@@ -93,7 +94,7 @@ private fun ProgressDots(
         repeat(total) { idx ->
             val active = idx == currentIndex
             val color by animateColorAsState(
-                targetValue = if (active) ForgeColor else ForgeColor.copy(alpha = 0.25f),
+                targetValue = if (active) ForgeColor else Color(0xFF9B3A2E).copy(alpha = 0.65f),
                 animationSpec = tween(FADE_MS),
                 label = "dot-color-$idx"
             )
@@ -124,37 +125,9 @@ fun OnboardingScreen(
 
     var step by remember { mutableStateOf(0) }
     var biometricEnabled by remember { mutableStateOf(false) }
-    var showBiometricTooltip by remember { mutableStateOf(false) }
 
     val buttonFocus = remember { FocusRequester() }
-    val infoTriggerFocus = remember { FocusRequester() }
     LaunchedEffect(step) { runCatching { buttonFocus.requestFocus() } }
-
-    if (showBiometricTooltip) {
-        val tooltipFocus = remember { FocusRequester() }
-        LaunchedEffect(Unit) { runCatching { tooltipFocus.requestFocus() } }
-        AlertDialog(
-            onDismissRequest = {
-                showBiometricTooltip = false
-                runCatching { infoTriggerFocus.requestFocus() }
-            },
-            text = {
-                Text(
-                    text = "This uses your phone's existing security — face recognition, fingerprint, or PIN. No new password is created. If biometrics aren't set up on your device, you'll be prompted for your device PIN instead.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showBiometricTooltip = false
-                        runCatching { infoTriggerFocus.requestFocus() }
-                    },
-                    modifier = Modifier.focusRequester(tooltipFocus)
-                ) { Text("Got it") }
-            }
-        )
-    }
 
     // Swipe forward — mirrors Continue button behavior, but swiping past the last step is a no-op.
     val advanceFromSwipe: () -> Unit = {
@@ -219,7 +192,7 @@ fun OnboardingScreen(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                    contentDescription = "Follow Through app icon",
+                    contentDescription = null,
                     modifier = Modifier.size(130.dp)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -274,9 +247,7 @@ fun OnboardingScreen(
                                 1 -> Step1Body(
                                     biometricAvailable = biometricAvailable,
                                     biometricEnabled = biometricEnabled,
-                                    onBiometricChange = { biometricEnabled = it },
-                                    onShowTooltip = { showBiometricTooltip = true },
-                                    infoTriggerFocus = infoTriggerFocus
+                                    onBiometricChange = { biometricEnabled = it }
                                 )
                                 2 -> Step2Body()
                             }
@@ -341,9 +312,7 @@ private fun Step0Body() {
 private fun Step1Body(
     biometricAvailable: Boolean,
     biometricEnabled: Boolean,
-    onBiometricChange: (Boolean) -> Unit,
-    onShowTooltip: () -> Unit,
-    infoTriggerFocus: FocusRequester
+    onBiometricChange: (Boolean) -> Unit
 ) {
     if (biometricAvailable) {
         Row(
@@ -359,28 +328,15 @@ private fun Step1Body(
                 color = BodyTextColor,
                 modifier = Modifier.weight(1f)
             )
-            IconButton(
-                onClick = onShowTooltip,
-                modifier = Modifier
-                    .size(48.dp)
-                    .focusRequester(infoTriggerFocus)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "More information",
-                    tint = BodyTextColor.copy(alpha = 0.5f),
-                    modifier = Modifier.size(16.dp)
-                )
-            }
             Spacer(modifier = Modifier.width(8.dp))
             Switch(
                 checked = biometricEnabled,
                 onCheckedChange = onBiometricChange,
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
-                    checkedTrackColor = OnboardingSwitchTrack,
+                    checkedTrackColor = TrackRed,
                     uncheckedThumbColor = Color.White,
-                    uncheckedTrackColor = OnboardingSwitchTrack.copy(alpha = 0.5f),
+                    uncheckedTrackColor = if (isSystemInDarkTheme()) Color(0xFFBE8076) else TrackRed.copy(alpha = 0.65f),
                     uncheckedBorderColor = Color.Transparent
                 ),
                 modifier = Modifier.semantics {

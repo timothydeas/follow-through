@@ -13,8 +13,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,6 +39,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -60,7 +63,13 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -74,7 +83,7 @@ import com.ideasinc.followthrough.notifications.PREFS_REMINDERS
 import com.ideasinc.followthrough.notifications.ReminderScheduler
 import com.ideasinc.followthrough.notifications.canScheduleExactAlarmsCompat
 import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
-import com.ideasinc.followthrough.ui.theme.PrimaryForge
+import com.ideasinc.followthrough.ui.theme.TrackRed
 import java.util.Calendar
 import java.util.Locale
 import com.ideasinc.followthrough.navigation.KEY_BIOMETRIC_ENABLED
@@ -98,11 +107,7 @@ fun SettingsScreen(
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
     val remindersPrefs = remember { context.getSharedPreferences(PREFS_REMINDERS, Context.MODE_PRIVATE) }
     var biometricEnabled by remember { mutableStateOf(prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false)) }
-    var showBiometricTooltip by remember { mutableStateOf(false) }
-    var showRemindersTooltip by remember { mutableStateOf(false) }
     val backFocus = remember { FocusRequester() }
-    val biometricInfoFocus = remember { FocusRequester() }
-    val remindersInfoFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -208,58 +213,6 @@ fun SettingsScreen(
         )
     }
 
-    if (showRemindersTooltip) {
-        val confirmFocus = remember { FocusRequester() }
-        LaunchedEffect(Unit) { runCatching { confirmFocus.requestFocus() } }
-        AlertDialog(
-            onDismissRequest = {
-                showRemindersTooltip = false
-                runCatching { remindersInfoFocus.requestFocus() }
-            },
-            text = {
-                Text(
-                    "Reminders require notifications to be enabled for this app. Some older Android devices may deliver reminders at slightly different times due to battery optimization settings.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showRemindersTooltip = false
-                        runCatching { remindersInfoFocus.requestFocus() }
-                    },
-                    modifier = Modifier.focusRequester(confirmFocus)
-                ) { Text("Got it") }
-            }
-        )
-    }
-
-    if (showBiometricTooltip) {
-        val confirmFocus = remember { FocusRequester() }
-        LaunchedEffect(Unit) { runCatching { confirmFocus.requestFocus() } }
-        AlertDialog(
-            onDismissRequest = {
-                showBiometricTooltip = false
-                runCatching { biometricInfoFocus.requestFocus() }
-            },
-            text = {
-                Text(
-                    "This uses your phone's existing security — face recognition, fingerprint, or PIN. No new password is created. If biometrics aren't set up on your device, you'll be prompted for your device PIN instead.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showBiometricTooltip = false
-                        runCatching { biometricInfoFocus.requestFocus() }
-                    },
-                    modifier = Modifier.focusRequester(confirmFocus)
-                ) { Text("Got it") }
-            }
-        )
-    }
-
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -320,19 +273,6 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
-                    IconButton(
-                        onClick = { showBiometricTooltip = true },
-                        modifier = Modifier
-                            .size(48.dp)
-                            .focusRequester(biometricInfoFocus)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = "More information",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Switch(
@@ -341,6 +281,13 @@ fun SettingsScreen(
                         biometricEnabled = enabled
                         prefs.edit().putBoolean(KEY_BIOMETRIC_ENABLED, enabled).apply()
                     },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = TrackRed,
+                        uncheckedThumbColor = Color.White,
+                        uncheckedTrackColor = if (isSystemInDarkTheme()) Color(0xFFBE8076) else TrackRed.copy(alpha = 0.65f),
+                        uncheckedBorderColor = Color.Transparent
+                    ),
                     modifier = Modifier.semantics {
                         contentDescription =
                             "Lock Follow Through with Face ID or Device PIN"
@@ -396,19 +343,6 @@ fun SettingsScreen(
                             .weight(1f)
                             .semantics { heading() }
                     )
-                    IconButton(
-                        onClick = { showRemindersTooltip = true },
-                        modifier = Modifier
-                            .size(48.dp)
-                            .focusRequester(remindersInfoFocus)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = "More information",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
                 }
 
                 Row(
@@ -447,6 +381,13 @@ fun SettingsScreen(
                                 } catch (_: Exception) { /* ignore */ }
                             }
                         },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = TrackRed,
+                            uncheckedThumbColor = Color.White,
+                            uncheckedTrackColor = if (isSystemInDarkTheme()) Color(0xFFBE8076) else TrackRed.copy(alpha = 0.65f),
+                            uncheckedBorderColor = Color.Transparent
+                        ),
                         modifier = Modifier.semantics {
                             contentDescription = "Enable reminders"
                             stateDescription = if (uiState.remindersEnabled) "On" else "Off"
@@ -495,7 +436,7 @@ fun SettingsScreen(
                         )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             val days = listOf(
                                 Triple(Calendar.MONDAY, "M", "Monday"),
@@ -525,12 +466,13 @@ fun SettingsScreen(
                                         }
                                     },
                                     modifier = Modifier
-                                        .size(36.dp)
+                                        .defaultMinSize(minWidth = 44.dp, minHeight = 44.dp)
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(if (selected) PrimaryForge else MaterialTheme.colorScheme.surfaceVariant)
+                                        .background(if (selected) TrackRed else MaterialTheme.colorScheme.surfaceVariant)
                                         .semantics {
                                             contentDescription = fullName
                                             stateDescription = if (selected) "Selected" else "Not selected"
+                                            role = Role.Button
                                         },
                                     contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
                                 ) {
@@ -574,27 +516,26 @@ fun SettingsScreen(
                     )
                 }
 
+                val primaryColor = if (isSystemInDarkTheme()) Color(0xFFBE8076) else MaterialTheme.colorScheme.primary
+                val privacyText = buildAnnotatedString {
+                    withLink(
+                        LinkAnnotation.Url(
+                            url = "https://timothydeas.github.io/follow-through/privacy-policy.html",
+                            styles = TextLinkStyles(style = SpanStyle(color = primaryColor, textDecoration = TextDecoration.Underline))
+                        )
+                    ) {
+                        append("Privacy Policy")
+                    }
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable(
-                            onClickLabel = "Open privacy policy",
-                            role = Role.Button,
-                            onClick = {
-                                val intent = Intent(
-                                    Intent.ACTION_VIEW,
-                                    Uri.parse("https://timothydeas.github.io/follow-through/privacy-policy.html")
-                                ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-                                runCatching { context.startActivity(intent) }
-                            }
-                        )
                         .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Privacy Policy",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        text = privacyText,
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
 
@@ -725,19 +666,25 @@ private fun openAppNotificationSettings(context: Context) {
 @Composable
 private fun TimePickerButton(hour: Int, minute: Int, onTimeSelected: (Int, Int) -> Unit) {
     val context = LocalContext.current
-    TextButton(onClick = {
-        try {
-            TimePickerDialog(
-                context,
-                { _, h, m -> onTimeSelected(h, m) },
-                hour, minute, false
-            ).show()
-        } catch (_: Exception) { /* OEM theme issue — silent */ }
-    }) {
+    val timeLabel = formatTime(hour, minute)
+    TextButton(
+        onClick = {
+            try {
+                TimePickerDialog(
+                    context,
+                    { _, h, m -> onTimeSelected(h, m) },
+                    hour, minute, false
+                ).show()
+            } catch (_: Exception) { /* OEM theme issue — silent */ }
+        },
+        modifier = Modifier.semantics {
+            contentDescription = "Reminder time, $timeLabel, double-tap to change"
+        }
+    ) {
         Text(
-            text = formatTime(hour, minute),
+            text = timeLabel,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary
+            color = if (isSystemInDarkTheme()) Color(0xFFFFFFFF) else MaterialTheme.colorScheme.primary
         )
     }
 }

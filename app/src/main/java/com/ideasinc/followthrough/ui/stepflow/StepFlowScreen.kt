@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
-import com.ideasinc.followthrough.ui.theme.PrimaryForge
+import com.ideasinc.followthrough.ui.theme.TrackRed
 import kotlinx.coroutines.delay
 
 @Composable
@@ -171,7 +171,7 @@ private fun StepBottomBar(currentStep: Int, onNext: () -> Unit, onSave: () -> Un
     ) {
         Button(
             onClick = if (currentStep == 5) onSave else onNext,
-            colors = ButtonDefaults.buttonColors(containerColor = PrimaryForge)
+            colors = ButtonDefaults.buttonColors(containerColor = TrackRed)
         ) {
             Text(
                 text = if (currentStep == 5) "Save" else "Next",
@@ -226,17 +226,6 @@ private fun StepContent(
     onImplementationIntentionChange: (String) -> Unit
 ) {
     val meta = stepMeta[step - 1]
-    var showTooltip by remember(step) { mutableStateOf(false) }
-
-    if (showTooltip) {
-        AlertDialog(
-            onDismissRequest = { showTooltip = false },
-            text = { Text(meta.tooltip, style = MaterialTheme.typography.bodyMedium) },
-            confirmButton = {
-                TextButton(onClick = { showTooltip = false }) { Text("Got it") }
-            }
-        )
-    }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -250,17 +239,6 @@ private fun StepContent(
                 .weight(1f)
                 .semantics { heading() }
         )
-        IconButton(
-            onClick = { showTooltip = true },
-            modifier = Modifier.size(48.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Info,
-                contentDescription = "More information",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
-            )
-        }
     }
 
     Spacer(modifier = Modifier.height(24.dp))
@@ -313,7 +291,7 @@ private fun LargeTextField(
                 fontFamily = DmSansFontFamily,
                 color = MaterialTheme.colorScheme.onSurface
             ),
-            cursorBrush = SolidColor(PrimaryForge),
+            cursorBrush = SolidColor(TrackRed),
             modifier = Modifier.fillMaxWidth()
         )
     }

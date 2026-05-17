@@ -2,6 +2,7 @@
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,10 +45,10 @@ import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
 import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
-import com.ideasinc.followthrough.ui.theme.PrimaryForge
+import com.ideasinc.followthrough.ui.theme.TrackRed
 import kotlinx.coroutines.delay
 
-private val ReassuranceBg = Color(0xFFA8431E)
+private val ReassuranceBg = Color(0xFF9B3A2E)
 
 @Composable
 fun FollowThroughEntryScreen(
@@ -80,10 +81,11 @@ fun FollowThroughEntryScreen(
                         )
                     }
                     Spacer(modifier = Modifier.weight(1f))
+                    val saveTextColor = if (isSystemInDarkTheme()) Color(0xFFFFFFFF) else TrackRed
                     TextButton(
                         onClick = viewModel::save,
                         colors = ButtonDefaults.textButtonColors(
-                            contentColor = PrimaryForge
+                            contentColor = saveTextColor
                         )
                     ) {
                         Text(
@@ -135,7 +137,7 @@ fun FollowThroughEntryScreen(
                             fontFamily = DmSansFontFamily,
                             color = MaterialTheme.colorScheme.onSurface
                         ),
-                        cursorBrush = SolidColor(PrimaryForge),
+                        cursorBrush = SolidColor(TrackRed),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
