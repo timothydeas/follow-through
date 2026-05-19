@@ -4,6 +4,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -117,7 +118,7 @@ fun GoalDetailScreen(
             confirmButton = {
                 TextButton(
                     onClick = { showDeleteDialog = false; viewModel.deleteGoal() },
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFCC0000)),
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFC0392B)),
                     modifier = Modifier.focusRequester(confirmFocus)
                 ) { Text("Delete") }
             },
@@ -126,7 +127,10 @@ fun GoalDetailScreen(
                     onClick = {
                         showDeleteDialog = false
                         runCatching { deleteTriggerFocus.requestFocus() }
-                    }
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = if (isSystemInDarkTheme()) Color(0xFFFFFFFF) else TrackRed
+                    )
                 ) { Text("Cancel") }
             }
         )
@@ -152,16 +156,26 @@ fun GoalDetailScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.saveGoalEdit()
-                    runCatching { editTriggerFocus.requestFocus() }
-                }) { Text("Save") }
+                TextButton(
+                    onClick = {
+                        viewModel.saveGoalEdit()
+                        runCatching { editTriggerFocus.requestFocus() }
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = if (isSystemInDarkTheme()) Color(0xFFFFFFFF) else TrackRed
+                    )
+                ) { Text("Save") }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    viewModel.dismissEditDialog()
-                    runCatching { editTriggerFocus.requestFocus() }
-                }) { Text("Cancel") }
+                TextButton(
+                    onClick = {
+                        viewModel.dismissEditDialog()
+                        runCatching { editTriggerFocus.requestFocus() }
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = if (isSystemInDarkTheme()) Color(0xFFFFFFFF) else TrackRed
+                    )
+                ) { Text("Cancel") }
             }
         )
     }

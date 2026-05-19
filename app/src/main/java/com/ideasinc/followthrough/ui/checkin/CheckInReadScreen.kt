@@ -1,6 +1,7 @@
 ﻿package com.ideasinc.followthrough.ui.checkin
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -80,15 +81,20 @@ fun CheckInReadScreen(
             confirmButton = {
                 TextButton(
                     onClick = { showDeleteDialog = false; viewModel.delete() },
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFCC0000)),
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFC0392B)),
                     modifier = Modifier.focusRequester(confirmFocus)
                 ) { Text("Delete") }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    showDeleteDialog = false
-                    runCatching { deleteTriggerFocus.requestFocus() }
-                }) { Text("Cancel") }
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        runCatching { deleteTriggerFocus.requestFocus() }
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = if (isSystemInDarkTheme()) Color(0xFFFFFFFF) else TrackRed
+                    )
+                ) { Text("Cancel") }
             }
         )
     }

@@ -208,6 +208,9 @@ fun ListScreen(
             }
 
             if (uiState.streakDays > 0 || uiState.totalFollowThroughs > 0) {
+                val statsRowA11y = "Check-In Streak ${uiState.streakDays}, " +
+                    "Follow Throughs ${uiState.totalFollowThroughs}. " +
+                    "Double tap to view full stats."
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -216,7 +219,9 @@ fun ListScreen(
                             role = Role.Button,
                             onClick = onStatsClick
                         )
-                        .semantics(mergeDescendants = true) { }
+                        .semantics(mergeDescendants = true) {
+                            contentDescription = statsRowA11y
+                        }
                         .padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(20.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -238,7 +243,7 @@ fun ListScreen(
                     Spacer(modifier = Modifier.weight(1f))
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = null,
+                        contentDescription = "View full stats",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )
