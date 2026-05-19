@@ -540,10 +540,24 @@ fun SettingsScreen(
                 }
 
                 Text(
-                    text = "All data stays on your device. We collect nothing.",
+                    text = "Your data is stored only on your device. We do not access or store it. If you switch phones or reinstall the app, your data may be lost and cannot be recovered by us.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                )
+
+                Text(
+                    text = "Follow Through is not a substitute for professional medical, psychological, or coaching advice.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+
+                Text(
+                    text = "Follow Through uses research-backed questions to support personal reflection. All questions are optional and fully customizable — you are always in control.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
 

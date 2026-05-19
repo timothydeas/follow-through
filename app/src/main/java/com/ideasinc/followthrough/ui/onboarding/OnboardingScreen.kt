@@ -72,7 +72,7 @@ import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
 import com.ideasinc.followthrough.ui.theme.TrackRed
 
 private val ForgeColor = Color(0xFF9B3A2E)
-private val CreamBackground = Color(0xFFFFFFFF)
+private val ContentBackground = Color(0xFFFFFFFF)
 private val BodyTextColor = Color(0xFF1A1A1A)
 
 private const val FADE_MS = 350
@@ -180,11 +180,11 @@ fun OnboardingScreen(
                 }
             }
     ) {
-        // Fixed header — forge background, icon + title, ~35% of screen, never animates
+        // Fixed header — forge background, icon + title, ~58% of screen, never animates
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(0.35f)
+                .weight(0.58f)
                 .statusBarsPadding()
                 .padding(horizontal = 32.dp),
             contentAlignment = Alignment.Center
@@ -208,19 +208,19 @@ fun OnboardingScreen(
             }
         }
 
-        // Content section — cream background, body crossfades between steps
+        // Content section — white background, body crossfades between steps
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(0.65f)
-                .background(CreamBackground)
+                .weight(0.42f)
+                .background(ContentBackground)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .navigationBarsPadding()
                     .padding(horizontal = 32.dp)
-                    .padding(top = 32.dp, bottom = 28.dp),
+                    .padding(top = 8.dp, bottom = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Box(
@@ -298,7 +298,7 @@ fun OnboardingScreen(
 @Composable
 private fun Step0Body() {
     Text(
-        text = "Keep making progress toward your goals despite setbacks, negative experiences, and self-doubt.",
+        text = "Goals & Desired Changes",
         fontFamily = PoppinsFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
@@ -351,25 +351,13 @@ private fun Step1Body(
 
 @Composable
 private fun Step2Body() {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = "Your data stays with you",
-            fontFamily = PoppinsFontFamily,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 24.sp,
-            color = BodyTextColor,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.semantics { heading() }
-        )
-        Spacer(modifier = Modifier.height(20.dp))
-        Text(
-            text = "Everything you write in Follow Through is stored privately on this device only. No one else can see it — not us, not anyone.\n\nTo keep your data safe, back up your device regularly through your Android backup settings.\n\nIf you switch to a new phone and restore from a backup, your data should transfer. If not, it will not be recoverable — so back up often.",
-            fontFamily = PoppinsFontFamily,
-            fontWeight = FontWeight.Normal,
-            fontSize = 15.sp,
-            lineHeight = 24.sp,
-            color = BodyTextColor,
-            textAlign = TextAlign.Center
-        )
-    }
+    Text(
+        text = "Your data is stored only on your device. We do not access it.",
+        fontFamily = PoppinsFontFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 16.sp,
+        lineHeight = 26.sp,
+        color = BodyTextColor,
+        textAlign = TextAlign.Center
+    )
 }
