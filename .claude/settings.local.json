@@ -91,7 +91,8 @@
       "Bash(dir C:UsersssdeaGroundedApp *)",
       "Bash(./gradlew compileDebugKotlin --console=plain)",
       "Bash(./gradlew :app:compileDebugKotlin -x mergeDebugResources -x processDebugResources --console=plain)",
-      "Bash(./gradlew :app:assembleDebug --console=plain)"
+      "Bash(./gradlew :app:assembleDebug --console=plain)",
+      "Bash(./gradlew.bat compileDebugKotlin --console=plain)"
     ]
   }
 }

@@ -1,8 +1,10 @@
 package com.ideasinc.followthrough.ui.launch
 
+import android.content.Context
 import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
+import android.view.accessibility.AccessibilityManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -21,7 +23,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -31,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.R
+import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
 
 const val KEY_LAST_INSIGHT_INDEX = "last_insight_index"
@@ -46,7 +49,8 @@ val LAUNCH_INSIGHTS = listOf(
     "The more personally meaningful a goal feels — even a necessary one — the more likely you are to follow through on it. Finding your own reason to want it makes all the difference.",
     "What you expect from yourself has a way of becoming what you do. Believing change is possible is often what makes it possible.",
     "The moment you feel like quitting is usually the moment right before the breakthrough. Don't let the obvious insights of hindsight be the only time you recognize your own progress.",
-    "Persist through the unknown until it becomes the obvious."
+    "Persist through the unknown until it becomes the obvious.",
+    "To achieve your goals, remember how they feel. Draw on the genuine emotions of past experiences that make you feel strong and capable, and bring that genuine energy to the task."
 )
 
 /**
@@ -74,21 +78,28 @@ internal fun insightDisplayDurationMs(text: String): Long {
     return withBuffer.coerceIn(3_000L, 8_000L)
 }
 
-private val ForgeBrown = Color(0xFF9B3A2E)
-
 @Composable
 fun LaunchInsightScreen(text: String, onDismiss: () -> Unit) {
+    val forgeBg = AppColors.ForgeBackground
+    val forgeOn = AppColors.OnForgeBackground
     // Capture the insight once so the timer keys off a stable value.
     val insightText = remember { text }
+    val context = LocalContext.current
 
     // Auto-dismiss via a plain Handler so the countdown lives outside the
     // composition — no LaunchedEffect, no coroutine state, nothing that
     // could trigger recomposition during the countdown. TalkBack discovers
     // the content naturally via clearAndSetSemantics contentDescription.
+    // When an accessibility service is active the timer is skipped entirely so
+    // the user can read at their own pace and dismiss with a tap.
     DisposableEffect(Unit) {
+        val a11yManager =
+            context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
         val handler = Handler(Looper.getMainLooper())
         val runnable = Runnable { onDismiss() }
-        handler.postDelayed(runnable, insightDisplayDurationMs(insightText))
+        if (a11yManager?.isEnabled != true) {
+            handler.postDelayed(runnable, insightDisplayDurationMs(insightText))
+        }
         onDispose {
             handler.removeCallbacks(runnable)
         }
@@ -100,7 +111,7 @@ fun LaunchInsightScreen(text: String, onDismiss: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(ForgeBrown)
+            .background(forgeBg)
             .clickable(onClickLabel = "Continue", onClick = onDismiss)
             // Whole screen is one opaque accessibility node so TalkBack
             // reads only the insight text — not the icon, title, or caption.
@@ -131,7 +142,7 @@ fun LaunchInsightScreen(text: String, onDismiss: () -> Unit) {
             Spacer(Modifier.height(16.dp))
             Text(
                 text = "Follow Through",
-                color = Color.White,
+                color = forgeOn,
                 fontFamily = PoppinsFontFamily,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 28.sp,
@@ -140,7 +151,7 @@ fun LaunchInsightScreen(text: String, onDismiss: () -> Unit) {
             Spacer(Modifier.weight(1f))
             Text(
                 text = insightText,
-                color = Color.White,
+                color = forgeOn,
                 fontFamily = PoppinsFontFamily,
                 fontWeight = FontWeight.Normal,
                 fontSize = 18.sp,
@@ -150,7 +161,7 @@ fun LaunchInsightScreen(text: String, onDismiss: () -> Unit) {
             Spacer(Modifier.weight(1f))
             Text(
                 text = "Tap anywhere to continue",
-                color = Color.White,
+                color = forgeOn,
                 fontFamily = PoppinsFontFamily,
                 fontWeight = FontWeight.Normal,
                 fontSize = 13.sp,

@@ -1,5 +1,6 @@
 ﻿package com.ideasinc.followthrough.ui.checkin
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -15,19 +16,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,29 +35,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
+import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
-import com.ideasinc.followthrough.ui.theme.TrackRed
 
 @Composable
 fun CheckInFlowScreen(
@@ -81,6 +77,31 @@ fun CheckInFlowScreen(
     val currentConfig: QuestionConfig? =
         if (onCurrentStep) uiState.questionConfigs[enabled[uiState.currentStepIndex]] else null
     val isLast = onCurrentStep && uiState.currentStepIndex == enabled.size - 1
+
+    // Intercept the system back gesture only while answers exist — otherwise
+    // back navigation proceeds normally and pops the flow.
+    BackHandler(enabled = uiState.hasAnswers()) {
+        viewModel.onSystemBack()
+    }
+
+    if (uiState.showDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = viewModel::onKeepWriting,
+            text = { Text("Discard your answers?", style = MaterialTheme.typography.bodyMedium) },
+            confirmButton = {
+                TextButton(
+                    onClick = viewModel::onDiscard,
+                    colors = ButtonDefaults.textButtonColors(contentColor = AppColors.Destructive)
+                ) { Text("Discard") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = viewModel::onKeepWriting,
+                    colors = ButtonDefaults.textButtonColors(contentColor = AppColors.BrandAccentText)
+                ) { Text("Keep Writing") }
+            }
+        )
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -125,21 +146,6 @@ fun CheckInFlowScreen(
                         )
                     }
                 }
-                if (uiState.goalTitle.isNotBlank()) {
-                    Text(
-                        text = uiState.goalTitle,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontFamily = DmSansFontFamily
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp)
-                            .padding(bottom = 8.dp)
-                    )
-                }
             }
         },
         bottomBar = {
@@ -156,7 +162,10 @@ fun CheckInFlowScreen(
                 ) {
                     Button(
                         onClick = if (isLast) viewModel::onSave else viewModel::onNext,
-                        colors = ButtonDefaults.buttonColors(containerColor = TrackRed)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     ) {
                         Text(
                             if (isLast) "Save" else "Next",
@@ -214,30 +223,21 @@ private fun ColumnScope.StepContent(
                 indication = null
             ) { fieldFocus.requestFocus() }
     ) {
-        val placeholder = ""
-        if (value.isEmpty() && placeholder.isNotBlank()) {
-            Text(
-                text = placeholder,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontFamily = DmSansFontFamily,
-                    fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-        }
-        BasicTextField(
+        OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                fontFamily = DmSansFontFamily,
-                color = MaterialTheme.colorScheme.onSurface
-            ),
-            cursorBrush = SolidColor(TrackRed),
+            placeholder = { Text(placeholderFor(config.key)) },
+            textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = DmSansFontFamily),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = Color.Transparent
+            ),
             modifier = Modifier
                 .fillMaxSize()
                 .focusRequester(fieldFocus)
-                .semantics { contentDescription = config.label }
         )
     }
 }

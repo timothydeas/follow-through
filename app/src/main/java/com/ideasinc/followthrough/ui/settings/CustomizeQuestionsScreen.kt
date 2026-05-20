@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ideasinc.followthrough.di.AppContainer
+import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
 
 @Composable
@@ -76,15 +78,24 @@ fun CustomizeQuestionsScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = settingsVm::saveLabel) { Text("Save") }
+                TextButton(
+                    onClick = settingsVm::saveLabel,
+                    colors = ButtonDefaults.textButtonColors(contentColor = AppColors.BrandAccentText)
+                ) { Text("Save") }
             },
             dismissButton = {
                 Row {
                     val key = uiState.editingKey!!
-                    TextButton(onClick = { settingsVm.resetLabel(key); settingsVm.cancelEditing() }) {
+                    TextButton(
+                        onClick = { settingsVm.resetLabel(key); settingsVm.cancelEditing() },
+                        colors = ButtonDefaults.textButtonColors(contentColor = AppColors.BrandAccentText)
+                    ) {
                         Text("Reset to default")
                     }
-                    TextButton(onClick = settingsVm::cancelEditing) { Text("Cancel") }
+                    TextButton(
+                        onClick = settingsVm::cancelEditing,
+                        colors = ButtonDefaults.textButtonColors(contentColor = AppColors.BrandAccentText)
+                    ) { Text("Cancel") }
                 }
             }
         )
@@ -153,11 +164,13 @@ fun CustomizeQuestionsScreen(
                         }
                         IconButton(
                             onClick = { settingsVm.startEditing(config.key) },
-                            modifier = Modifier.size(48.dp)
+                            modifier = Modifier
+                                .size(48.dp)
+                                .semantics { contentDescription = "Edit ${config.label}" }
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Edit,
-                                contentDescription = "Edit",
+                                contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(18.dp)
                             )

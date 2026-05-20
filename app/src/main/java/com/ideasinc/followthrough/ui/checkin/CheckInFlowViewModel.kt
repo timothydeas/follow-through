@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.ideasinc.followthrough.data.CheckIn
 import com.ideasinc.followthrough.data.CheckInDao
-import com.ideasinc.followthrough.data.GoalDao
 import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
 import com.ideasinc.followthrough.data.QuestionLabelDao
@@ -20,7 +19,6 @@ import java.util.UUID
 
 data class CheckInFlowUiState(
     val goalId: String = "",
-    val goalTitle: String = "",
     val checkInId: String = UUID.randomUUID().toString(),
     val questionConfigs: List<QuestionConfig> = emptyList(),
     // Index into the enabled-step list. After the last enabled step the
@@ -33,9 +31,16 @@ data class CheckInFlowUiState(
     val competingPriority: String = "",
     val implementationIntention: String = "",
     val accountability: String = "",
+    val showDiscardDialog: Boolean = false,
     val shouldExit: Boolean = false,
     val didSave: Boolean = false
 )
+
+/** True once the user has typed any answer — used to gate the discard prompt. */
+internal fun CheckInFlowUiState.hasAnswers(): Boolean =
+    goalOrChange.isNotBlank() || avoiding.isNotBlank() || confidence.isNotBlank() ||
+        madeProgress.isNotBlank() || competingPriority.isNotBlank() ||
+        implementationIntention.isNotBlank() || accountability.isNotBlank()
 
 /**
  * Indices into [CheckInFlowUiState.questionConfigs] that should appear as
@@ -52,7 +57,6 @@ internal fun CheckInFlowUiState.activeStepIndices(): List<Int> =
 class CheckInFlowViewModel(
     private val checkInDao: CheckInDao,
     private val questionLabelDao: QuestionLabelDao,
-    private val goalDao: GoalDao,
     private val goalId: String
 ) : ViewModel() {
 
@@ -65,9 +69,7 @@ class CheckInFlowViewModel(
     init {
         viewModelScope.launch {
             val labels = questionLabelDao.getAllLabels().first()
-            val configs = resolveConfigs(labels)
-            val title = goalDao.getGoalById(goalId)?.title.orEmpty()
-            _uiState.update { it.copy(questionConfigs = configs, goalTitle = title) }
+            _uiState.update { it.copy(questionConfigs = resolveConfigs(labels)) }
         }
     }
 
@@ -97,9 +99,25 @@ class CheckInFlowViewModel(
     fun onBack() {
         val state = _uiState.value
         if (state.currentStepIndex == 0) {
-            _uiState.update { it.copy(shouldExit = true) }
+            // Backing out of the flow — confirm only if answers would be lost.
+            if (state.hasAnswers()) {
+                _uiState.update { it.copy(showDiscardDialog = true) }
+            } else {
+                _uiState.update { it.copy(shouldExit = true) }
+            }
         } else {
             _uiState.update { it.copy(currentStepIndex = state.currentStepIndex - 1) }
+        }
+    }
+
+    fun onKeepWriting() = _uiState.update { it.copy(showDiscardDialog = false) }
+
+    fun onDiscard() = _uiState.update { it.copy(showDiscardDialog = false, shouldExit = true) }
+
+    /** Android system back gesture — confirm before discarding typed answers. */
+    fun onSystemBack() {
+        if (_uiState.value.hasAnswers()) {
+            _uiState.update { it.copy(showDiscardDialog = true) }
         }
     }
 
@@ -130,12 +148,11 @@ class CheckInFlowViewModel(
     class Factory(
         private val checkInDao: CheckInDao,
         private val questionLabelDao: QuestionLabelDao,
-        private val goalDao: GoalDao,
         private val goalId: String
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            CheckInFlowViewModel(checkInDao, questionLabelDao, goalDao, goalId) as T
+            CheckInFlowViewModel(checkInDao, questionLabelDao, goalId) as T
     }
 }
 

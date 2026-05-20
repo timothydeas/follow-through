@@ -7,6 +7,9 @@ import com.ideasinc.followthrough.data.CheckIn
 import com.ideasinc.followthrough.data.CheckInDao
 import com.ideasinc.followthrough.data.Goal
 import com.ideasinc.followthrough.data.GoalDao
+import com.ideasinc.followthrough.data.QuestionConfig
+import com.ideasinc.followthrough.data.QuestionLabelDao
+import com.ideasinc.followthrough.data.resolveConfigs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,16 +20,17 @@ import kotlinx.coroutines.launch
 data class GoalDetailUiState(
     val goal: Goal? = null,
     val checkIns: List<CheckIn> = emptyList(),
+    val questionConfigs: List<QuestionConfig> = emptyList(),
     val shouldNavigateToList: Boolean = false,
     val showEditDialog: Boolean = false,
     val editTitle: String = "",
-    val editAccountableTo: String = "",
     val showReassurance: Boolean = false
 )
 
 class GoalDetailViewModel(
     private val goalDao: GoalDao,
     private val checkInDao: CheckInDao,
+    private val questionLabelDao: QuestionLabelDao,
     private val goalId: String
 ) : ViewModel() {
 
@@ -37,11 +41,14 @@ class GoalDetailViewModel(
         viewModelScope.launch {
             combine(
                 goalDao.getGoalByIdAsFlow(goalId),
-                checkInDao.getCheckInsForGoal(goalId)
-            ) { goal, checkIns ->
-                Pair(goal, checkIns)
-            }.collect { (goal, checkIns) ->
-                _uiState.update { it.copy(goal = goal, checkIns = checkIns) }
+                checkInDao.getCheckInsForGoal(goalId),
+                questionLabelDao.getAllLabels()
+            ) { goal, checkIns, labels ->
+                Triple(goal, checkIns, resolveConfigs(labels))
+            }.collect { (goal, checkIns, configs) ->
+                _uiState.update {
+                    it.copy(goal = goal, checkIns = checkIns, questionConfigs = configs)
+                }
             }
         }
     }
@@ -49,27 +56,23 @@ class GoalDetailViewModel(
     fun showEditDialog() {
         val goal = _uiState.value.goal ?: return
         _uiState.update {
-            it.copy(
-                showEditDialog = true,
-                editTitle = goal.title,
-                editAccountableTo = goal.accountableTo ?: ""
-            )
+            it.copy(showEditDialog = true, editTitle = goal.title)
         }
     }
 
     fun dismissEditDialog() = _uiState.update { it.copy(showEditDialog = false) }
 
     fun onEditTitleChange(value: String) = _uiState.update { it.copy(editTitle = value) }
-    fun onEditAccountableToChange(value: String) = _uiState.update { it.copy(editAccountableTo = value) }
 
     fun saveGoalEdit() {
         viewModelScope.launch {
             val goal = _uiState.value.goal ?: return@launch
             val title = _uiState.value.editTitle.trim().ifBlank { return@launch }
+            // Preserve the existing accountableTo on the entity; the edit dialog
+            // no longer surfaces it.
             goalDao.updateGoal(
                 goal.copy(
                     title = title,
-                    accountableTo = _uiState.value.editAccountableTo.trim().ifBlank { null },
                     updatedAt = System.currentTimeMillis()
                 )
             )
@@ -105,10 +108,11 @@ class GoalDetailViewModel(
     class Factory(
         private val goalDao: GoalDao,
         private val checkInDao: CheckInDao,
+        private val questionLabelDao: QuestionLabelDao,
         private val goalId: String
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            GoalDetailViewModel(goalDao, checkInDao, goalId) as T
+            GoalDetailViewModel(goalDao, checkInDao, questionLabelDao, goalId) as T
     }
 }

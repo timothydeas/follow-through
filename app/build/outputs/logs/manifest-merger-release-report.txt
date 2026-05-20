@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:2:1-47:12
-INJECTED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:2:1-47:12
-INJECTED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:2:1-47:12
-INJECTED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:2:1-47:12
+ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:2:1-46:12
+INJECTED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:2:1-46:12
+INJECTED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:2:1-46:12
+INJECTED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:2:1-46:12
 MERGED from [androidx.biometric:biometric:1.1.0] C:\Users\ssdea\.gradle\caches\8.9\transforms\e8774e161a3f1d31687cd635a453b5aa\transformed\biometric-1.1.0\AndroidManifest.xml:17:1-29:12
 MERGED from [androidx.navigation:navigation-common:2.8.3] C:\Users\ssdea\.gradle\caches\8.9\transforms\7a581fcfabccdea2e6c39a12edd9e713\transformed\navigation-common-2.8.3\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.navigation:navigation-runtime:2.8.3] C:\Users\ssdea\.gradle\caches\8.9\transforms\797ccad214662700f1faf68756514a21\transformed\navigation-runtime-2.8.3\AndroidManifest.xml:17:1-22:12
@@ -96,8 +96,8 @@ ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:6:5-81
 	android:name
 		ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:6:22-78
 application
-ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:8:5-45:19
-INJECTED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:8:5-45:19
+ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:8:5-44:19
+INJECTED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:8:5-44:19
 MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\ssdea\.gradle\caches\8.9\transforms\9fe1982b830881ec758602ae3785b2c2\transformed\emoji2-1.3.0\AndroidManifest.xml:23:5-33:19
 MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\ssdea\.gradle\caches\8.9\transforms\9fe1982b830881ec758602ae3785b2c2\transformed\emoji2-1.3.0\AndroidManifest.xml:23:5-33:19
 MERGED from [androidx.lifecycle:lifecycle-process:2.8.6] C:\Users\ssdea\.gradle\caches\8.9\transforms\dd1bd7b0cdcb7bf1747d929008101e65\transformed\lifecycle-process-2.8.6\AndroidManifest.xml:23:5-33:19
@@ -163,25 +163,21 @@ ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:31:17-85
 	android:name
 		ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:31:25-82
 receiver#com.ideasinc.followthrough.notifications.BootReceiver
-ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:35:9-43:20
+ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:35:9-42:20
 	android:exported
 		ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:37:13-36
 	android:name
 		ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:36:13-55
-intent-filter#action:name:android.intent.action.BOOT_COMPLETED+action:name:android.intent.action.LOCKED_BOOT_COMPLETED+action:name:android.intent.action.QUICKBOOT_POWERON
-ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:38:13-42:29
+intent-filter#action:name:android.intent.action.BOOT_COMPLETED+action:name:android.intent.action.QUICKBOOT_POWERON
+ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:38:13-41:29
 action#android.intent.action.BOOT_COMPLETED
 ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:39:17-79
 	android:name
 		ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:39:25-76
-action#android.intent.action.LOCKED_BOOT_COMPLETED
-ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:40:17-86
-	android:name
-		ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:40:25-83
 action#android.intent.action.QUICKBOOT_POWERON
-ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:41:17-82
+ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:40:17-82
 	android:name
-		ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:41:25-79
+		ADDED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml:40:25-79
 uses-sdk
 INJECTED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from C:\Users\ssdea\GroundedApp\app\src\main\AndroidManifest.xml

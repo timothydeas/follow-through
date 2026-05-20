@@ -60,6 +60,7 @@ com.ideasinc.followthrough.app-pngs-58 C:\Users\ssdea\GroundedApp\app\build\gene
 com.ideasinc.followthrough.app-resValues-59 C:\Users\ssdea\GroundedApp\app\build\generated\res\resValues\release
 com.ideasinc.followthrough.app-packageReleaseResources-60 C:\Users\ssdea\GroundedApp\app\build\intermediates\incremental\release\packageReleaseResources\merged.dir
 com.ideasinc.followthrough.app-packageReleaseResources-61 C:\Users\ssdea\GroundedApp\app\build\intermediates\incremental\release\packageReleaseResources\stripped.dir
-com.ideasinc.followthrough.app-release-62 C:\Users\ssdea\GroundedApp\app\build\intermediates\merged_res\release\mergeReleaseResources
-com.ideasinc.followthrough.app-main-63 C:\Users\ssdea\GroundedApp\app\src\main\res
-com.ideasinc.followthrough.app-release-64 C:\Users\ssdea\GroundedApp\app\src\release\res
+com.ideasinc.followthrough.app-merged-not-compiled-resources-62 C:\Users\ssdea\GroundedApp\app\build\intermediates\merged-not-compiled-resources\release
+com.ideasinc.followthrough.app-release-63 C:\Users\ssdea\GroundedApp\app\build\intermediates\merged_res\release\mergeReleaseResources
+com.ideasinc.followthrough.app-main-64 C:\Users\ssdea\GroundedApp\app\src\main\res
+com.ideasinc.followthrough.app-release-65 C:\Users\ssdea\GroundedApp\app\src\release\res

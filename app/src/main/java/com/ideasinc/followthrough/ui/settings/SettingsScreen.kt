@@ -13,14 +13,16 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -38,6 +40,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -49,6 +54,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,8 +88,9 @@ import com.ideasinc.followthrough.di.AppContainer
 import com.ideasinc.followthrough.notifications.PREFS_REMINDERS
 import com.ideasinc.followthrough.notifications.ReminderScheduler
 import com.ideasinc.followthrough.notifications.canScheduleExactAlarmsCompat
+import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
-import com.ideasinc.followthrough.ui.theme.TrackRed
+import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Locale
 import com.ideasinc.followthrough.navigation.KEY_BIOMETRIC_ENABLED
@@ -108,6 +115,9 @@ fun SettingsScreen(
     val remindersPrefs = remember { context.getSharedPreferences(PREFS_REMINDERS, Context.MODE_PRIVATE) }
     var biometricEnabled by remember { mutableStateOf(prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false)) }
     val backFocus = remember { FocusRequester() }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
+    val permissionDeniedMessage = "Permission required. Please enable in Settings."
     LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -165,6 +175,12 @@ fun SettingsScreen(
         } else {
             remindersPrefs.edit().putBoolean(KEY_REMINDERS_PENDING_PERMISSION, false).apply()
             showNotificationDeniedDialog = true
+            snackbarScope.launch {
+                snackbarHostState.showSnackbar(
+                    message = permissionDeniedMessage,
+                    duration = SnackbarDuration.Short
+                )
+            }
         }
     }
 
@@ -215,6 +231,7 @@ fun SettingsScreen(
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Row(
                 modifier = Modifier
@@ -282,10 +299,10 @@ fun SettingsScreen(
                         prefs.edit().putBoolean(KEY_BIOMETRIC_ENABLED, enabled).apply()
                     },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = TrackRed,
-                        uncheckedThumbColor = Color.White,
-                        uncheckedTrackColor = if (isSystemInDarkTheme()) Color(0xFFBE8076) else TrackRed.copy(alpha = 0.65f),
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        uncheckedTrackColor = AppColors.SwitchUncheckedTrack,
                         uncheckedBorderColor = Color.Transparent
                     ),
                     modifier = Modifier.semantics {
@@ -369,8 +386,24 @@ fun SettingsScreen(
                                     uiState = uiState,
                                     notificationLauncher = notificationLauncher,
                                     remindersPrefs = remindersPrefs,
-                                    onNotificationDenied = { showNotificationDeniedDialog = true },
-                                    onExactAlarmDenied = { showExactAlarmDialog = true }
+                                    onNotificationDenied = {
+                                        showNotificationDeniedDialog = true
+                                        snackbarScope.launch {
+                                            snackbarHostState.showSnackbar(
+                                                message = permissionDeniedMessage,
+                                                duration = SnackbarDuration.Short
+                                            )
+                                        }
+                                    },
+                                    onExactAlarmDenied = {
+                                        showExactAlarmDialog = true
+                                        snackbarScope.launch {
+                                            snackbarHostState.showSnackbar(
+                                                message = permissionDeniedMessage,
+                                                duration = SnackbarDuration.Short
+                                            )
+                                        }
+                                    }
                                 )
                             } else {
                                 Log.d(TAG, "Reminders toggle tapped OFF — clearing pending flag")
@@ -382,10 +415,10 @@ fun SettingsScreen(
                             }
                         },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = TrackRed,
-                            uncheckedThumbColor = Color.White,
-                            uncheckedTrackColor = if (isSystemInDarkTheme()) Color(0xFFBE8076) else TrackRed.copy(alpha = 0.65f),
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            uncheckedTrackColor = AppColors.SwitchUncheckedTrack,
                             uncheckedBorderColor = Color.Transparent
                         ),
                         modifier = Modifier.semantics {
@@ -434,53 +467,65 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            val days = listOf(
-                                Triple(Calendar.MONDAY, "M", "Monday"),
-                                Triple(Calendar.TUESDAY, "T", "Tuesday"),
-                                Triple(Calendar.WEDNESDAY, "W", "Wednesday"),
-                                Triple(Calendar.THURSDAY, "T", "Thursday"),
-                                Triple(Calendar.FRIDAY, "F", "Friday"),
-                                Triple(Calendar.SATURDAY, "S", "Saturday"),
-                                Triple(Calendar.SUNDAY, "S", "Sunday")
-                            )
-                            days.forEach { (day, label, fullName) ->
-                                val selected = day in uiState.reminderDays
-                                TextButton(
-                                    onClick = {
-                                        settingsVm.toggleDay(day)
-                                        if (uiState.remindersEnabled) {
-                                            val newDays = uiState.reminderDays.toMutableSet()
-                                            if (selected) newDays.remove(day) else newDays.add(day)
-                                            try {
-                                                ReminderScheduler.scheduleReminders(
-                                                    context.applicationContext,
-                                                    uiState.reminderHour,
-                                                    uiState.reminderMinute,
-                                                    newDays
-                                                )
-                                            } catch (_: Exception) { /* ignore */ }
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .defaultMinSize(minWidth = 44.dp, minHeight = 44.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (selected) TrackRed else MaterialTheme.colorScheme.surfaceVariant)
-                                        .semantics {
-                                            contentDescription = fullName
-                                            stateDescription = if (selected) "Selected" else "Not selected"
-                                            role = Role.Button
-                                        },
-                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
-                                ) {
-                                    Text(
-                                        text = label,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                        // Day-of-week chips. Seven 48dp chips need 336dp to share
+                        // one row; on narrower screens (e.g. 360dp ≈ 320dp content)
+                        // they fall back to a 4 + 3 two-row layout so every chip
+                        // keeps a full 48 × 48dp touch target.
+                        val days = listOf(
+                            Triple(Calendar.MONDAY, "M", "Monday"),
+                            Triple(Calendar.TUESDAY, "T", "Tuesday"),
+                            Triple(Calendar.WEDNESDAY, "W", "Wednesday"),
+                            Triple(Calendar.THURSDAY, "T", "Thursday"),
+                            Triple(Calendar.FRIDAY, "F", "Friday"),
+                            Triple(Calendar.SATURDAY, "S", "Saturday"),
+                            Triple(Calendar.SUNDAY, "S", "Sunday")
+                        )
+                        val onDayToggle: (Int, Boolean) -> Unit = { day, selected ->
+                            settingsVm.toggleDay(day)
+                            if (uiState.remindersEnabled) {
+                                val newDays = uiState.reminderDays.toMutableSet()
+                                if (selected) newDays.remove(day) else newDays.add(day)
+                                try {
+                                    ReminderScheduler.scheduleReminders(
+                                        context.applicationContext,
+                                        uiState.reminderHour,
+                                        uiState.reminderMinute,
+                                        newDays
                                     )
+                                } catch (_: Exception) { /* ignore */ }
+                            }
+                        }
+                        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                            val singleRow = maxWidth >= 48.dp * 7
+                            if (singleRow) {
+                                Row(modifier = Modifier.fillMaxWidth()) {
+                                    days.forEach { (day, label, fullName) ->
+                                        val selected = day in uiState.reminderDays
+                                        ReminderDayChip(label, fullName, selected) {
+                                            onDayToggle(day, selected)
+                                        }
+                                    }
+                                }
+                            } else {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Row(modifier = Modifier.fillMaxWidth()) {
+                                        days.take(4).forEach { (day, label, fullName) ->
+                                            val selected = day in uiState.reminderDays
+                                            ReminderDayChip(label, fullName, selected) {
+                                                onDayToggle(day, selected)
+                                            }
+                                        }
+                                    }
+                                    Row(modifier = Modifier.fillMaxWidth()) {
+                                        days.drop(4).forEach { (day, label, fullName) ->
+                                            val selected = day in uiState.reminderDays
+                                            ReminderDayChip(label, fullName, selected) {
+                                                onDayToggle(day, selected)
+                                            }
+                                        }
+                                        // Keep row-2 chips the same width as row 1.
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
                                 }
                             }
                         }
@@ -516,7 +561,7 @@ fun SettingsScreen(
                     )
                 }
 
-                val primaryColor = if (isSystemInDarkTheme()) Color(0xFFBE8076) else MaterialTheme.colorScheme.primary
+                val primaryColor = AppColors.BrandAccentText
                 val privacyText = buildAnnotatedString {
                     withLink(
                         LinkAnnotation.Url(
@@ -563,6 +608,44 @@ fun SettingsScreen(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
         }
+    }
+}
+
+/**
+ * One day-of-week toggle chip. `weight(1f)` + `heightIn(min = 48.dp)` guarantee
+ * a ≥ 48 × 48dp touch target; the caller sizes the row so the weighted width
+ * never drops below 48dp.
+ */
+@Composable
+private fun RowScope.ReminderDayChip(
+    label: String,
+    fullName: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier
+            .weight(1f)
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(
+                if (selected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.surfaceVariant
+            )
+            .semantics {
+                contentDescription = fullName
+                stateDescription = if (selected) "Selected" else "Not selected"
+                role = Role.Button
+            },
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (selected) MaterialTheme.colorScheme.onPrimary
+                else MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -698,7 +781,7 @@ private fun TimePickerButton(hour: Int, minute: Int, onTimeSelected: (Int, Int) 
         Text(
             text = timeLabel,
             style = MaterialTheme.typography.bodyMedium,
-            color = if (isSystemInDarkTheme()) Color(0xFFFFFFFF) else MaterialTheme.colorScheme.primary
+            color = AppColors.BrandAccentText
         )
     }
 }

@@ -2,7 +2,6 @@
 
 import android.content.Context
 import android.view.accessibility.AccessibilityManager
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
@@ -27,9 +26,10 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 
 /**
- * Returns true while a TalkBack-style accessibility service with touch exploration
- * is active. Used to surface alternatives to gesture-only interactions (e.g. drag
- * and drop reordering).
+ * Returns true while ANY accessibility service is active — TalkBack, Switch
+ * Access, keyboard/external-navigation services, etc. — not just touch
+ * exploration. Used to surface alternatives to gesture-only interactions
+ * (e.g. drag-and-drop reordering) for every assistive-tech user.
  */
 @Composable
 fun rememberIsTouchExplorationEnabled(): Boolean {
@@ -38,14 +38,23 @@ fun rememberIsTouchExplorationEnabled(): Boolean {
         context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
     } ?: return false
 
-    var enabled by remember { mutableStateOf(manager.isTouchExplorationEnabled) }
+    fun anyServiceActive(): Boolean = manager.isEnabled || manager.isTouchExplorationEnabled
+
+    var enabled by remember { mutableStateOf(anyServiceActive()) }
     DisposableEffect(manager) {
-        val listener = AccessibilityManager.TouchExplorationStateChangeListener { state ->
-            enabled = state
+        val touchListener = AccessibilityManager.TouchExplorationStateChangeListener {
+            enabled = anyServiceActive()
         }
-        manager.addTouchExplorationStateChangeListener(listener)
-        enabled = manager.isTouchExplorationEnabled
-        onDispose { manager.removeTouchExplorationStateChangeListener(listener) }
+        val stateListener = AccessibilityManager.AccessibilityStateChangeListener {
+            enabled = anyServiceActive()
+        }
+        manager.addTouchExplorationStateChangeListener(touchListener)
+        manager.addAccessibilityStateChangeListener(stateListener)
+        enabled = anyServiceActive()
+        onDispose {
+            manager.removeTouchExplorationStateChangeListener(touchListener)
+            manager.removeAccessibilityStateChangeListener(stateListener)
+        }
     }
     return enabled
 }
@@ -110,10 +119,4 @@ fun AccessibilityReorderArrows(
             )
         }
     }
-}
-
-/** Reserves space matching [AccessibilityReorderArrows] without rendering anything. */
-@Composable
-fun AccessibilityReorderArrowsPlaceholder() {
-    Box(modifier = Modifier.size(0.dp))
 }

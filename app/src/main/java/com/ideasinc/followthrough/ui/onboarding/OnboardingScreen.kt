@@ -1,8 +1,10 @@
 ﻿package com.ideasinc.followthrough.ui.onboarding
 
+import android.content.Context
 import androidx.biometric.BiometricManager
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -10,7 +12,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,7 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -68,14 +69,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.R
+import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
-import com.ideasinc.followthrough.ui.theme.TrackRed
-
-private val ForgeColor = Color(0xFF9B3A2E)
-private val ContentBackground = Color(0xFFFFFFFF)
-private val BodyTextColor = Color(0xFF1A1A1A)
 
 private const val FADE_MS = 350
+
+private const val PREFS_ONBOARDING = "onboarding_prefs"
+private const val KEY_SWIPE_HINT_SHOWN = "swipe_hint_shown"
 
 @Composable
 private fun ProgressDots(
@@ -83,6 +83,8 @@ private fun ProgressDots(
     total: Int = 3,
     modifier: Modifier = Modifier
 ) {
+    val activeColor = AppColors.ForgeBackground
+    val inactiveColor = AppColors.ForgeBackground.copy(alpha = 0.65f)
     Row(
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = "Step ${currentIndex + 1} of $total"
@@ -94,7 +96,7 @@ private fun ProgressDots(
         repeat(total) { idx ->
             val active = idx == currentIndex
             val color by animateColorAsState(
-                targetValue = if (active) ForgeColor else Color(0xFF9B3A2E).copy(alpha = 0.65f),
+                targetValue = if (active) activeColor else inactiveColor,
                 animationSpec = tween(FADE_MS),
                 label = "dot-color-$idx"
             )
@@ -129,6 +131,24 @@ fun OnboardingScreen(
     val buttonFocus = remember { FocusRequester() }
     LaunchedEffect(step) { runCatching { buttonFocus.requestFocus() } }
 
+    // First-launch only: animate the progress-dots row horizontally for ~1s to
+    // signal the screen is swipeable. SharedPreferences gate ensures it shows
+    // exactly once across installs.
+    val onboardingPrefs = remember {
+        context.getSharedPreferences(PREFS_ONBOARDING, Context.MODE_PRIVATE)
+    }
+    val hintOffsetPx = remember { Animatable(0f) }
+    val hintAmplitudePx = with(density) { 14.dp.toPx() }
+    LaunchedEffect(Unit) {
+        val alreadyShown = onboardingPrefs.getBoolean(KEY_SWIPE_HINT_SHOWN, false)
+        if (!alreadyShown) {
+            hintOffsetPx.animateTo(-hintAmplitudePx, animationSpec = tween(350))
+            hintOffsetPx.animateTo(hintAmplitudePx, animationSpec = tween(450))
+            hintOffsetPx.animateTo(0f, animationSpec = tween(300))
+            onboardingPrefs.edit().putBoolean(KEY_SWIPE_HINT_SHOWN, true).apply()
+        }
+    }
+
     // Swipe forward — mirrors Continue button behavior, but swiping past the last step is a no-op.
     val advanceFromSwipe: () -> Unit = {
         when (step) {
@@ -162,7 +182,7 @@ fun OnboardingScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(ForgeColor)
+            .background(AppColors.ForgeBackground)
             .pointerInput(Unit) {
                 var totalDrag = 0f
                 detectHorizontalDragGestures(
@@ -201,19 +221,19 @@ fun OnboardingScreen(
                     fontFamily = PoppinsFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 32.sp,
-                    color = Color.White,
+                    color = AppColors.OnForgeBackground,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.semantics { heading() }
                 )
             }
         }
 
-        // Content section — white background, body crossfades between steps
+        // Content section — light surface (always), body crossfades between steps
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(0.42f)
-                .background(ContentBackground)
+                .background(AppColors.OnboardingBodySurface)
         ) {
             Column(
                 modifier = Modifier
@@ -255,7 +275,10 @@ fun OnboardingScreen(
                     }
                 }
 
-                ProgressDots(currentIndex = step)
+                ProgressDots(
+                    currentIndex = step,
+                    modifier = Modifier.graphicsLayer { translationX = hintOffsetPx.value }
+                )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
@@ -268,8 +291,8 @@ fun OnboardingScreen(
                             contentDescription = buttonDescription
                         },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ForgeColor,
-                        contentColor = Color.White
+                        containerColor = AppColors.ForgeBackground,
+                        contentColor = AppColors.OnForgeBackground
                     ),
                     shape = RoundedCornerShape(14.dp),
                     contentPadding = PaddingValues(vertical = 16.dp)
@@ -303,7 +326,7 @@ private fun Step0Body() {
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 26.sp,
-        color = BodyTextColor,
+        color = AppColors.OnOnboardingBodySurface,
         textAlign = TextAlign.Center
     )
 }
@@ -325,7 +348,7 @@ private fun Step1Body(
                 fontWeight = FontWeight.Normal,
                 fontSize = 14.sp,
                 lineHeight = 22.sp,
-                color = BodyTextColor,
+                color = AppColors.OnOnboardingBodySurface,
                 modifier = Modifier.weight(1f)
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -333,11 +356,11 @@ private fun Step1Body(
                 checked = biometricEnabled,
                 onCheckedChange = onBiometricChange,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = TrackRed,
-                    uncheckedThumbColor = Color.White,
-                    uncheckedTrackColor = if (isSystemInDarkTheme()) Color(0xFFBE8076) else TrackRed.copy(alpha = 0.65f),
-                    uncheckedBorderColor = Color.Transparent
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                    uncheckedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                    uncheckedTrackColor = AppColors.SwitchUncheckedTrack,
+                    uncheckedBorderColor = androidx.compose.ui.graphics.Color.Transparent
                 ),
                 modifier = Modifier.semantics {
                     contentDescription = "Lock Follow Through with biometrics"
@@ -357,7 +380,7 @@ private fun Step2Body() {
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 26.sp,
-        color = BodyTextColor,
+        color = AppColors.OnOnboardingBodySurface,
         textAlign = TextAlign.Center
     )
 }

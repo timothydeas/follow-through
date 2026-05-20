@@ -22,9 +22,9 @@ object QuestionKeys {
 
     val ALL_KEYS = listOf(
         GOAL_OR_CHANGE,
-        MADE_PROGRESS,
         AVOIDING,
         CONFIDENCE,
+        MADE_PROGRESS,
         COMPETING_PRIORITY,
         IMPLEMENTATION_INTENTION,
         ACCOUNTABILITY

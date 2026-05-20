@@ -1,7 +1,6 @@
 ﻿package com.ideasinc.followthrough.ui.checkin
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,16 +38,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.data.CheckIn
 import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
+import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
-import com.ideasinc.followthrough.ui.theme.TrackRed
 
 @Composable
 fun CheckInReadScreen(
@@ -81,7 +82,7 @@ fun CheckInReadScreen(
             confirmButton = {
                 TextButton(
                     onClick = { showDeleteDialog = false; viewModel.delete() },
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFC0392B)),
+                    colors = ButtonDefaults.textButtonColors(contentColor = AppColors.Destructive),
                     modifier = Modifier.focusRequester(confirmFocus)
                 ) { Text("Delete") }
             },
@@ -92,7 +93,7 @@ fun CheckInReadScreen(
                         runCatching { deleteTriggerFocus.requestFocus() }
                     },
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = if (isSystemInDarkTheme()) Color(0xFFFFFFFF) else TrackRed
+                        contentColor = AppColors.BrandAccentText
                     )
                 ) { Text("Cancel") }
             }
@@ -130,6 +131,7 @@ fun CheckInReadScreen(
                     modifier = Modifier
                         .weight(1f)
                         .padding(horizontal = 4.dp)
+                        .semantics { heading() }
                 )
                 if (!uiState.isEditing) {
                     IconButton(onClick = viewModel::startEdit) {
@@ -147,7 +149,7 @@ fun CheckInReadScreen(
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "Delete",
-                            tint = Color(0xFFC0392B),
+                            tint = AppColors.Destructive,
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -184,6 +186,29 @@ private fun ReadView(
     configs: List<QuestionConfig>,
     modifier: Modifier = Modifier
 ) {
+    val allBlank = checkIn.goalOrChange.isBlank() &&
+        checkIn.avoiding.isNullOrBlank() &&
+        checkIn.confidence.isNullOrBlank() &&
+        checkIn.madeProgress.isNullOrBlank() &&
+        checkIn.competingPriority.isNullOrBlank() &&
+        checkIn.implementationIntention.isNullOrBlank() &&
+        checkIn.accountability.isNullOrBlank()
+
+    if (allBlank) {
+        Box(
+            modifier = modifier.padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "No answers recorded for this check-in.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+        return
+    }
+
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
@@ -277,7 +302,10 @@ private fun EditView(
             }
             Button(
                 onClick = viewModel::saveEdit,
-                colors = ButtonDefaults.buttonColors(containerColor = TrackRed),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
@@ -323,7 +351,7 @@ private fun EditField(
                     fontFamily = DmSansFontFamily,
                     color = MaterialTheme.colorScheme.onSurface
                 ),
-                cursorBrush = SolidColor(TrackRed),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 modifier = Modifier.fillMaxWidth()
             )
         }

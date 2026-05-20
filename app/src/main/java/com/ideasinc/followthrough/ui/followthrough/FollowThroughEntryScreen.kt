@@ -2,7 +2,6 @@
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,7 +30,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -43,12 +41,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
+import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
 import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
-import com.ideasinc.followthrough.ui.theme.TrackRed
 import kotlinx.coroutines.delay
-
-private val ReassuranceBg = Color(0xFF9B3A2E)
 
 @Composable
 fun FollowThroughEntryScreen(
@@ -81,11 +77,10 @@ fun FollowThroughEntryScreen(
                         )
                     }
                     Spacer(modifier = Modifier.weight(1f))
-                    val saveTextColor = if (isSystemInDarkTheme()) Color(0xFFFFFFFF) else TrackRed
                     TextButton(
                         onClick = viewModel::save,
                         colors = ButtonDefaults.textButtonColors(
-                            contentColor = saveTextColor
+                            contentColor = AppColors.BrandAccentText
                         )
                     ) {
                         Text(
@@ -137,7 +132,7 @@ fun FollowThroughEntryScreen(
                             fontFamily = DmSansFontFamily,
                             color = MaterialTheme.colorScheme.onSurface
                         ),
-                        cursorBrush = SolidColor(TrackRed),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -156,7 +151,7 @@ fun FollowThroughEntryScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(ReassuranceBg)
+                    .background(AppColors.ForgeBackground)
                     .clickable(onClickLabel = "Dismiss", onClick = onNavigateToList)
                     .semantics {
                         contentDescription =
@@ -171,7 +166,7 @@ fun FollowThroughEntryScreen(
                     fontWeight = FontWeight.Normal,
                     fontSize = 20.sp,
                     lineHeight = 32.sp,
-                    color = Color.White,
+                    color = AppColors.OnForgeBackground,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 40.dp)
                 )

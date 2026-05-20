@@ -1,6 +1,7 @@
 ﻿package com.ideasinc.followthrough.ui.stats
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,6 +31,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ideasinc.followthrough.di.AppContainer
@@ -82,6 +84,24 @@ fun StatsScreen(
             }
         }
     ) { innerPadding ->
+        val isEmpty = state.checkInTotal == 0 && state.followThroughTotal == 0
+        if (isEmpty) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No stats yet — your progress will appear after your first check-in.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+            return@Scaffold
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -107,10 +127,18 @@ fun StatsScreen(
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
             StatsSection(title = "Follow Throughs") {
-                StatRow("Current Streak", "${state.followThroughCurrentStreak}")
-                StatRow("Total All Time", "${state.followThroughTotal}")
-                StatRow("This Week", "${state.followThroughThisWeek}")
-                StatRow("This Month", "${state.followThroughThisMonth}")
+                if (state.followThroughTotal == 0) {
+                    Text(
+                        text = "No follow-throughs yet — tap 'I Followed Through' on any goal when you're ready.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    StatRow("Current Streak", "${state.followThroughCurrentStreak}")
+                    StatRow("Total All Time", "${state.followThroughTotal}")
+                    StatRow("This Week", "${state.followThroughThisWeek}")
+                    StatRow("This Month", "${state.followThroughThisMonth}")
+                }
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)

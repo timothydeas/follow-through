@@ -1,10 +1,11 @@
 ﻿package com.ideasinc.followthrough.ui.goals
 
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.view.accessibility.AccessibilityManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +15,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -34,6 +34,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -56,7 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -66,11 +67,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.data.CheckIn
+import com.ideasinc.followthrough.data.QuestionConfig
+import com.ideasinc.followthrough.data.QuestionKeys
 import com.ideasinc.followthrough.ui.launch.insightDisplayDurationMs
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
+import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
-import com.ideasinc.followthrough.ui.theme.TrackRed
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -118,7 +122,7 @@ fun GoalDetailScreen(
             confirmButton = {
                 TextButton(
                     onClick = { showDeleteDialog = false; viewModel.deleteGoal() },
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFC0392B)),
+                    colors = ButtonDefaults.textButtonColors(contentColor = AppColors.Destructive),
                     modifier = Modifier.focusRequester(confirmFocus)
                 ) { Text("Delete") }
             },
@@ -129,7 +133,7 @@ fun GoalDetailScreen(
                         runCatching { deleteTriggerFocus.requestFocus() }
                     },
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = if (isSystemInDarkTheme()) Color(0xFFFFFFFF) else TrackRed
+                        contentColor = AppColors.BrandAccentText
                     )
                 ) { Text("Cancel") }
             }
@@ -146,14 +150,24 @@ fun GoalDetailScreen(
             },
             title = { Text("Edit goal", style = MaterialTheme.typography.headlineSmall) },
             text = {
-                OutlinedTextField(
-                    value = uiState.editTitle,
-                    onValueChange = viewModel::onEditTitleChange,
-                    label = { Text("Goal title") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(titleFocus)
-                )
+                Column {
+                    OutlinedTextField(
+                        value = uiState.editTitle,
+                        onValueChange = viewModel::onEditTitleChange,
+                        label = { Text("Goal title") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(titleFocus)
+                    )
+                    if (uiState.editTitle.isBlank()) {
+                        Text(
+                            text = "Title cannot be empty.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                        )
+                    }
+                }
             },
             confirmButton = {
                 TextButton(
@@ -161,8 +175,10 @@ fun GoalDetailScreen(
                         viewModel.saveGoalEdit()
                         runCatching { editTriggerFocus.requestFocus() }
                     },
+                    enabled = uiState.editTitle.isNotBlank(),
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = if (isSystemInDarkTheme()) Color(0xFFFFFFFF) else TrackRed
+                        contentColor = AppColors.BrandAccentText,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 ) { Text("Save") }
             },
@@ -173,7 +189,7 @@ fun GoalDetailScreen(
                         runCatching { editTriggerFocus.requestFocus() }
                     },
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = if (isSystemInDarkTheme()) Color(0xFFFFFFFF) else TrackRed
+                        contentColor = AppColors.BrandAccentText
                     )
                 ) { Text("Cancel") }
             }
@@ -206,7 +222,7 @@ fun GoalDetailScreen(
                     text = uiState.goal?.title ?: "",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .weight(1f)
@@ -231,12 +247,13 @@ fun GoalDetailScreen(
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Delete goal",
-                        tint = Color(0xFFC0392B),
+                        tint = AppColors.Destructive,
                         modifier = Modifier.size(22.dp)
                     )
                 }
             }
         },
+        floatingActionButtonPosition = FabPosition.Center,
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onAddCheckIn,
@@ -247,25 +264,32 @@ fun GoalDetailScreen(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)
             }
-        },
-        bottomBar = {
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
             val goal = uiState.goal
             if (goal != null) {
                 val followedThrough = goal.followedThrough
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.background)
-                        .navigationBarsPadding()
-                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                        .padding(horizontal = 24.dp, vertical = 12.dp)
                 ) {
                     Button(
                         onClick = { if (!followedThrough) viewModel.followThrough() },
+                        enabled = !followedThrough,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = TrackRed,
-                            contentColor = Color.White,
-                            disabledContainerColor = TrackRed,
-                            disabledContentColor = Color.White
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            // Explicit disabled colors match enabled so the visual
+                            // state doesn't change — the button stays solid red with
+                            // a checkmark; only TalkBack reports it as disabled.
+                            disabledContainerColor = MaterialTheme.colorScheme.primary,
+                            disabledContentColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -292,16 +316,11 @@ fun GoalDetailScreen(
                     }
                 }
             }
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
             if (uiState.checkIns.isEmpty()) {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -313,7 +332,9 @@ fun GoalDetailScreen(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,
@@ -325,6 +346,7 @@ fun GoalDetailScreen(
                     items(uiState.checkIns, key = { it.id }) { checkIn ->
                         CheckInCard(
                             checkIn = checkIn,
+                            configs = uiState.questionConfigs,
                             onClick = { onCheckInClick(checkIn.id) }
                         )
                     }
@@ -340,39 +362,51 @@ fun GoalDetailScreen(
 }
 
 @Composable
-private fun CheckInCard(checkIn: CheckIn, onClick: () -> Unit) {
+private fun CheckInCard(
+    checkIn: CheckIn,
+    configs: List<QuestionConfig>,
+    onClick: () -> Unit
+) {
+    fun labelFor(key: String) = configs.firstOrNull { it.key == key }?.label
+        ?: QuestionKeys.DEFAULT_LABELS[key] ?: key
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(
-                onClickLabel = "Open check-in",
+                onClickLabel = "Open check-in to edit",
                 role = Role.Button,
                 onClick = onClick
             )
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        if (checkIn.goalOrChange.isNotBlank()) {
-            Text(
-                text = checkIn.goalOrChange,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
         if (!checkIn.madeProgress.isNullOrBlank()) {
-            Text(
-                text = checkIn.madeProgress,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = labelFor(QuestionKeys.MADE_PROGRESS),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = checkIn.madeProgress,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Tap to edit",
+                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.5.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = formatDate(checkIn.createdAt),
@@ -386,15 +420,22 @@ private fun CheckInCard(checkIn: CheckIn, onClick: () -> Unit) {
 @Composable
 private fun ReassuranceOverlay(onDismiss: () -> Unit) {
     val message = "You followed through. Whatever happens next — you showed up for yourself. That's what matters."
+    val context = LocalContext.current
 
     // Auto-dismiss via a plain Handler so the countdown lives outside the
     // composition — no LaunchedEffect, no coroutine state, nothing that
     // could trigger recomposition during the countdown. TalkBack discovers
     // the message naturally via clearAndSetSemantics contentDescription.
+    // When an accessibility service is active the timer is skipped entirely so
+    // the user can read at their own pace and dismiss with a tap.
     DisposableEffect(Unit) {
+        val a11yManager =
+            context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
         val handler = Handler(Looper.getMainLooper())
         val runnable = Runnable { onDismiss() }
-        handler.postDelayed(runnable, insightDisplayDurationMs(message))
+        if (a11yManager?.isEnabled != true) {
+            handler.postDelayed(runnable, insightDisplayDurationMs(message))
+        }
         onDispose {
             handler.removeCallbacks(runnable)
         }
@@ -403,7 +444,7 @@ private fun ReassuranceOverlay(onDismiss: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
+            .background(AppColors.OverlayScrim)
             .clickable(onClickLabel = "Dismiss", onClick = onDismiss)
             // Whole overlay is one opaque accessibility node so TalkBack
             // reads only the reassurance message, not the inner card/Text.
@@ -420,7 +461,7 @@ private fun ReassuranceOverlay(onDismiss: () -> Unit) {
         Box(
             modifier = Modifier
                 .padding(32.dp)
-                .background(Color(0xFF2C2C28), RoundedCornerShape(20.dp))
+                .background(AppColors.OverlaySurface, RoundedCornerShape(20.dp))
                 .padding(horizontal = 32.dp, vertical = 28.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -428,7 +469,7 @@ private fun ReassuranceOverlay(onDismiss: () -> Unit) {
                 text = message,
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontFamily = DmSansFontFamily,
-                    color = Color.White
+                    color = AppColors.OnOverlaySurface
                 ),
                 textAlign = TextAlign.Center
             )

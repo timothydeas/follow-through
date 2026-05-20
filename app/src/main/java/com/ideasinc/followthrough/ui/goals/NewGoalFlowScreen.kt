@@ -1,5 +1,6 @@
 ﻿package com.ideasinc.followthrough.ui.goals
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -15,9 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -28,6 +27,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -42,20 +43,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
+import com.ideasinc.followthrough.ui.checkin.placeholderFor
+import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
-import com.ideasinc.followthrough.ui.theme.TrackRed
 
 @Composable
 fun NewGoalFlowScreen(
@@ -73,6 +74,31 @@ fun NewGoalFlowScreen(
     }
     LaunchedEffect(uiState.savedGoalId) {
         uiState.savedGoalId?.let { onGoalCreated(it) }
+    }
+
+    // Intercept the system back gesture only while answers exist — otherwise
+    // back navigation proceeds normally and pops the flow.
+    BackHandler(enabled = uiState.hasAnswers()) {
+        viewModel.onSystemBack()
+    }
+
+    if (uiState.showDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = viewModel::onKeepWriting,
+            text = { Text("Discard your answers?", style = MaterialTheme.typography.bodyMedium) },
+            confirmButton = {
+                TextButton(
+                    onClick = viewModel::onDiscard,
+                    colors = ButtonDefaults.textButtonColors(contentColor = AppColors.Destructive)
+                ) { Text("Discard") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = viewModel::onKeepWriting,
+                    colors = ButtonDefaults.textButtonColors(contentColor = AppColors.BrandAccentText)
+                ) { Text("Keep Writing") }
+            }
+        )
     }
 
     Scaffold(
@@ -122,6 +148,8 @@ fun NewGoalFlowScreen(
             val enabled = uiState.questionConfigs.indices
                 .filter { uiState.questionConfigs[it].isEnabled }
             val isLast = phase.stepIndex == enabled.size - 1
+            // Step 1 captures the goal title — block advancing while it's blank.
+            val canProceed = phase.stepIndex != 0 || uiState.goalOrChange.isNotBlank()
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -134,7 +162,13 @@ fun NewGoalFlowScreen(
             ) {
                 Button(
                     onClick = if (isLast) viewModel::onSave else viewModel::onNextCheckInStep,
-                    colors = ButtonDefaults.buttonColors(containerColor = TrackRed)
+                    enabled = canProceed,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 ) {
                     Text(
                         if (isLast) "Save" else "Next",
@@ -195,30 +229,21 @@ private fun ColumnScope.CheckInStepContent(
                 indication = null
             ) { fieldFocus.requestFocus() }
     ) {
-        val placeholder = ""
-        if (value.isEmpty() && placeholder.isNotBlank()) {
-            Text(
-                text = placeholder,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontFamily = DmSansFontFamily,
-                    fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-        }
-        BasicTextField(
+        OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                fontFamily = DmSansFontFamily,
-                color = MaterialTheme.colorScheme.onSurface
-            ),
-            cursorBrush = SolidColor(TrackRed),
+            placeholder = { Text(placeholderFor(config.key)) },
+            textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = DmSansFontFamily),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = Color.Transparent
+            ),
             modifier = Modifier
                 .fillMaxSize()
                 .focusRequester(fieldFocus)
-                .semantics { contentDescription = config.label }
         )
     }
 }

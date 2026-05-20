@@ -31,8 +31,6 @@ import com.ideasinc.followthrough.ui.checkin.CheckInFlowScreen
 import com.ideasinc.followthrough.ui.checkin.CheckInFlowViewModel
 import com.ideasinc.followthrough.ui.checkin.CheckInReadScreen
 import com.ideasinc.followthrough.ui.checkin.CheckInReadViewModel
-import com.ideasinc.followthrough.ui.editor.EditorScreen
-import com.ideasinc.followthrough.ui.editor.EditorViewModel
 import com.ideasinc.followthrough.ui.goals.GoalDetailScreen
 import com.ideasinc.followthrough.ui.goals.GoalDetailViewModel
 import com.ideasinc.followthrough.ui.goals.NewGoalFlowScreen
@@ -45,21 +43,15 @@ import com.ideasinc.followthrough.ui.onboarding.OnboardingScreen
 import com.ideasinc.followthrough.ui.settings.CustomizeQuestionsScreen
 import com.ideasinc.followthrough.ui.settings.SettingsScreen
 import com.ideasinc.followthrough.ui.stats.StatsScreen
-import com.ideasinc.followthrough.ui.stepflow.StepFlowScreen
-import com.ideasinc.followthrough.ui.stepflow.StepFlowViewModel
 
 private const val ROUTE_LIST = "list"
 private const val ROUTE_LAUNCH_INSIGHT = "launch_insight"
-private const val ROUTE_EDITOR = "editor/{noteId}"
-private const val ROUTE_STEP_FLOW = "step_flow/{noteId}"
 private const val ROUTE_NEW_GOAL = "new_goal"
 private const val ROUTE_GOAL_DETAIL = "goal_detail/{goalId}"
 private const val ROUTE_CHECKIN_FLOW = "checkin_flow/{goalId}"
 private const val ROUTE_CHECKIN_READ = "checkin_read/{checkInId}"
-private const val ARG_NOTE_ID = "noteId"
 private const val ARG_GOAL_ID = "goalId"
 private const val ARG_CHECKIN_ID = "checkInId"
-private const val NEW_NOTE_SENTINEL = "new"
 private const val ROUTE_ONBOARDING = "onboarding"
 private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_CUSTOMIZE_QUESTIONS = "customize_questions"
@@ -68,7 +60,7 @@ private const val ROUTE_STATS = "stats"
 internal const val PREFS_NAME = "grounded_prefs"
 internal const val KEY_ONBOARDING_VERSION = "onboarding_version"
 internal const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
-internal const val CURRENT_ONBOARDING_VERSION = 63
+internal const val CURRENT_ONBOARDING_VERSION = 79
 
 @Composable
 fun AppNavigation(
@@ -191,7 +183,7 @@ fun AppNavigation(
         ) { backStackEntry ->
             val goalId = backStackEntry.arguments?.getString(ARG_GOAL_ID) ?: return@composable
             val vm: GoalDetailViewModel = viewModel(
-                factory = GoalDetailViewModel.Factory(container.goalDao, container.checkInDao, goalId)
+                factory = GoalDetailViewModel.Factory(container.goalDao, container.checkInDao, container.questionLabelDao, goalId)
             )
             GoalDetailScreen(
                 viewModel = vm,
@@ -215,7 +207,6 @@ fun AppNavigation(
                 factory = CheckInFlowViewModel.Factory(
                     container.checkInDao,
                     container.questionLabelDao,
-                    container.goalDao,
                     goalId
                 )
             )
@@ -240,37 +231,6 @@ fun AppNavigation(
             )
             CheckInReadScreen(
                 viewModel = vm,
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        // Legacy routes kept for backward compatibility
-        composable(
-            route = ROUTE_EDITOR,
-            arguments = listOf(navArgument(ARG_NOTE_ID) { type = NavType.StringType })
-        ) { backStackEntry ->
-            val rawId = backStackEntry.arguments?.getString(ARG_NOTE_ID)
-            val noteId = if (rawId == null || rawId == NEW_NOTE_SENTINEL) null else rawId
-            val editorVm: EditorViewModel = viewModel(
-                factory = EditorViewModel.Factory(container.noteDao, noteId)
-            )
-            EditorScreen(
-                viewModel = editorVm,
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        composable(
-            route = ROUTE_STEP_FLOW,
-            arguments = listOf(navArgument(ARG_NOTE_ID) { type = NavType.StringType })
-        ) { backStackEntry ->
-            val rawId = backStackEntry.arguments?.getString(ARG_NOTE_ID)
-            val noteId = if (rawId == null || rawId == NEW_NOTE_SENTINEL) null else rawId
-            val stepFlowVm: StepFlowViewModel = viewModel(
-                factory = StepFlowViewModel.Factory(container.noteDao, noteId)
-            )
-            StepFlowScreen(
-                viewModel = stepFlowVm,
                 onNavigateBack = { navController.popBackStack() }
             )
         }
@@ -331,7 +291,7 @@ private fun TabletLayout(
             } else {
                 val vm: GoalDetailViewModel = viewModel(
                     key = "${goalId}_$selectionKey",
-                    factory = GoalDetailViewModel.Factory(container.goalDao, container.checkInDao, goalId)
+                    factory = GoalDetailViewModel.Factory(container.goalDao, container.checkInDao, container.questionLabelDao, goalId)
                 )
                 GoalDetailScreen(
                     viewModel = vm,

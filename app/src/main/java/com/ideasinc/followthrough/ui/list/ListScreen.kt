@@ -11,13 +11,14 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,7 +47,6 @@ import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -67,11 +67,11 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -86,9 +86,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.ideasinc.followthrough.ui.rememberIsTouchExplorationEnabled
 import com.ideasinc.followthrough.ui.theme.Accent
-import com.ideasinc.followthrough.ui.theme.TrackRed
-import com.ideasinc.followthrough.ui.theme.TrackRedAccessible
-import com.ideasinc.followthrough.ui.theme.TrackRedLight
+import com.ideasinc.followthrough.ui.theme.AppColors
 import kotlinx.coroutines.flow.drop
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -105,7 +103,7 @@ fun ListScreen(
     onStatsClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val accentColor = if (isSystemInDarkTheme()) Color(0xFFFFFFFF) else MaterialTheme.colorScheme.primary
+    val accentColor = AppColors.BrandAccentText
     val lazyListState = rememberLazyListState()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -113,15 +111,9 @@ fun ListScreen(
 
     var moveDialogTarget: MoveDialogTarget? by remember { mutableStateOf(null) }
 
-    // The reorderable library's onMove gives us LazyColumn indices. The
-    // "Your focus goals" label sits at LazyColumn index 0 as a non-reorderable
-    // item, so each goal's LazyColumn index is offset by 1 from its flat
-    // position. The label is non-reorderable, so the library never targets it
-    // for drops; the null-guard here is defensive.
+    // Each LazyColumn index corresponds directly to a goal's flat position.
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        val fromFlat = lazyToFlat(from.index) ?: return@rememberReorderableLazyListState
-        val toFlat = lazyToFlat(to.index) ?: return@rememberReorderableLazyListState
-        viewModel.onDragMove(fromFlat, toFlat)
+        viewModel.onDragMove(from.index, to.index)
     }
 
     // Persist on drag end. drop(1) skips the initial false emission so we only
@@ -243,9 +235,9 @@ fun ListScreen(
                     Spacer(modifier = Modifier.weight(1f))
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "View full stats",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
@@ -271,10 +263,6 @@ fun ListScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    item(key = "focus_goals_label") {
-                        FocusGoalsLabel()
-                    }
-
                     itemsIndexed(
                         uiState.goals,
                         key = { _, row -> "goal_${row.goal.id}" }
@@ -338,31 +326,6 @@ private fun StatChip(
 
 private data class MoveDialogTarget(val goalId: String, val totalCount: Int)
 
-// LazyColumn structure during drag:
-//   index 0                 : "focus_goals_label"  (non-reorderable)
-//   index 1..uiState.goals.size : goal items       (flat 0..size-1)
-private fun lazyToFlat(lazyIndex: Int): Int? =
-    if (lazyIndex == 0) null else lazyIndex - 1
-
-// ─── Focus goals label ─────────────────────────────────────────────────────
-
-@Composable
-private fun FocusGoalsLabel() {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 4.dp, bottom = 2.dp)
-    ) {
-        Text(
-            text = "Your focus goals",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.semantics { heading() }
-        )
-    }
-}
-
 // ─── Goal card ─────────────────────────────────────────────────────────────
 
 @Composable
@@ -391,14 +354,12 @@ private fun DraggableGoalCard(
         label = "cardScale"
     )
 
-    val baseBg = if (isPriority)
-        Color(0xFF9B3A2E)
-    else
-        MaterialTheme.colorScheme.surfaceVariant
-
     // dragModifier carries the long-press handle from the ReorderableScope.
     // Applying it to the whole Surface lets the user long-press anywhere on
-    // the card to start dragging.
+    // the card to start dragging. Priority is signaled by a 4dp left-border
+    // accent (drawn as the first child of the inner Row) rather than a solid
+    // brand-color background, so all card text reads against the normal
+    // surfaceVariant — same as non-priority cards — in both light and dark.
     Surface(
         modifier = dragModifier
             .fillMaxWidth()
@@ -408,20 +369,34 @@ private fun DraggableGoalCard(
             }
             .zIndex(if (isDragging) 1f else 0f),
         shape = RoundedCornerShape(14.dp),
-        color = baseBg,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         tonalElevation = elevation,
         shadowElevation = elevation
     ) {
-        GoalCardContent(
-            row = row,
-            onClick = onClick,
-            showA11yArrows = showA11yArrows,
-            canMoveUp = canMoveUp,
-            canMoveDown = canMoveDown,
-            onMoveUp = onMoveUp,
-            onMoveDown = onMoveDown,
-            onArrowLongPress = onArrowLongPress
-        )
+        // height(IntrinsicSize.Min) lets the 4dp accent strip fillMaxHeight
+        // and track the content's intrinsic height (full edge-to-edge).
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            if (isPriority) {
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .fillMaxHeight()
+                        .background(AppColors.PriorityContainer)
+                )
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                GoalCardContent(
+                    row = row,
+                    onClick = onClick,
+                    showA11yArrows = showA11yArrows,
+                    canMoveUp = canMoveUp,
+                    canMoveDown = canMoveDown,
+                    onMoveUp = onMoveUp,
+                    onMoveDown = onMoveDown,
+                    onArrowLongPress = onArrowLongPress
+                )
+            }
+        }
     }
 }
 
@@ -436,13 +411,6 @@ private fun GoalCardContent(
     onMoveDown: () -> Unit,
     onArrowLongPress: () -> Unit
 ) {
-    val isPriority = row.rank != null
-    val primaryTextColor = if (isPriority) Color(0xFFFFFFFF) else MaterialTheme.colorScheme.onSurface
-    val secondaryTextColor = if (isPriority)
-        Color(0xFFFFFFFF).copy(alpha = 0.8f)
-    else
-        MaterialTheme.colorScheme.onSurfaceVariant
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -459,11 +427,14 @@ private fun GoalCardContent(
             modifier = Modifier.fillMaxWidth()
         ) {
             if (row.rank != null) {
+                // Rank number keeps the brand accent so the 1/2/3 ordering reads
+                // at a glance, even though the rest of the card uses normal
+                // onSurface colors.
                 Text(
                     text = "${row.rank}",
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFFFFFF)
+                        color = AppColors.BrandAccentText
                     ),
                     modifier = Modifier
                         .padding(end = 10.dp)
@@ -473,7 +444,7 @@ private fun GoalCardContent(
             Text(
                 text = row.goal.title,
                 style = MaterialTheme.typography.headlineSmall,
-                color = primaryTextColor,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
@@ -484,12 +455,11 @@ private fun GoalCardContent(
                     canMoveDown = canMoveDown,
                     onMoveUp = onMoveUp,
                     onMoveDown = onMoveDown,
-                    onLongPress = onArrowLongPress,
-                    isPriority = isPriority
+                    onLongPress = onArrowLongPress
                 )
                 Spacer(Modifier.width(4.dp))
             }
-            DragHandleIcon(isPriority = isPriority)
+            DragHandleIcon()
         }
 
         Row(
@@ -499,13 +469,13 @@ private fun GoalCardContent(
             Text(
                 text = "${row.checkInCount} check-in${if (row.checkInCount == 1) "" else "s"}",
                 style = MaterialTheme.typography.bodySmall,
-                color = secondaryTextColor
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             row.latestCheckInDate?.let {
                 Text(
                     text = formatDate(it),
                     style = MaterialTheme.typography.bodySmall,
-                    color = secondaryTextColor
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -513,21 +483,20 @@ private fun GoalCardContent(
 }
 
 @Composable
-private fun DragHandleIcon(isPriority: Boolean = false) {
-    val tint = if (isPriority)
-        Color(0xFFFFFFFF)
-    else
-        MaterialTheme.colorScheme.onSurfaceVariant
+private fun DragHandleIcon() {
+    // Decorative only — the whole card is the long-press drag handle, and a11y
+    // users get the explicit A11yReorderArrows. clearAndSetSemantics removes
+    // this Box from the TalkBack tree so it isn't announced as actionable.
     Box(
         modifier = Modifier
             .size(36.dp)
-            .semantics { contentDescription = "Drag to reorder" },
+            .clearAndSetSemantics {},
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = Icons.Filled.DragHandle,
             contentDescription = null,
-            tint = tint,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp)
         )
     }
@@ -541,8 +510,7 @@ private fun A11yReorderArrows(
     canMoveDown: Boolean,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
-    onLongPress: () -> Unit,
-    isPriority: Boolean = false
+    onLongPress: () -> Unit
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         ArrowButton(
@@ -550,8 +518,7 @@ private fun A11yReorderArrows(
             description = "Move up",
             enabled = canMoveUp,
             onClick = onMoveUp,
-            onLongPress = onLongPress,
-            isPriority = isPriority
+            onLongPress = onLongPress
         )
         Spacer(Modifier.width(2.dp))
         ArrowButton(
@@ -559,8 +526,7 @@ private fun A11yReorderArrows(
             description = "Move down",
             enabled = canMoveDown,
             onClick = onMoveDown,
-            onLongPress = onLongPress,
-            isPriority = isPriority
+            onLongPress = onLongPress
         )
     }
 }
@@ -571,18 +537,12 @@ private fun ArrowButton(
     description: String,
     enabled: Boolean,
     onClick: () -> Unit,
-    onLongPress: () -> Unit,
-    isPriority: Boolean = false
+    onLongPress: () -> Unit
 ) {
-    val enabledColor = if (isPriority)
-        Color(0xFFFFFFFF)
-    else
+    val tint = if (enabled)
         MaterialTheme.colorScheme.onSurfaceVariant
-    val disabledColor = if (isPriority)
-        Color(0xFFFFFFFF).copy(alpha = 0.5f)
     else
         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-    val tint = if (enabled) enabledColor else disabledColor
     Box(
         modifier = Modifier
             .size(48.dp)

@@ -13,6 +13,7 @@ import com.ideasinc.followthrough.data.resolveConfigs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -51,11 +52,14 @@ class CheckInReadViewModel(
             }
         }
         viewModelScope.launch {
-            checkInDao.getCheckInByIdAsFlow(checkInId).collect { checkIn ->
+            checkInDao.getCheckInByIdAsFlow(checkInId).collectLatest { checkIn ->
                 _uiState.update { it.copy(checkIn = checkIn) }
                 if (checkIn != null) {
-                    val goal = goalDao.getGoalById(checkIn.goalId)
-                    _uiState.update { it.copy(goal = goal) }
+                    goalDao.getGoalByIdAsFlow(checkIn.goalId).collect { goal ->
+                        _uiState.update { it.copy(goal = goal) }
+                    }
+                } else {
+                    _uiState.update { it.copy(goal = null) }
                 }
             }
         }

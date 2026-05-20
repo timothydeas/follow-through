@@ -32,9 +32,16 @@ data class NewGoalFlowUiState(
     val implementationIntention: String = "",
     val accountability: String = "",
     val questionConfigs: List<QuestionConfig> = emptyList(),
+    val showDiscardDialog: Boolean = false,
     val shouldExit: Boolean = false,
     val savedGoalId: String? = null
 )
+
+/** True once the user has typed any answer — used to gate the discard prompt. */
+internal fun NewGoalFlowUiState.hasAnswers(): Boolean =
+    goalOrChange.isNotBlank() || avoiding.isNotBlank() || confidence.isNotBlank() ||
+        madeProgress.isNotBlank() || competingPriority.isNotBlank() ||
+        implementationIntention.isNotBlank() || accountability.isNotBlank()
 
 class NewGoalFlowViewModel(
     private val goalDao: GoalDao,
@@ -87,11 +94,27 @@ class NewGoalFlowViewModel(
         when (val phase = state.phase) {
             is NewGoalPhase.CheckIn -> {
                 if (phase.stepIndex == 0) {
-                    _uiState.update { it.copy(shouldExit = true) }
+                    // Backing out of the flow — confirm only if answers would be lost.
+                    if (state.hasAnswers()) {
+                        _uiState.update { it.copy(showDiscardDialog = true) }
+                    } else {
+                        _uiState.update { it.copy(shouldExit = true) }
+                    }
                 } else {
                     _uiState.update { it.copy(phase = NewGoalPhase.CheckIn(phase.stepIndex - 1)) }
                 }
             }
+        }
+    }
+
+    fun onKeepWriting() = _uiState.update { it.copy(showDiscardDialog = false) }
+
+    fun onDiscard() = _uiState.update { it.copy(showDiscardDialog = false, shouldExit = true) }
+
+    /** Android system back gesture — confirm before discarding typed answers. */
+    fun onSystemBack() {
+        if (_uiState.value.hasAnswers()) {
+            _uiState.update { it.copy(showDiscardDialog = true) }
         }
     }
 
