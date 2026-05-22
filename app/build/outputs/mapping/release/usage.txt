@@ -6227,12 +6227,20 @@ androidx.compose.foundation.layout.BoxScopeInstance$matchParentSize$$inlined$deb
 androidx.compose.foundation.layout.BoxScopeInstance:
     public static final int $stable
     public androidx.compose.ui.Modifier matchParentSize(androidx.compose.ui.Modifier)
-androidx.compose.foundation.layout.BoxWithConstraintsKt$BoxWithConstraints$1$1$measurables$1
-androidx.compose.foundation.layout.BoxWithConstraintsKt$BoxWithConstraints$1$1
-androidx.compose.foundation.layout.BoxWithConstraintsKt$BoxWithConstraints$2
-androidx.compose.foundation.layout.BoxWithConstraintsKt
-androidx.compose.foundation.layout.BoxWithConstraintsScope
-androidx.compose.foundation.layout.BoxWithConstraintsScopeImpl
+androidx.compose.foundation.layout.BoxWithConstraintsScope:
+    public abstract long getConstraints-msEJaDk()
+    public abstract float getMaxHeight-D9Ej5fM()
+    public abstract float getMinHeight-D9Ej5fM()
+    public abstract float getMinWidth-D9Ej5fM()
+androidx.compose.foundation.layout.BoxWithConstraintsScopeImpl:
+    private final androidx.compose.ui.unit.Density component1()
+    public final long component2-msEJaDk()
+    public final androidx.compose.foundation.layout.BoxWithConstraintsScopeImpl copy-0kLqBqw(androidx.compose.ui.unit.Density,long)
+    public static synthetic androidx.compose.foundation.layout.BoxWithConstraintsScopeImpl copy-0kLqBqw$default(androidx.compose.foundation.layout.BoxWithConstraintsScopeImpl,androidx.compose.ui.unit.Density,long,int,java.lang.Object)
+    public float getMaxHeight-D9Ej5fM()
+    public float getMinHeight-D9Ej5fM()
+    public float getMinWidth-D9Ej5fM()
+    public androidx.compose.ui.Modifier matchParentSize(androidx.compose.ui.Modifier)
 androidx.compose.foundation.layout.ColumnKt:
     public static final void Column(androidx.compose.ui.Modifier,androidx.compose.foundation.layout.Arrangement$Vertical,androidx.compose.ui.Alignment$Horizontal,kotlin.jvm.functions.Function3,androidx.compose.runtime.Composer,int,int)
     public static final androidx.compose.ui.layout.MeasurePolicy getDefaultColumnMeasurePolicy()
@@ -20937,7 +20945,6 @@ androidx.compose.material3.OutlinedTextFieldDefaults$ContainerBox$1
 androidx.compose.material3.OutlinedTextFieldDefaults:
     public static final int $stable
     public final void ContainerBox-nbWgWpA(boolean,boolean,androidx.compose.foundation.interaction.InteractionSource,androidx.compose.material3.TextFieldColors,androidx.compose.ui.graphics.Shape,float,float,androidx.compose.runtime.Composer,int,int)
-    public final androidx.compose.material3.TextFieldColors colors-0hiis_0(long,long,long,long,long,long,long,long,long,long,androidx.compose.foundation.text.selection.TextSelectionColors,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,androidx.compose.runtime.Composer,int,int,int,int,int,int,int)
 androidx.compose.material3.OutlinedTextFieldKt$OutlinedTextField$3$1
 androidx.compose.material3.OutlinedTextFieldKt$OutlinedTextField$3$3$1
 androidx.compose.material3.OutlinedTextFieldKt$OutlinedTextField$3$3
@@ -21362,10 +21369,8 @@ androidx.compose.material3.TabRowKt$TabRowWithSubcomposeImpl$1
 androidx.compose.material3.TabRowKt$TabRowWithSubcomposeImpl$2
 androidx.compose.material3.TabRowKt
 androidx.compose.material3.TabSlots
-androidx.compose.material3.TextFieldColors$copy$11
 androidx.compose.material3.TextFieldColors:
     public static final int $stable
-    public final androidx.compose.material3.TextFieldColors copy-ejIjP34(long,long,long,long,long,long,long,long,long,long,androidx.compose.foundation.text.selection.TextSelectionColors,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long)
     public static synthetic androidx.compose.material3.TextFieldColors copy-ejIjP34$default(androidx.compose.material3.TextFieldColors,long,long,long,long,long,long,long,long,long,long,androidx.compose.foundation.text.selection.TextSelectionColors,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,int,int,java.lang.Object)
     public final long getCursorColor-0d7_KjU()
     public final long getDisabledContainerColor-0d7_KjU()
@@ -21409,7 +21414,6 @@ androidx.compose.material3.TextFieldColors:
     public final long getUnfocusedSupportingTextColor-0d7_KjU()
     public final long getUnfocusedTextColor-0d7_KjU()
     public final long getUnfocusedTrailingIconColor-0d7_KjU()
-    public final androidx.compose.foundation.text.selection.TextSelectionColors takeOrElse$material3_release(androidx.compose.foundation.text.selection.TextSelectionColors,kotlin.jvm.functions.Function0)
 androidx.compose.material3.TextFieldDefaults$Container$1
 androidx.compose.material3.TextFieldDefaults$Container$2
 androidx.compose.material3.TextFieldDefaults$ContainerBox$1
@@ -29742,11 +29746,9 @@ androidx.compose.ui.unit.DensityWithConverter:
     public static synthetic androidx.compose.ui.unit.DensityWithConverter copy$default(androidx.compose.ui.unit.DensityWithConverter,float,float,androidx.compose.ui.unit.fontscaling.FontScaleConverter,int,java.lang.Object)
 androidx.compose.ui.unit.Dp$Companion:
     public static synthetic void getHairline-D9Ej5fM$annotations()
-    public final float getInfinity-D9Ej5fM()
     public static synthetic void getInfinity-D9Ej5fM$annotations()
     public static synthetic void getUnspecified-D9Ej5fM$annotations()
 androidx.compose.ui.unit.Dp:
-    public static final synthetic float access$getInfinity$cp()
     public static final float div-0680j_4(float,float)
     public static final float div-u2uoSUM(float,float)
     public static final float div-u2uoSUM(float,int)
@@ -35464,8 +35466,8 @@ com.ideasinc.followthrough.ui.AccessibilityKt$AccessibilityReorderArrows$2$1
 com.ideasinc.followthrough.ui.AccessibilityKt$AccessibilityReorderArrows$2$2
 com.ideasinc.followthrough.ui.AccessibilityKt:
     public static final void AccessibilityReorderArrows(boolean,boolean,boolean,kotlin.jvm.functions.Function0,kotlin.jvm.functions.Function0,androidx.compose.ui.Modifier,androidx.compose.runtime.Composer,int,int)
-    private static final kotlin.Unit AccessibilityReorderArrows$lambda$10(boolean,boolean,boolean,kotlin.jvm.functions.Function0,kotlin.jvm.functions.Function0,androidx.compose.ui.Modifier,int,int,androidx.compose.runtime.Composer,int)
-    private static final kotlin.Unit AccessibilityReorderArrows$lambda$12(boolean,boolean,boolean,kotlin.jvm.functions.Function0,kotlin.jvm.functions.Function0,androidx.compose.ui.Modifier,int,int,androidx.compose.runtime.Composer,int)
+    private static final kotlin.Unit AccessibilityReorderArrows$lambda$11(boolean,boolean,boolean,kotlin.jvm.functions.Function0,kotlin.jvm.functions.Function0,androidx.compose.ui.Modifier,int,int,androidx.compose.runtime.Composer,int)
+    private static final kotlin.Unit AccessibilityReorderArrows$lambda$13(boolean,boolean,boolean,kotlin.jvm.functions.Function0,kotlin.jvm.functions.Function0,androidx.compose.ui.Modifier,int,int,androidx.compose.runtime.Composer,int)
 com.ideasinc.followthrough.ui.MarkdownUtilsKt
 com.ideasinc.followthrough.ui.checkin.CheckInFlowUiState:
     public void <init>()
@@ -35474,6 +35476,7 @@ com.ideasinc.followthrough.ui.checkin.CheckInFlowUiState:
     public final java.lang.String component11()
     public final boolean component12()
     public final boolean component13()
+    public final boolean component14()
     public final java.lang.String component2()
     public final java.util.List component3()
     public final int component4()
@@ -35538,7 +35541,8 @@ com.ideasinc.followthrough.ui.goals.NewGoalFlowUiState:
     public void <init>()
     public final com.ideasinc.followthrough.ui.goals.NewGoalPhase component1()
     public final boolean component10()
-    public final java.lang.String component11()
+    public final boolean component11()
+    public final java.lang.String component12()
     public final java.lang.String component2()
     public final java.lang.String component3()
     public final java.lang.String component4()
@@ -38384,7 +38388,6 @@ kotlin.collections.CollectionsKt___CollectionsKt:
     private static final int count(java.util.Collection)
     public static final java.util.List distinct(java.lang.Iterable)
     public static final java.util.List distinctBy(java.lang.Iterable,kotlin.jvm.functions.Function1)
-    public static final java.util.List drop(java.lang.Iterable,int)
     public static final java.util.List dropLast(java.util.List,int)
     public static final java.util.List dropLastWhile(java.util.List,kotlin.jvm.functions.Function1)
     public static final java.util.List dropWhile(java.lang.Iterable,kotlin.jvm.functions.Function1)
@@ -38434,7 +38437,6 @@ kotlin.collections.CollectionsKt___CollectionsKt:
     public static final int indexOfFirst(java.util.List,kotlin.jvm.functions.Function1)
     public static final int indexOfLast(java.lang.Iterable,kotlin.jvm.functions.Function1)
     public static final int indexOfLast(java.util.List,kotlin.jvm.functions.Function1)
-    public static final java.lang.Object last(java.lang.Iterable)
     public static final java.lang.Object last(java.lang.Iterable,kotlin.jvm.functions.Function1)
     public static final java.lang.Object last(java.util.List,kotlin.jvm.functions.Function1)
     public static final int lastIndexOf(java.lang.Iterable,java.lang.Object)
@@ -47378,6 +47380,8 @@ androidx.compose.foundation.BackgroundElement:
     public static void update$1()
 androidx.compose.foundation.BackgroundKt$background-bw27NRU$$inlined$debugInspectorInfo$1$$InternalSyntheticThrowCCEIfNotNull$53$c9c3c5b1b86ea217e3356ad06dbce618aded832ee31ba436111a1453d967d754$0
 androidx.compose.foundation.BackgroundKt$background-bw27NRU$$inlined$debugInspectorInfo$1
+androidx.compose.foundation.BackgroundKt:
+    public static synthetic androidx.compose.ui.Modifier background-bw27NRU$default(androidx.compose.ui.Modifier,long)
 androidx.compose.foundation.BackgroundNode$getOutline$1:
     public final void invoke()
 androidx.compose.foundation.BackgroundNode:
@@ -48217,6 +48221,19 @@ androidx.compose.foundation.layout.BoxMeasurePolicy$measure$5:
 androidx.compose.foundation.layout.BoxScope
 androidx.compose.foundation.layout.BoxScopeInstance$align$$inlined$debugInspectorInfo$1$$InternalSyntheticThrowCCEIfNotNull$20$d41970bc58c64b789f0763f561ca87acd15ffd7164739ebe67a91a03975a48a8$0
 androidx.compose.foundation.layout.BoxScopeInstance$align$$inlined$debugInspectorInfo$1
+androidx.compose.foundation.layout.BoxWithConstraintsKt$BoxWithConstraints$1$1$measurables$1:
+    public final void invoke$2()
+androidx.compose.foundation.layout.BoxWithConstraintsKt$BoxWithConstraints$1$1:
+    public final androidx.compose.ui.layout.MeasureResult invoke-0kLqBqw()
+androidx.compose.foundation.layout.BoxWithConstraintsKt$BoxWithConstraints$2:
+    public final synthetic int $$default
+    public final void invoke$2()
+androidx.compose.foundation.layout.BoxWithConstraintsScope
+androidx.compose.foundation.layout.BoxWithConstraintsScopeImpl:
+    public final synthetic androidx.compose.foundation.layout.BoxScopeInstance $$delegate_0
+    public final androidx.compose.ui.Modifier align(androidx.compose.ui.Alignment)
+    public static long getConstraints-msEJaDk()
+    public static float getMaxWidth-D9Ej5fM()
 androidx.compose.foundation.layout.ColumnMeasurePolicy$placeHelper$1$1:
     public final synthetic int $beforeCrossAxisAlignmentLine
     public final void invoke$3()
@@ -48412,6 +48429,8 @@ androidx.compose.foundation.layout.SizeKt:
     public static final androidx.compose.foundation.layout.WrapContentElement WrapContentWidthCenter
     public static final androidx.compose.foundation.layout.WrapContentElement WrapContentWidthStart
     public static androidx.compose.ui.Modifier fillMaxHeight$default(androidx.compose.ui.Modifier)
+    public static androidx.compose.ui.Modifier fillMaxSize$default()
+    public static synthetic androidx.compose.ui.Modifier heightIn-VpY3zN4$default(androidx.compose.ui.Modifier,float)
 androidx.compose.foundation.layout.SizeNode$measure$1:
     public final void invoke$3()
 androidx.compose.foundation.layout.SizeNode:
@@ -50359,7 +50378,7 @@ androidx.compose.foundation.text.selection.TextSelectionColors:
     public static long getBackgroundColor-0d7_KjU()
     public static long getHandleColor-0d7_KjU()
 androidx.compose.foundation.text.selection.TextSelectionColorsKt$LocalTextSelectionColors$1:
-    public static androidx.compose.foundation.text.selection.TextSelectionColors invoke()
+    public final androidx.compose.foundation.text.selection.TextSelectionColors invoke()
 androidx.compose.foundation.text.selection.TextSelectionColorsKt:
     public static final long DefaultSelectionColor
 androidx.compose.foundation.text.selection.TextSelectionDelegateKt
@@ -50652,6 +50671,7 @@ androidx.compose.material3.ColorScheme:
     public static long getSurfaceContainerLowest-0d7_KjU()
     public static long getSurfaceDim-0d7_KjU()
     public static long getSurfaceTint-0d7_KjU()
+    public final long getSurfaceVariant-0d7_KjU()
     public static long getTertiary-0d7_KjU()
     public static long getTertiaryContainer-0d7_KjU()
     public static void setDefaultButtonColorsCached$material3_release()
@@ -50813,7 +50833,6 @@ androidx.compose.material3.OutlinedTextFieldDefaults$DecorationBox$2:
     public final void invoke$2()
 androidx.compose.material3.OutlinedTextFieldDefaults:
     public static androidx.compose.foundation.layout.PaddingValues contentPadding-a9UjIt4()
-    public static androidx.compose.material3.TextFieldColors getDefaultOutlinedTextFieldColors()
     public static float getFocusedBorderThickness-D9Ej5fM()
     public static float getMinHeight-D9Ej5fM()
     public static float getMinWidth-D9Ej5fM()
@@ -51009,12 +51028,15 @@ androidx.compose.material3.SwitchKt$Switch$1:
     public final void invoke$2()
 androidx.compose.material3.SwitchKt$SwitchImpl$2:
     public final void invoke$2()
+androidx.compose.material3.TextFieldColors$copy$11
 androidx.compose.material3.TextFieldColors:
     static void <clinit>()
     public static long containerColor-XeAY9LY$material3_release()
+    public static androidx.compose.material3.TextFieldColors copy-ejIjP34()
     public static long cursorColor-vNxB06k$material3_release()
     public static androidx.compose.foundation.text.selection.TextSelectionColors getTextSelectionColors()
     public static long indicatorColor-XeAY9LY$material3_release()
+    public static androidx.compose.foundation.text.selection.TextSelectionColors takeOrElse$material3_release()
     public static long textColor-XeAY9LY$material3_release()
 androidx.compose.material3.TextFieldDefaults:
     public static final float FocusedBorderThickness
@@ -55962,7 +55984,6 @@ androidx.compose.ui.layout.ScaleFactor$Companion
 androidx.compose.ui.layout.ScaleFactor:
     public static final androidx.compose.ui.layout.ScaleFactor$Companion Companion
 androidx.compose.ui.layout.SubcomposeLayoutKt$SubcomposeLayout$2:
-    public final synthetic int $$default
     public final void invoke$2()
 androidx.compose.ui.layout.SubcomposeLayoutKt$SubcomposeLayout$4$1:
     public final void invoke()
@@ -59245,6 +59266,7 @@ androidx.compose.ui.unit.Dp:
     public static final float Unspecified
     static void <clinit>()
     public static final synthetic float access$getHairline$cp()
+    public static final synthetic float access$getInfinity$cp()
     public static final synthetic float access$getUnspecified$cp()
     public static int compareTo-0680j_4()
     public static synthetic float unbox-impl()
@@ -62176,7 +62198,7 @@ com.ideasinc.followthrough.notifications.ReminderScheduler:
     public static void rescheduleAllFromPrefs()
 com.ideasinc.followthrough.ui.AccessibilityKt:
     public static final void rememberIsTouchExplorationEnabled$lambda$3(androidx.compose.runtime.MutableState,boolean)
-com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$$InternalSyntheticLambda$6$b0cfa96d2503fc176c5c3aa8606de6b7ac5c5d69d8891c3e4260390bd9d85375$3:
+com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$$InternalSyntheticLambda$6$b0cfa96d2503fc176c5c3aa8606de6b7ac5c5d69d8891c3e4260390bd9d85375$2:
     public final synthetic androidx.compose.foundation.layout.ColumnScope f$0
 com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$1$1:
     public int label
@@ -62184,20 +62206,32 @@ com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$1$1:
 com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$2$1:
     public int label
     public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope,kotlin.coroutines.Continuation)
-com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$3$1$1$1$1:
+com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$4$1:
     public final void invoke()
-com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$3:
-    public final void invoke$2()
-com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$4$1$1$1:
+com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$5$1$1:
     public final void invoke()
-com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$4$1$2$1:
-    public final void invoke()
-com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$4$1$3:
-    public final void invoke$42()
-com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$4:
-    public final void invoke$2()
 com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$5:
+    public final void invoke$2()
+com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$6$1$1:
+    public final void invoke()
+com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$6:
+    public final void invoke$2()
+com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$7$1$1$1$1:
+    public final void invoke()
+com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$7:
+    public final void invoke$2()
+com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$8$1$1$1:
+    public final void invoke()
+com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$8$1$2$1:
+    public final void invoke()
+com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$8$1$3:
+    public final void invoke$42()
+com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$8:
+    public final void invoke$2()
+com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$CheckInFlowScreen$9:
     public final void invoke$89()
+com.ideasinc.followthrough.ui.checkin.CheckInFlowScreenKt$StepContent$4$1:
+    public final void invoke$2()
 com.ideasinc.followthrough.ui.checkin.CheckInFlowUiState:
     public static final int $stable
     static void <clinit>()
@@ -62215,6 +62249,7 @@ com.ideasinc.followthrough.ui.checkin.CheckInFlowUiState:
     public static java.lang.String getMadeProgress()
     public static java.util.List getQuestionConfigs()
     public static boolean getShouldExit()
+    public static boolean getShowDiscardDialog()
 com.ideasinc.followthrough.ui.checkin.CheckInFlowViewModel$1:
     public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope,kotlin.coroutines.Continuation)
 com.ideasinc.followthrough.ui.checkin.CheckInFlowViewModel$Factory:
@@ -62232,11 +62267,13 @@ com.ideasinc.followthrough.ui.checkin.CheckInFlowViewModel:
     public final void onBack()
     public final void onCompetingPriorityChange()
     public final void onConfidenceChange()
+    public final void onDiscard()
     public final void onGoalOrChangeChange()
     public final void onImplementationIntentionChange()
     public final void onMadeProgressChange()
     public static void onNext()
     public final void onSave()
+    public final void onSystemBack()
     public final void save()
 com.ideasinc.followthrough.ui.checkin.CheckInReadScreenKt$$InternalSyntheticLambda$5$50b4b5d380ddaeb19bc92aca89d602ff33cc7f3f8a0e1e673fbb4b691fb80382$0:
     public final synthetic int f$4
@@ -62330,10 +62367,19 @@ com.ideasinc.followthrough.ui.checkin.CheckInReadViewModel:
     public static void saveEdit()
     public static void startEdit()
 com.ideasinc.followthrough.ui.checkin.ComposableSingletons$CheckInFlowScreenKt$lambda-1$1:
+    public final void invoke$42()
+com.ideasinc.followthrough.ui.checkin.ComposableSingletons$CheckInFlowScreenKt$lambda-2$1:
+    public final void invoke$42()
+com.ideasinc.followthrough.ui.checkin.ComposableSingletons$CheckInFlowScreenKt$lambda-3$1:
+    public final void invoke$2()
+com.ideasinc.followthrough.ui.checkin.ComposableSingletons$CheckInFlowScreenKt$lambda-4$1:
     public final void invoke$2()
 com.ideasinc.followthrough.ui.checkin.ComposableSingletons$CheckInFlowScreenKt:
     public static final com.ideasinc.followthrough.ui.checkin.ComposableSingletons$CheckInFlowScreenKt INSTANCE
-    public static kotlin.jvm.functions.Function2 getLambda-1$app_release()
+    public static kotlin.jvm.functions.Function3 getLambda-1$app_release()
+    public static kotlin.jvm.functions.Function3 getLambda-2$app_release()
+    public static kotlin.jvm.functions.Function2 getLambda-3$app_release()
+    public static kotlin.jvm.functions.Function2 getLambda-4$app_release()
 com.ideasinc.followthrough.ui.checkin.ComposableSingletons$CheckInReadScreenKt$lambda-1$1:
     public final void invoke$42()
 com.ideasinc.followthrough.ui.checkin.ComposableSingletons$CheckInReadScreenKt$lambda-2$1:
@@ -62396,12 +62442,21 @@ com.ideasinc.followthrough.ui.goals.ComposableSingletons$GoalDetailScreenKt:
     public static kotlin.jvm.functions.Function2 getLambda-8$app_release()
     public static kotlin.jvm.functions.Function2 getLambda-9$app_release()
 com.ideasinc.followthrough.ui.goals.ComposableSingletons$NewGoalFlowScreenKt$lambda-1$1:
+    public final void invoke$42()
+com.ideasinc.followthrough.ui.goals.ComposableSingletons$NewGoalFlowScreenKt$lambda-2$1:
+    public final void invoke$42()
+com.ideasinc.followthrough.ui.goals.ComposableSingletons$NewGoalFlowScreenKt$lambda-3$1:
+    public final void invoke$2()
+com.ideasinc.followthrough.ui.goals.ComposableSingletons$NewGoalFlowScreenKt$lambda-4$1:
     public final void invoke$2()
 com.ideasinc.followthrough.ui.goals.ComposableSingletons$NewGoalFlowScreenKt:
     public static final com.ideasinc.followthrough.ui.goals.ComposableSingletons$NewGoalFlowScreenKt INSTANCE
-    public static kotlin.jvm.functions.Function2 getLambda-1$app_release()
+    public static kotlin.jvm.functions.Function3 getLambda-1$app_release()
+    public static kotlin.jvm.functions.Function3 getLambda-2$app_release()
+    public static kotlin.jvm.functions.Function2 getLambda-3$app_release()
+    public static kotlin.jvm.functions.Function2 getLambda-4$app_release()
 com.ideasinc.followthrough.ui.goals.GoalDetailScreenKt$$InternalSyntheticLambda$5$e4e96f8a6590c8b00d192933cd1d79df3b16d935152f1a262a7dc2ccf68faaf0$0:
-    public final synthetic java.lang.String f$0
+    public final synthetic java.lang.String f$1
 com.ideasinc.followthrough.ui.goals.GoalDetailScreenKt$$InternalSyntheticLambda$5$e4e96f8a6590c8b00d192933cd1d79df3b16d935152f1a262a7dc2ccf68faaf0$1:
     public final synthetic java.lang.String f$0
 com.ideasinc.followthrough.ui.goals.GoalDetailScreenKt$GoalDetailScreen$1$1:
@@ -62409,7 +62464,7 @@ com.ideasinc.followthrough.ui.goals.GoalDetailScreenKt$GoalDetailScreen$1$1:
     public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope,kotlin.coroutines.Continuation)
 com.ideasinc.followthrough.ui.goals.GoalDetailScreenKt$GoalDetailScreen$10:
     public final void invoke$2()
-com.ideasinc.followthrough.ui.goals.GoalDetailScreenKt$GoalDetailScreen$11$1$1:
+com.ideasinc.followthrough.ui.goals.GoalDetailScreenKt$GoalDetailScreen$11$1$1$1:
     public final void invoke$90()
 com.ideasinc.followthrough.ui.goals.GoalDetailScreenKt$GoalDetailScreen$11:
     public final void invoke$2()
@@ -62488,31 +62543,43 @@ com.ideasinc.followthrough.ui.goals.GoalDetailViewModel:
     public static void onReassuranceDone()
     public static void saveGoalEdit()
     public static void showEditDialog()
-com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$$InternalSyntheticLambda$6$00dfb1c37acbb3e7d28cb7424426f88e072ffe023eac5c9a35d72ef2abad5248$3:
+com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$$InternalSyntheticLambda$6$00dfb1c37acbb3e7d28cb7424426f88e072ffe023eac5c9a35d72ef2abad5248$2:
     public final synthetic androidx.compose.foundation.layout.ColumnScope f$0
+com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$CheckInStepContent$4$1:
+    public final void invoke$2()
 com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$1$1:
     public int label
     public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope,kotlin.coroutines.Continuation)
+com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$10:
+    public final void invoke$89()
 com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$2$1:
     public int label
     public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope,kotlin.coroutines.Continuation)
 com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$3$1:
     public int label
     public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope,kotlin.coroutines.Continuation)
-com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$4$1$1$1:
+com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$5$1:
     public final void invoke()
-com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$4:
-    public final void invoke$2()
-com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$5$1$1$1:
+com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$6$1$1:
     public final void invoke()
-com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$5$1$2$1:
-    public final void invoke()
-com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$5$1$3:
-    public final void invoke$42()
-com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$5:
-    public final void invoke$2()
 com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$6:
-    public final void invoke$89()
+    public final void invoke$2()
+com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$7$1$1:
+    public final void invoke()
+com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$7:
+    public final void invoke$2()
+com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$8$1$1$1:
+    public final void invoke()
+com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$8:
+    public final void invoke$2()
+com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$9$1$1$1:
+    public final void invoke()
+com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$9$1$2$1:
+    public final void invoke()
+com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$9$1$3:
+    public final void invoke$42()
+com.ideasinc.followthrough.ui.goals.NewGoalFlowScreenKt$NewGoalFlowScreen$9:
+    public final void invoke$2()
 com.ideasinc.followthrough.ui.goals.NewGoalFlowUiState:
     public static final int $stable
     static void <clinit>()
@@ -62528,6 +62595,7 @@ com.ideasinc.followthrough.ui.goals.NewGoalFlowUiState:
     public static java.util.List getQuestionConfigs()
     public static java.lang.String getSavedGoalId()
     public static boolean getShouldExit()
+    public static boolean getShowDiscardDialog()
 com.ideasinc.followthrough.ui.goals.NewGoalFlowViewModel$1:
     public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope,kotlin.coroutines.Continuation)
 com.ideasinc.followthrough.ui.goals.NewGoalFlowViewModel$Factory:
@@ -62544,11 +62612,13 @@ com.ideasinc.followthrough.ui.goals.NewGoalFlowViewModel:
     public final void onBack()
     public final void onCompetingPriorityChange()
     public final void onConfidenceChange()
+    public final void onDiscard()
     public final void onGoalOrChangeChange()
     public final void onImplementationIntentionChange()
     public final void onMadeProgressChange()
     public static void onNextCheckInStep()
     public final void onSave()
+    public final void onSystemBack()
     public final void save$1()
 com.ideasinc.followthrough.ui.goals.NewGoalPhase$CheckIn:
     static void <clinit>()
@@ -62616,11 +62686,11 @@ com.ideasinc.followthrough.ui.list.ListScreenKt$ListScreen$6$1$5$1$2$1$4$1:
     public final void invoke()
 com.ideasinc.followthrough.ui.list.ListScreenKt$ListScreen$6$1$5$1$2$1:
     public static void invoke$92()
-com.ideasinc.followthrough.ui.list.ListScreenKt$ListScreen$6$invoke$lambda$14$lambda$13$lambda$12$$inlined$itemsIndexed$default$1:
+com.ideasinc.followthrough.ui.list.ListScreenKt$ListScreen$6$invoke$lambda$13$lambda$12$lambda$11$$inlined$itemsIndexed$default$1:
     public final java.lang.Object invoke$41()
-com.ideasinc.followthrough.ui.list.ListScreenKt$ListScreen$6$invoke$lambda$14$lambda$13$lambda$12$$inlined$itemsIndexed$default$2:
+com.ideasinc.followthrough.ui.list.ListScreenKt$ListScreen$6$invoke$lambda$13$lambda$12$lambda$11$$inlined$itemsIndexed$default$2:
     public final java.lang.Object invoke$41()
-com.ideasinc.followthrough.ui.list.ListScreenKt$ListScreen$6$invoke$lambda$14$lambda$13$lambda$12$$inlined$itemsIndexed$default$3:
+com.ideasinc.followthrough.ui.list.ListScreenKt$ListScreen$6$invoke$lambda$13$lambda$12$lambda$11$$inlined$itemsIndexed$default$3:
     public final void invoke$91()
 com.ideasinc.followthrough.ui.list.ListScreenKt$ListScreen$6:
     public final void invoke$89()
@@ -62780,19 +62850,23 @@ com.ideasinc.followthrough.ui.settings.CustomizeQuestionsScreenKt$CustomizeQuest
     public final void invoke$89()
 com.ideasinc.followthrough.ui.settings.SettingsScreenKt$$InternalSyntheticLambda$4$003b0dfc3fd3b3821a0db4a1a4fd1378aef25befe28585086b4f41140b4c6aa9$1:
     public final synthetic java.lang.String f$8
+com.ideasinc.followthrough.ui.settings.SettingsScreenKt$$InternalSyntheticLambda$7$2880c5f928c4b7c3df6e32621c79f0c02f077cf31e5a63b8cbae22935737f839$1:
+    public final synthetic androidx.compose.foundation.layout.RowScope f$0
+com.ideasinc.followthrough.ui.settings.SettingsScreenKt$ReminderDayChip$2:
+    public final void invoke$42()
 com.ideasinc.followthrough.ui.settings.SettingsScreenKt$SettingsScreen$1$1:
     public int label
     public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope,kotlin.coroutines.Continuation)
 com.ideasinc.followthrough.ui.settings.SettingsScreenKt$SettingsScreen$10:
     public final void invoke$2()
-com.ideasinc.followthrough.ui.settings.SettingsScreenKt$SettingsScreen$11$$InternalSyntheticLambda$6$cde50950cb925d90638759eced2dd1ddf2ae2315b99f0596652841b8079395e7$0
-com.ideasinc.followthrough.ui.settings.SettingsScreenKt$SettingsScreen$11$$InternalSyntheticLambda$6$cde50950cb925d90638759eced2dd1ddf2ae2315b99f0596652841b8079395e7$1
+com.ideasinc.followthrough.ui.settings.SettingsScreenKt$SettingsScreen$11$$InternalSyntheticLambda$6$44ab6b609131c64a7fb599a3e5ea9058afa57296ddfc8cd4a2c027b6fa8cfe48$0
+com.ideasinc.followthrough.ui.settings.SettingsScreenKt$SettingsScreen$11$$InternalSyntheticLambda$6$44ab6b609131c64a7fb599a3e5ea9058afa57296ddfc8cd4a2c027b6fa8cfe48$1
 com.ideasinc.followthrough.ui.settings.SettingsScreenKt$SettingsScreen$11$1$3$2$2$1$1$1:
     public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope,kotlin.coroutines.Continuation)
 com.ideasinc.followthrough.ui.settings.SettingsScreenKt$SettingsScreen$11$1$3$2$2$1$2$1:
     public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope,kotlin.coroutines.Continuation)
-com.ideasinc.followthrough.ui.settings.SettingsScreenKt$SettingsScreen$11$1$3$3$2$1$3:
-    public final void invoke$42()
+com.ideasinc.followthrough.ui.settings.SettingsScreenKt$SettingsScreen$11$1$3$3$2:
+    public static void invoke$95()
 com.ideasinc.followthrough.ui.settings.SettingsScreenKt$SettingsScreen$11:
     public final synthetic java.lang.String $permissionDeniedMessage
     public final void invoke$89()
@@ -62820,7 +62894,7 @@ com.ideasinc.followthrough.ui.settings.SettingsUiState:
     public static java.lang.String getEditingKey()
     public static java.lang.String getEditingLabel()
     public static java.util.List getQuestionConfigs()
-    public final java.util.Set getReminderDays()
+    public static java.util.Set getReminderDays()
     public final int getReminderHour()
     public final int getReminderMinute()
     public final boolean getRemindersEnabled()
@@ -62885,7 +62959,6 @@ com.ideasinc.followthrough.ui.stats.StatsViewModel:
 com.ideasinc.followthrough.ui.stats.StatsViewModelKt
 com.ideasinc.followthrough.ui.theme.AppColors:
     public static final com.ideasinc.followthrough.ui.theme.AppColors INSTANCE
-    public static long getDestructive(androidx.compose.runtime.Composer)
     public static long getOnForgeBackground(androidx.compose.runtime.Composer)
     public static long getOnOnboardingBodySurface-0d7_KjU()
     public static long getOnOverlaySurface-0d7_KjU()
@@ -62938,9 +63011,9 @@ kotlin.SafePublicationLazyImpl:
 kotlin.SynchronizedLazyImpl:
     public final boolean isInitialized()
 kotlin.Triple:
-    public final java.lang.Object component1()
-    public final java.lang.Object component2()
-    public final java.lang.Object component3()
+    public static java.lang.Object component1()
+    public static java.lang.Object component2()
+    public static java.lang.Object component3()
 kotlin.TuplesKt
 kotlin.UByte$Companion
 kotlin.UByte:
@@ -64254,7 +64327,7 @@ kotlinx.coroutines.sync.SemaphoreKt:
 kotlinx.coroutines.sync.SemaphoreSegment:
     public static synthetic java.util.concurrent.atomic.AtomicReferenceArray getAcquirers()
 kotlinx.serialization.PolymorphicSerializer$descriptor$2$1:
-    public final void invoke$96()
+    public final void invoke$97()
 kotlinx.serialization.PolymorphicSerializer$descriptor$2:
     public final kotlinx.serialization.descriptors.SerialDescriptor invoke()
 kotlinx.serialization.PolymorphicSerializer:
@@ -64291,7 +64364,7 @@ kotlinx.serialization.descriptors.SerialDescriptorKt$elementNames$1$1:
 kotlinx.serialization.descriptors.SerialDescriptorKt$special$$inlined$Iterable$1
 kotlinx.serialization.descriptors.SerialDescriptorKt
 kotlinx.serialization.descriptors.SerialDescriptorsKt$buildSerialDescriptor$1:
-    public final void invoke$96()
+    public final void invoke$97()
 kotlinx.serialization.descriptors.SerialDescriptorsKt:
     public static synthetic kotlinx.serialization.descriptors.SerialDescriptorImpl buildSerialDescriptor$default(java.lang.String,kotlinx.serialization.descriptors.SerialKind,kotlinx.serialization.descriptors.SerialDescriptor[])
 kotlinx.serialization.encoding.AbstractEncoder:
@@ -64379,7 +64452,7 @@ kotlinx.serialization.internal.NothingSerialDescriptor:
 kotlinx.serialization.internal.NothingSerializer:
     public static void serialize$8()
 kotlinx.serialization.internal.ObjectSerializer$descriptor$2$1:
-    public final void invoke$96()
+    public final void invoke$97()
 kotlinx.serialization.internal.ObjectSerializer$descriptor$2:
     public final kotlinx.serialization.descriptors.SerialDescriptor invoke()
 kotlinx.serialization.internal.ObjectSerializer:

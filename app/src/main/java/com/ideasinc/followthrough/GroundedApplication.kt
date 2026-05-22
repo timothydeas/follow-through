@@ -5,6 +5,7 @@ import android.content.Context
 import com.ideasinc.followthrough.di.AppContainer
 import com.ideasinc.followthrough.notifications.KEY_REMINDERS_ENABLED
 import com.ideasinc.followthrough.notifications.PREFS_REMINDERS
+import com.ideasinc.followthrough.ui.theme.ThemePreferences
 
 private const val KEY_REMINDERS_RESET_V1 = "reminders_reset_v1"
 
@@ -15,6 +16,7 @@ class GroundedApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        ThemePreferences.load(this)
         resetRemindersOnceForExactAlarmMigration()
     }
 

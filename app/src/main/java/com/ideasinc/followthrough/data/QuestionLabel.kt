@@ -1,4 +1,4 @@
-﻿package com.ideasinc.followthrough.data
+package com.ideasinc.followthrough.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -8,6 +8,7 @@ data class QuestionLabel(
     @PrimaryKey val id: String,
     val questionKey: String,
     val customLabel: String,
+    val customPlaceholder: String? = null,
     val isEnabled: Boolean = true
 )
 
@@ -36,14 +37,27 @@ object QuestionKeys {
         AVOIDING to "Is there something you already know would help you here, but you've been avoiding finding out or facing?",
         CONFIDENCE to "How confident do you feel you'll figure this out?",
         COMPETING_PRIORITY to "What's getting in your way right now — is it the situation itself, or how you're seeing it or expecting it to go? If nothing is, what might get in the way later?",
-        IMPLEMENTATION_INTENTION to "I will [e.g., what I'll do] when [e.g., moment or situation] occurs.",
+        IMPLEMENTATION_INTENTION to "When [e.g., moment or situation], I will [e.g., what I'll do].",
         ACCOUNTABILITY to "Who holds you accountable?"
+    )
+
+    // Default placeholder (example-answer) text per question. Mirrors the
+    // values the check-in flow used before placeholders became customizable.
+    val DEFAULT_PLACEHOLDERS = mapOf(
+        GOAL_OR_CHANGE to "A goal, a habit, something you want to change, or something you're struggling with",
+        AVOIDING to "Something you've been putting off looking at, even though part of you knows it matters",
+        CONFIDENCE to "You don't need proof you can do this before you start. What does your gut say?",
+        MADE_PROGRESS to "Yes, No, or describe where you feel you are right now",
+        COMPETING_PRIORITY to "Be honest — sometimes our perception or anticipation of a situation matters more than the situation itself. And if nothing is in your way right now, think ahead.",
+        IMPLEMENTATION_INTENTION to "I will go for a walk when I finish my morning coffee.",
+        ACCOUNTABILITY to "A person, a memory, a strategy — whatever keeps you going"
     )
 }
 
 data class QuestionConfig(
     val key: String,
     val label: String,
+    val placeholder: String,
     val isEnabled: Boolean
 )
 
@@ -56,6 +70,8 @@ fun resolveConfigs(labels: List<QuestionLabel>): List<QuestionConfig> {
         QuestionConfig(
             key = key,
             label = label?.customLabel ?: QuestionKeys.DEFAULT_LABELS[key] ?: key,
+            placeholder = label?.customPlaceholder
+                ?: QuestionKeys.DEFAULT_PLACEHOLDERS[key] ?: "",
             isEnabled = label?.isEnabled ?: true
         )
     }

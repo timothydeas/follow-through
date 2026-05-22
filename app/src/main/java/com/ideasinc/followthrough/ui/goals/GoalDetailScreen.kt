@@ -12,15 +12,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -34,6 +37,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -65,12 +69,14 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.data.CheckIn
 import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
+import com.ideasinc.followthrough.data.Step
 import com.ideasinc.followthrough.ui.launch.insightDisplayDurationMs
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
 import com.ideasinc.followthrough.ui.theme.AppColors
@@ -89,6 +95,7 @@ fun GoalDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showUndoDialog by remember { mutableStateOf(false) }
     val backFocus = remember { FocusRequester() }
     val deleteTriggerFocus = remember { FocusRequester() }
     val editTriggerFocus = remember { FocusRequester() }
@@ -196,6 +203,81 @@ fun GoalDetailScreen(
         )
     }
 
+    if (showUndoDialog) {
+        AlertDialog(
+            onDismissRequest = { showUndoDialog = false },
+            text = {
+                Text(
+                    "Undo follow-through?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showUndoDialog = false
+                        viewModel.undoFollowThrough()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = AppColors.BrandAccentText
+                    )
+                ) { Text("Undo") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showUndoDialog = false },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = AppColors.BrandAccentText
+                    )
+                ) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (uiState.showStepDialog) {
+        val stepFocus = remember { FocusRequester() }
+        LaunchedEffect(Unit) { runCatching { stepFocus.requestFocus() } }
+        val isEditingStep = uiState.stepEditorTargetId != null
+        AlertDialog(
+            onDismissRequest = viewModel::dismissStepDialog,
+            title = {
+                Text(
+                    if (isEditingStep) "Edit step" else "Add step",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+            },
+            text = {
+                OutlinedTextField(
+                    value = uiState.stepDialogText,
+                    onValueChange = viewModel::onStepDialogTextChange,
+                    label = { Text("Step") },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(stepFocus)
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = viewModel::saveStep,
+                    enabled = uiState.stepDialogText.isNotBlank(),
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = AppColors.BrandAccentText,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = viewModel::dismissStepDialog,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = AppColors.BrandAccentText
+                    )
+                ) { Text("Cancel") }
+            }
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -280,23 +362,23 @@ fun GoalDetailScreen(
                         .padding(horizontal = 24.dp, vertical = 12.dp)
                 ) {
                     Button(
-                        onClick = { if (!followedThrough) viewModel.followThrough() },
-                        enabled = !followedThrough,
+                        onClick = {
+                            if (followedThrough) showUndoDialog = true
+                            else viewModel.followThrough()
+                        },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                            // Explicit disabled colors match enabled so the visual
-                            // state doesn't change — the button stays solid red with
-                            // a checkmark; only TalkBack reports it as disabled.
-                            disabledContainerColor = MaterialTheme.colorScheme.primary,
-                            disabledContentColor = MaterialTheme.colorScheme.onPrimary
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp)
                             .semantics {
+                                // Stays tappable once followed through — a tap then
+                                // opens the undo confirmation dialog.
                                 contentDescription =
-                                    if (followedThrough) "Followed through"
+                                    if (followedThrough)
+                                        "Followed through. Double tap to undo."
                                     else "I followed through"
                             }
                     ) {
@@ -316,33 +398,42 @@ fun GoalDetailScreen(
                     }
                 }
             }
-            if (uiState.checkIns.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No check-ins yet.\nTap + to add one.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
+            // Steps section and check-ins share one scrolling list so a goal
+            // with many steps and many check-ins never overflows.
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 4.dp,
+                    bottom = 96.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                item {
+                    StepsSection(
+                        steps = uiState.steps,
+                        onAddStep = viewModel::showAddStepDialog,
+                        onToggleStep = viewModel::toggleStep,
+                        onEditStep = viewModel::showEditStepDialog,
+                        onDeleteStep = viewModel::deleteStep
                     )
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 4.dp,
-                        bottom = 96.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
+                if (uiState.checkIns.isEmpty()) {
+                    item {
+                        Text(
+                            text = "No check-ins yet. Tap + to add one.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp)
+                        )
+                    }
+                } else {
                     items(uiState.checkIns, key = { it.id }) { checkIn ->
                         CheckInCard(
                             checkIn = checkIn,
@@ -412,6 +503,154 @@ private fun CheckInCard(
                 text = formatDate(checkIn.createdAt),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+// ─── Steps (sub-goals) ─────────────────────────────────────────────────────
+
+@Composable
+private fun StepsSection(
+    steps: List<Step>,
+    onAddStep: () -> Unit,
+    onToggleStep: (Step) -> Unit,
+    onEditStep: (Step) -> Unit,
+    onDeleteStep: (String) -> Unit
+) {
+    val completed = steps.count { it.isCompleted }
+    val total = steps.size
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Steps",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontFamily = DmSansFontFamily
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { heading() }
+            )
+            IconButton(
+                onClick = onAddStep,
+                modifier = Modifier.semantics { contentDescription = "Add step" }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        if (total == 0) {
+            Text(
+                text = "No steps yet. Break this goal into smaller steps.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Text(
+                text = "$completed of $total completed",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            // Cascading progress bar. Decorative — the count above conveys the
+            // same information to TalkBack.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(completed.toFloat() / total)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+            }
+            steps.forEach { step ->
+                StepRow(
+                    step = step,
+                    onToggle = { onToggleStep(step) },
+                    onEdit = { onEditStep(step) },
+                    onDelete = { onDeleteStep(step.id) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StepRow(
+    step: Step,
+    onToggle: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .heightIn(min = 48.dp)
+                .toggleable(
+                    value = step.isCompleted,
+                    role = Role.Checkbox,
+                    onValueChange = { onToggle() }
+                ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = step.isCompleted,
+                onCheckedChange = null
+            )
+            Text(
+                text = step.title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (step.isCompleted)
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                else
+                    MaterialTheme.colorScheme.onSurface,
+                textDecoration = if (step.isCompleted)
+                    TextDecoration.LineThrough else null,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        }
+        IconButton(
+            onClick = onEdit,
+            modifier = Modifier.semantics { contentDescription = "Edit step" }
+        ) {
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        IconButton(
+            onClick = onDelete,
+            modifier = Modifier.semantics { contentDescription = "Delete step" }
+        ) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = null,
+                tint = AppColors.Destructive,
+                modifier = Modifier.size(18.dp)
             )
         }
     }

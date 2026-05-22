@@ -37,10 +37,12 @@ public final class GroundedDatabase_Impl extends GroundedDatabase {
 
   private volatile QuestionLabelDao _questionLabelDao;
 
+  private volatile StepDao _stepDao;
+
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(23) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(26) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `notes` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `body` TEXT NOT NULL, `tag` TEXT, `isPinned` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `type` TEXT NOT NULL, `isDraft` INTEGER NOT NULL, `reflection` TEXT NOT NULL, `whatStoppedYou` TEXT NOT NULL, `whatYouLearned` TEXT NOT NULL, `nextSteps` TEXT NOT NULL, `whenField` TEXT NOT NULL, `willField` TEXT NOT NULL, `followedThrough` INTEGER NOT NULL, `followedThroughAt` INTEGER, `implementationIntention` TEXT NOT NULL, PRIMARY KEY(`id`))");
@@ -49,9 +51,11 @@ public final class GroundedDatabase_Impl extends GroundedDatabase {
         db.execSQL("CREATE TABLE IF NOT EXISTS `goals` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `accountableTo` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `priority` INTEGER, `followedThrough` INTEGER NOT NULL, `followedThroughAt` INTEGER, PRIMARY KEY(`id`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS `check_ins` (`id` TEXT NOT NULL, `goalId` TEXT NOT NULL, `goalOrChange` TEXT NOT NULL, `madeProgress` TEXT, `avoiding` TEXT, `confidence` TEXT, `competingPriority` TEXT, `implementationIntention` TEXT, `accountability` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`goalId`) REFERENCES `goals`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )");
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_check_ins_goalId` ON `check_ins` (`goalId`)");
-        db.execSQL("CREATE TABLE IF NOT EXISTS `question_labels` (`id` TEXT NOT NULL, `questionKey` TEXT NOT NULL, `customLabel` TEXT NOT NULL, `isEnabled` INTEGER NOT NULL, PRIMARY KEY(`id`))");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `question_labels` (`id` TEXT NOT NULL, `questionKey` TEXT NOT NULL, `customLabel` TEXT NOT NULL, `customPlaceholder` TEXT, `isEnabled` INTEGER NOT NULL, PRIMARY KEY(`id`))");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `steps` (`id` TEXT NOT NULL, `goalId` TEXT NOT NULL, `title` TEXT NOT NULL, `isCompleted` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`goalId`) REFERENCES `goals`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )");
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_steps_goalId` ON `steps` (`goalId`)");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e47efc6cedc7b86904ab024e2f520db6')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b406277ba84d0e413fdac5e58653c763')");
       }
 
       @Override
@@ -61,6 +65,7 @@ public final class GroundedDatabase_Impl extends GroundedDatabase {
         db.execSQL("DROP TABLE IF EXISTS `goals`");
         db.execSQL("DROP TABLE IF EXISTS `check_ins`");
         db.execSQL("DROP TABLE IF EXISTS `question_labels`");
+        db.execSQL("DROP TABLE IF EXISTS `steps`");
         final List<? extends RoomDatabase.Callback> _callbacks = mCallbacks;
         if (_callbacks != null) {
           for (RoomDatabase.Callback _callback : _callbacks) {
@@ -190,10 +195,11 @@ public final class GroundedDatabase_Impl extends GroundedDatabase {
                   + " Expected:\n" + _infoCheckIns + "\n"
                   + " Found:\n" + _existingCheckIns);
         }
-        final HashMap<String, TableInfo.Column> _columnsQuestionLabels = new HashMap<String, TableInfo.Column>(4);
+        final HashMap<String, TableInfo.Column> _columnsQuestionLabels = new HashMap<String, TableInfo.Column>(5);
         _columnsQuestionLabels.put("id", new TableInfo.Column("id", "TEXT", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsQuestionLabels.put("questionKey", new TableInfo.Column("questionKey", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsQuestionLabels.put("customLabel", new TableInfo.Column("customLabel", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsQuestionLabels.put("customPlaceholder", new TableInfo.Column("customPlaceholder", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsQuestionLabels.put("isEnabled", new TableInfo.Column("isEnabled", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         final HashSet<TableInfo.ForeignKey> _foreignKeysQuestionLabels = new HashSet<TableInfo.ForeignKey>(0);
         final HashSet<TableInfo.Index> _indicesQuestionLabels = new HashSet<TableInfo.Index>(0);
@@ -204,9 +210,27 @@ public final class GroundedDatabase_Impl extends GroundedDatabase {
                   + " Expected:\n" + _infoQuestionLabels + "\n"
                   + " Found:\n" + _existingQuestionLabels);
         }
+        final HashMap<String, TableInfo.Column> _columnsSteps = new HashMap<String, TableInfo.Column>(6);
+        _columnsSteps.put("id", new TableInfo.Column("id", "TEXT", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsSteps.put("goalId", new TableInfo.Column("goalId", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsSteps.put("title", new TableInfo.Column("title", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsSteps.put("isCompleted", new TableInfo.Column("isCompleted", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsSteps.put("createdAt", new TableInfo.Column("createdAt", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsSteps.put("updatedAt", new TableInfo.Column("updatedAt", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        final HashSet<TableInfo.ForeignKey> _foreignKeysSteps = new HashSet<TableInfo.ForeignKey>(1);
+        _foreignKeysSteps.add(new TableInfo.ForeignKey("goals", "CASCADE", "NO ACTION", Arrays.asList("goalId"), Arrays.asList("id")));
+        final HashSet<TableInfo.Index> _indicesSteps = new HashSet<TableInfo.Index>(1);
+        _indicesSteps.add(new TableInfo.Index("index_steps_goalId", false, Arrays.asList("goalId"), Arrays.asList("ASC")));
+        final TableInfo _infoSteps = new TableInfo("steps", _columnsSteps, _foreignKeysSteps, _indicesSteps);
+        final TableInfo _existingSteps = TableInfo.read(db, "steps");
+        if (!_infoSteps.equals(_existingSteps)) {
+          return new RoomOpenHelper.ValidationResult(false, "steps(com.ideasinc.followthrough.data.Step).\n"
+                  + " Expected:\n" + _infoSteps + "\n"
+                  + " Found:\n" + _existingSteps);
+        }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "e47efc6cedc7b86904ab024e2f520db6", "c055b467f05669f833878eeb921e74fc");
+    }, "b406277ba84d0e413fdac5e58653c763", "fc381cf0711e9dfd5303b3e0dda6872a");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;
@@ -217,7 +241,7 @@ public final class GroundedDatabase_Impl extends GroundedDatabase {
   protected InvalidationTracker createInvalidationTracker() {
     final HashMap<String, String> _shadowTablesMap = new HashMap<String, String>(0);
     final HashMap<String, Set<String>> _viewTables = new HashMap<String, Set<String>>(0);
-    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "notes","follow_throughs","goals","check_ins","question_labels");
+    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "notes","follow_throughs","goals","check_ins","question_labels","steps");
   }
 
   @Override
@@ -238,6 +262,7 @@ public final class GroundedDatabase_Impl extends GroundedDatabase {
       _db.execSQL("DELETE FROM `goals`");
       _db.execSQL("DELETE FROM `check_ins`");
       _db.execSQL("DELETE FROM `question_labels`");
+      _db.execSQL("DELETE FROM `steps`");
       super.setTransactionSuccessful();
     } finally {
       super.endTransaction();
@@ -260,6 +285,7 @@ public final class GroundedDatabase_Impl extends GroundedDatabase {
     _typeConvertersMap.put(GoalDao.class, GoalDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(CheckInDao.class, CheckInDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(QuestionLabelDao.class, QuestionLabelDao_Impl.getRequiredConverters());
+    _typeConvertersMap.put(StepDao.class, StepDao_Impl.getRequiredConverters());
     return _typeConvertersMap;
   }
 
@@ -344,6 +370,20 @@ public final class GroundedDatabase_Impl extends GroundedDatabase {
           _questionLabelDao = new QuestionLabelDao_Impl(this);
         }
         return _questionLabelDao;
+      }
+    }
+  }
+
+  @Override
+  public StepDao stepDao() {
+    if (_stepDao != null) {
+      return _stepDao;
+    } else {
+      synchronized(this) {
+        if(_stepDao == null) {
+          _stepDao = new StepDao_Impl(this);
+        }
+        return _stepDao;
       }
     }
   }

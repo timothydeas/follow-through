@@ -1,6 +1,7 @@
 ﻿package com.ideasinc.followthrough.ui.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,6 +42,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ideasinc.followthrough.di.AppContainer
@@ -64,23 +66,46 @@ fun CustomizeQuestionsScreen(
     if (uiState.editingKey != null) {
         val labelFocus = remember { FocusRequester() }
         LaunchedEffect(Unit) { runCatching { labelFocus.requestFocus() } }
+        val canSave = uiState.editingLabel.isNotBlank() &&
+            uiState.editingPlaceholder.isNotBlank()
         AlertDialog(
             onDismissRequest = settingsVm::cancelEditing,
-            title = { Text("Edit question label", style = MaterialTheme.typography.headlineSmall) },
+            title = { Text("Edit question", style = MaterialTheme.typography.headlineSmall) },
             text = {
-                OutlinedTextField(
-                    value = uiState.editingLabel,
-                    onValueChange = settingsVm::onEditingLabelChange,
-                    label = { Text("Label") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(labelFocus)
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = uiState.editingLabel,
+                        onValueChange = settingsVm::onEditingLabelChange,
+                        label = { Text("Question label") },
+                        isError = uiState.editingLabel.isBlank(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(labelFocus)
+                    )
+                    OutlinedTextField(
+                        value = uiState.editingPlaceholder,
+                        onValueChange = settingsVm::onEditingPlaceholderChange,
+                        label = { Text("Placeholder (example answer)") },
+                        isError = uiState.editingPlaceholder.isBlank(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (!canSave) {
+                        Text(
+                            text = "Both the label and placeholder are required.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             },
             confirmButton = {
                 TextButton(
                     onClick = settingsVm::saveLabel,
-                    colors = ButtonDefaults.textButtonColors(contentColor = AppColors.BrandAccentText)
+                    enabled = canSave,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = AppColors.BrandAccentText,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 ) { Text("Save") }
             },
             dismissButton = {
@@ -160,6 +185,13 @@ fun CustomizeQuestionsScreen(
                                     MaterialTheme.colorScheme.onSurface
                                 else
                                     MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "Placeholder: ${config.placeholder}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                         IconButton(

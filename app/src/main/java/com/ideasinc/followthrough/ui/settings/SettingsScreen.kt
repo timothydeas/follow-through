@@ -28,6 +28,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -39,6 +41,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -90,6 +93,8 @@ import com.ideasinc.followthrough.notifications.ReminderScheduler
 import com.ideasinc.followthrough.notifications.canScheduleExactAlarmsCompat
 import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
+import com.ideasinc.followthrough.ui.theme.ThemeMode
+import com.ideasinc.followthrough.ui.theme.ThemePreferences
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Locale
@@ -190,7 +195,7 @@ fun SettingsScreen(
             title = { Text("Enable notifications", style = MaterialTheme.typography.titleMedium) },
             text = {
                 Text(
-                    "To receive reminders, please enable notifications for Follow Through in your device Settings.",
+                    "To receive reminders, please enable notifications for Follow Thru in your device Settings.",
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -212,7 +217,7 @@ fun SettingsScreen(
             title = { Text("Allow exact alarms", style = MaterialTheme.typography.titleMedium) },
             text = {
                 Text(
-                    "For accurate reminders, Follow Through needs permission to schedule exact alarms. Tap below to enable it in Settings — it takes just a second.",
+                    "For accurate reminders, Follow Thru needs permission to schedule exact alarms. Tap below to enable it in Settings — it takes just a second.",
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -285,7 +290,7 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = "Lock Follow Through with Face ID or Device PIN",
+                        text = "Lock Follow Thru with Face ID or Device PIN",
                         style = MaterialTheme.typography.bodyMedium.copy(fontFamily = PoppinsFontFamily),
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
@@ -307,7 +312,7 @@ fun SettingsScreen(
                     ),
                     modifier = Modifier.semantics {
                         contentDescription =
-                            "Lock Follow Through with Face ID or Device PIN"
+                            "Lock Follow Thru with Face ID or Device PIN"
                         stateDescription = if (biometricEnabled) "On" else "Off"
                         role = Role.Switch
                     }
@@ -339,6 +344,35 @@ fun SettingsScreen(
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+
+            // Appearance section
+            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                Text(
+                    text = "Appearance",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontFamily = PoppinsFontFamily,
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .padding(bottom = 8.dp)
+                        .semantics { heading() }
+                )
+                val themeMode by ThemePreferences.mode.collectAsState()
+                Column(modifier = Modifier.selectableGroup()) {
+                    ThemeOptionRow("Light", ThemeMode.LIGHT, themeMode) {
+                        ThemePreferences.setMode(context, it)
+                    }
+                    ThemeOptionRow("Dark", ThemeMode.DARK, themeMode) {
+                        ThemePreferences.setMode(context, it)
+                    }
+                    ThemeOptionRow("System default", ThemeMode.SYSTEM, themeMode) {
+                        ThemePreferences.setMode(context, it)
+                    }
+                }
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
@@ -592,14 +626,14 @@ fun SettingsScreen(
                 )
 
                 Text(
-                    text = "Follow Through is not a substitute for professional medical, psychological, or coaching advice.",
+                    text = "Follow Thru is not a substitute for professional medical, psychological, or coaching advice.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
 
                 Text(
-                    text = "Follow Through uses research-backed questions to support personal reflection. All questions are optional and fully customizable — you are always in control.",
+                    text = "Follow Thru uses research-backed questions to support personal reflection. All questions are optional and fully customizable — you are always in control.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 4.dp)
@@ -645,6 +679,43 @@ private fun RowScope.ReminderDayChip(
             style = MaterialTheme.typography.labelMedium,
             color = if (selected) MaterialTheme.colorScheme.onPrimary
                 else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/**
+ * One light/dark theme choice rendered as a radio row. The whole row is a
+ * single ≥ 48dp selectable target with `Role.RadioButton`, so TalkBack
+ * announces the label and selected state together.
+ */
+@Composable
+private fun ThemeOptionRow(
+    label: String,
+    mode: ThemeMode,
+    selectedMode: ThemeMode,
+    onSelect: (ThemeMode) -> Unit
+) {
+    val selected = mode == selectedMode
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .selectable(
+                selected = selected,
+                onClick = { onSelect(mode) },
+                role = Role.RadioButton
+            ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(
+            selected = selected,
+            onClick = null
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(start = 8.dp)
         )
     }
 }

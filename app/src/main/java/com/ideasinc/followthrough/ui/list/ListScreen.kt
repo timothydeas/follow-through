@@ -22,12 +22,15 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -35,6 +38,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -67,6 +71,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -110,6 +115,7 @@ fun ListScreen(
     val touchExplorationOn = rememberIsTouchExplorationEnabled()
 
     var moveDialogTarget: MoveDialogTarget? by remember { mutableStateOf(null) }
+    var selectedTab by remember { mutableStateOf(0) }
 
     // Each LazyColumn index corresponds directly to a goal's flat position.
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
@@ -179,7 +185,7 @@ fun ListScreen(
             ) {
                 Text(
                     text = buildAnnotatedString {
-                        withStyle(SpanStyle(color = accentColor)) { append("Follow Through") }
+                        withStyle(SpanStyle(color = accentColor)) { append("Follow Thru") }
                     },
                     style = MaterialTheme.typography.displayMedium,
                     modifier = Modifier
@@ -199,91 +205,119 @@ fun ListScreen(
                 }
             }
 
-            if (uiState.streakDays > 0 || uiState.totalFollowThroughs > 0) {
-                val statsRowA11y = "Check-In Streak ${uiState.streakDays}, " +
-                    "Follow Throughs ${uiState.totalFollowThroughs}. " +
-                    "Double tap to view full stats."
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(
-                            onClickLabel = "Tap to see full stats",
-                            role = Role.Button,
-                            onClick = onStatsClick
-                        )
-                        .semantics(mergeDescendants = true) {
-                            contentDescription = statsRowA11y
-                        }
-                        .padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    StatChip(
-                        emoji = "🔥",
-                        emojiTint = Accent,
-                        value = uiState.streakDays,
-                        label = "Check-In Streak",
-                        a11y = "Check-In Streak ${uiState.streakDays}"
-                    )
-                    StatChip(
-                        emoji = "✓",
-                        emojiTint = null,
-                        value = uiState.totalFollowThroughs,
-                        label = "Follow Throughs",
-                        a11y = "Follow Throughs ${uiState.totalFollowThroughs}"
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-
-            SearchBar(
-                query = uiState.query,
-                onQueryChange = viewModel::onQueryChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
+            ListTabBar(
+                selectedTab = selectedTab,
+                onSelect = { selectedTab = it }
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            if (selectedTab == 0) {
+                if (uiState.streakDays > 0 || uiState.totalFollowThroughs > 0) {
+                    val statsRowA11y = "Check-In Streak ${uiState.streakDays}, " +
+                        "Follow Thrus ${uiState.totalFollowThroughs}. " +
+                        "Double tap to view full stats."
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(
+                                onClickLabel = "Tap to see full stats",
+                                role = Role.Button,
+                                onClick = onStatsClick
+                            )
+                            .semantics(mergeDescendants = true) {
+                                contentDescription = statsRowA11y
+                            }
+                            .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        StatChip(
+                            emoji = "🔥",
+                            emojiTint = Accent,
+                            value = uiState.streakDays,
+                            label = "Check-In Streak",
+                            a11y = "Check-In Streak ${uiState.streakDays}"
+                        )
+                        StatChip(
+                            emoji = "✓",
+                            emojiTint = null,
+                            value = uiState.totalFollowThroughs,
+                            label = "Follow Thrus",
+                            a11y = "Follow Thrus ${uiState.totalFollowThroughs}"
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
 
-            val totalCount = uiState.goals.size
+                SearchBar(
+                    query = uiState.query,
+                    onQueryChange = viewModel::onQueryChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                )
 
-            if (totalCount == 0) {
-                EmptyState(hasQuery = uiState.query.isNotBlank())
+                Spacer(modifier = Modifier.height(8.dp))
+
+                val totalCount = uiState.goals.size
+
+                if (totalCount == 0) {
+                    EmptyState(hasQuery = uiState.query.isNotBlank())
+                } else {
+                    LazyColumn(
+                        state = lazyListState,
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        itemsIndexed(
+                            uiState.goals,
+                            key = { _, row -> "goal_${row.goal.id}" }
+                        ) { idx, row ->
+                            ReorderableItem(reorderableState, key = "goal_${row.goal.id}") { dragging ->
+                                // longPressDraggableHandle() is an extension on the
+                                // ReorderableScope receiver of this lambda, so it
+                                // can only be constructed here.
+                                DraggableGoalCard(
+                                    row = row,
+                                    isDragging = dragging,
+                                    showA11yArrows = touchExplorationOn,
+                                    canMoveUp = idx > 0,
+                                    canMoveDown = idx < totalCount - 1,
+                                    dragModifier = Modifier.longPressDraggableHandle(),
+                                    onClick = { onGoalClick(row.goal.id) },
+                                    onMoveUp = { viewModel.moveGoal(row.goal.id, -1) },
+                                    onMoveDown = { viewModel.moveGoal(row.goal.id, +1) },
+                                    onArrowLongPress = {
+                                        moveDialogTarget = MoveDialogTarget(row.goal.id, totalCount)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
             } else {
-                LazyColumn(
-                    state = lazyListState,
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    itemsIndexed(
-                        uiState.goals,
-                        key = { _, row -> "goal_${row.goal.id}" }
-                    ) { idx, row ->
-                        ReorderableItem(reorderableState, key = "goal_${row.goal.id}") { dragging ->
-                            // longPressDraggableHandle() is an extension on the
-                            // ReorderableScope receiver of this lambda, so it
-                            // can only be constructed here.
-                            DraggableGoalCard(
+                Spacer(modifier = Modifier.height(8.dp))
+                if (uiState.completedGoals.isEmpty()) {
+                    CompletedEmptyState()
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(
+                            uiState.completedGoals,
+                            key = { row -> "completed_${row.goal.id}" }
+                        ) { row ->
+                            CompletedGoalCard(
                                 row = row,
-                                isDragging = dragging,
-                                showA11yArrows = touchExplorationOn,
-                                canMoveUp = idx > 0,
-                                canMoveDown = idx < totalCount - 1,
-                                dragModifier = Modifier.longPressDraggableHandle(),
-                                onClick = { onGoalClick(row.goal.id) },
-                                onMoveUp = { viewModel.moveGoal(row.goal.id, -1) },
-                                onMoveDown = { viewModel.moveGoal(row.goal.id, +1) },
-                                onArrowLongPress = {
-                                    moveDialogTarget = MoveDialogTarget(row.goal.id, totalCount)
-                                }
+                                onClick = { onGoalClick(row.goal.id) }
                             )
                         }
                     }
@@ -678,12 +712,149 @@ private fun SearchBar(
     }
 }
 
+// ─── Tabs ─────────────────────────────────────────────────────────────────
+
+@Composable
+private fun ListTabBar(
+    selectedTab: Int,
+    onSelect: (Int) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        ListTab(
+            label = "Active",
+            selected = selectedTab == 0,
+            modifier = Modifier.weight(1f),
+            onClick = { onSelect(0) }
+        )
+        ListTab(
+            label = "Completed",
+            selected = selectedTab == 1,
+            modifier = Modifier.weight(1f),
+            onClick = { onSelect(1) }
+        )
+    }
+}
+
+@Composable
+private fun ListTab(
+    label: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val accent = AppColors.BrandAccentText
+    Column(
+        modifier = modifier
+            .selectable(
+                selected = selected,
+                role = Role.Tab,
+                onClick = onClick
+            )
+            .heightIn(min = 48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleSmall,
+            color = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.dp)
+                .background(if (selected) accent else Color.Transparent)
+        )
+    }
+}
+
+// ─── Completed goals showcase ─────────────────────────────────────────────
+
+@Composable
+private fun CompletedGoalCard(
+    row: GoalRowData,
+    onClick: () -> Unit
+) {
+    val completedAt = row.goal.followedThroughAt
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    onClickLabel = "Open goal",
+                    role = Role.Button,
+                    onClick = onClick
+                )
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = row.goal.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = if (completedAt != null)
+                        "Completed ${formatDate(completedAt)}"
+                    else "Completed",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompletedEmptyState() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "Your completed goals will appear here.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
 @Composable
 private fun EmptyState(hasQuery: Boolean) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp),
+        contentAlignment = Alignment.Center
+    ) {
         Text(
             text = if (hasQuery) "No goals match your search."
-            else "Nothing here yet.\nTap + to add a goal.",
+            else "Welcome to Follow Thru. Tap the + button below to add your first goal or change you're working toward.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center

@@ -42,7 +42,7 @@ public final class QuestionLabelDao_Impl implements QuestionLabelDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `question_labels` (`id`,`questionKey`,`customLabel`,`isEnabled`) VALUES (?,?,?,?)";
+        return "INSERT OR REPLACE INTO `question_labels` (`id`,`questionKey`,`customLabel`,`customPlaceholder`,`isEnabled`) VALUES (?,?,?,?,?)";
       }
 
       @Override
@@ -51,8 +51,13 @@ public final class QuestionLabelDao_Impl implements QuestionLabelDao {
         statement.bindString(1, entity.getId());
         statement.bindString(2, entity.getQuestionKey());
         statement.bindString(3, entity.getCustomLabel());
+        if (entity.getCustomPlaceholder() == null) {
+          statement.bindNull(4);
+        } else {
+          statement.bindString(4, entity.getCustomPlaceholder());
+        }
         final int _tmp = entity.isEnabled() ? 1 : 0;
-        statement.bindLong(4, _tmp);
+        statement.bindLong(5, _tmp);
       }
     };
     this.__preparedStmtOfDeleteByKey = new SharedSQLiteStatement(__db) {
@@ -122,6 +127,7 @@ public final class QuestionLabelDao_Impl implements QuestionLabelDao {
           final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
           final int _cursorIndexOfQuestionKey = CursorUtil.getColumnIndexOrThrow(_cursor, "questionKey");
           final int _cursorIndexOfCustomLabel = CursorUtil.getColumnIndexOrThrow(_cursor, "customLabel");
+          final int _cursorIndexOfCustomPlaceholder = CursorUtil.getColumnIndexOrThrow(_cursor, "customPlaceholder");
           final int _cursorIndexOfIsEnabled = CursorUtil.getColumnIndexOrThrow(_cursor, "isEnabled");
           final List<QuestionLabel> _result = new ArrayList<QuestionLabel>(_cursor.getCount());
           while (_cursor.moveToNext()) {
@@ -132,11 +138,17 @@ public final class QuestionLabelDao_Impl implements QuestionLabelDao {
             _tmpQuestionKey = _cursor.getString(_cursorIndexOfQuestionKey);
             final String _tmpCustomLabel;
             _tmpCustomLabel = _cursor.getString(_cursorIndexOfCustomLabel);
+            final String _tmpCustomPlaceholder;
+            if (_cursor.isNull(_cursorIndexOfCustomPlaceholder)) {
+              _tmpCustomPlaceholder = null;
+            } else {
+              _tmpCustomPlaceholder = _cursor.getString(_cursorIndexOfCustomPlaceholder);
+            }
             final boolean _tmpIsEnabled;
             final int _tmp;
             _tmp = _cursor.getInt(_cursorIndexOfIsEnabled);
             _tmpIsEnabled = _tmp != 0;
-            _item = new QuestionLabel(_tmpId,_tmpQuestionKey,_tmpCustomLabel,_tmpIsEnabled);
+            _item = new QuestionLabel(_tmpId,_tmpQuestionKey,_tmpCustomLabel,_tmpCustomPlaceholder,_tmpIsEnabled);
             _result.add(_item);
           }
           return _result;
@@ -169,6 +181,7 @@ public final class QuestionLabelDao_Impl implements QuestionLabelDao {
           final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
           final int _cursorIndexOfQuestionKey = CursorUtil.getColumnIndexOrThrow(_cursor, "questionKey");
           final int _cursorIndexOfCustomLabel = CursorUtil.getColumnIndexOrThrow(_cursor, "customLabel");
+          final int _cursorIndexOfCustomPlaceholder = CursorUtil.getColumnIndexOrThrow(_cursor, "customPlaceholder");
           final int _cursorIndexOfIsEnabled = CursorUtil.getColumnIndexOrThrow(_cursor, "isEnabled");
           final QuestionLabel _result;
           if (_cursor.moveToFirst()) {
@@ -178,11 +191,17 @@ public final class QuestionLabelDao_Impl implements QuestionLabelDao {
             _tmpQuestionKey = _cursor.getString(_cursorIndexOfQuestionKey);
             final String _tmpCustomLabel;
             _tmpCustomLabel = _cursor.getString(_cursorIndexOfCustomLabel);
+            final String _tmpCustomPlaceholder;
+            if (_cursor.isNull(_cursorIndexOfCustomPlaceholder)) {
+              _tmpCustomPlaceholder = null;
+            } else {
+              _tmpCustomPlaceholder = _cursor.getString(_cursorIndexOfCustomPlaceholder);
+            }
             final boolean _tmpIsEnabled;
             final int _tmp;
             _tmp = _cursor.getInt(_cursorIndexOfIsEnabled);
             _tmpIsEnabled = _tmp != 0;
-            _result = new QuestionLabel(_tmpId,_tmpQuestionKey,_tmpCustomLabel,_tmpIsEnabled);
+            _result = new QuestionLabel(_tmpId,_tmpQuestionKey,_tmpCustomLabel,_tmpCustomPlaceholder,_tmpIsEnabled);
           } else {
             _result = null;
           }

@@ -232,7 +232,7 @@ private fun ColumnScope.CheckInStepContent(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text(placeholderFor(config.key)) },
+            placeholder = { Text(placeholderFor(config)) },
             textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = DmSansFontFamily),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             colors = OutlinedTextFieldDefaults.colors(

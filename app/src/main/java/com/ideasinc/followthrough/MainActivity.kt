@@ -9,8 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -24,7 +22,6 @@ import com.ideasinc.followthrough.navigation.KEY_ONBOARDING_VERSION
 import com.ideasinc.followthrough.navigation.PREFS_NAME
 import com.ideasinc.followthrough.ui.theme.GroundedTheme
 
-@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 class MainActivity : FragmentActivity() {
 
     private var authCleared by mutableStateOf(false)
@@ -50,11 +47,7 @@ class MainActivity : FragmentActivity() {
         setContent {
             GroundedTheme {
                 if (authCleared) {
-                    val windowSizeClass = calculateWindowSizeClass(this)
-                    AppNavigation(
-                        container = container,
-                        windowWidthSizeClass = windowSizeClass.widthSizeClass
-                    )
+                    AppNavigation(container = container)
                 } else {
                     Box(
                         modifier = Modifier
@@ -88,7 +81,7 @@ class MainActivity : FragmentActivity() {
         }
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Unlock Follow Through")
+            .setTitle("Unlock Follow Thru")
             .setSubtitle("confirm your identity to continue")
             .setAllowedAuthenticators(
                 BiometricManager.Authenticators.BIOMETRIC_STRONG or

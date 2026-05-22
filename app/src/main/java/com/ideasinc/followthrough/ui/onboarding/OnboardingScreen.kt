@@ -80,7 +80,7 @@ private const val KEY_SWIPE_HINT_SHOWN = "swipe_hint_shown"
 @Composable
 private fun ProgressDots(
     currentIndex: Int,
-    total: Int = 3,
+    total: Int = 4,
     modifier: Modifier = Modifier
 ) {
     val activeColor = AppColors.ForgeBackground
@@ -153,11 +153,12 @@ fun OnboardingScreen(
     val advanceFromSwipe: () -> Unit = {
         when (step) {
             0 -> step = 1
-            1 -> {
+            1 -> step = 2
+            2 -> {
                 onBiometricPersist(biometricEnabled)
-                step = 2
+                step = 3
             }
-            // step 2: swipe-forward is a no-op — only the explicit "Got it" tap can complete onboarding.
+            // step 3: swipe-forward is a no-op — only the explicit "Got it" tap can complete onboarding.
         }
     }
     val goBack: () -> Unit = {
@@ -166,16 +167,18 @@ fun OnboardingScreen(
     val onPrimaryClick: () -> Unit = {
         when (step) {
             0 -> step = 1
-            1 -> {
+            1 -> step = 2
+            2 -> {
                 onBiometricPersist(biometricEnabled)
-                step = 2
+                step = 3
             }
-            2 -> onComplete()
+            3 -> onComplete()
         }
     }
     val buttonDescription = when (step) {
         0 -> "Continue to step 2"
         1 -> "Continue to step 3"
+        2 -> "Continue to step 4"
         else -> "Complete onboarding"
     }
 
@@ -217,7 +220,7 @@ fun OnboardingScreen(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Follow Through",
+                    text = "Follow Thru",
                     fontFamily = PoppinsFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 32.sp,
@@ -263,13 +266,14 @@ fun OnboardingScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             when (currentStep) {
-                                0 -> Step0Body()
-                                1 -> Step1Body(
+                                0 -> GoalsBody()
+                                1 -> HowItWorksBody()
+                                2 -> BiometricBody(
                                     biometricAvailable = biometricAvailable,
                                     biometricEnabled = biometricEnabled,
                                     onBiometricChange = { biometricEnabled = it }
                                 )
-                                2 -> Step2Body()
+                                3 -> PrivacyBody()
                             }
                         }
                     }
@@ -298,7 +302,7 @@ fun OnboardingScreen(
                     contentPadding = PaddingValues(vertical = 16.dp)
                 ) {
                     AnimatedContent(
-                        targetState = step == 2,
+                        targetState = step == 3,
                         transitionSpec = {
                             fadeIn(animationSpec = tween(FADE_MS)) togetherWith
                                 fadeOut(animationSpec = tween(FADE_MS))
@@ -319,9 +323,9 @@ fun OnboardingScreen(
 }
 
 @Composable
-private fun Step0Body() {
+private fun GoalsBody() {
     Text(
-        text = "Goals & Desired Changes",
+        text = "Goals & Changes",
         fontFamily = PoppinsFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
@@ -332,7 +336,40 @@ private fun Step0Body() {
 }
 
 @Composable
-private fun Step1Body(
+private fun HowItWorksBody() {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "How it works",
+            fontFamily = PoppinsFontFamily,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 18.sp,
+            color = AppColors.OnOnboardingBodySurface,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.semantics { heading() }
+        )
+        Text(
+            text = "1. Add a goal or change you're working toward.\n\n" +
+                "2. Check in regularly. Each check-in walks you through reflection " +
+                "questions based on behavioral science.\n\n" +
+                "3. Mark when you follow through. Your progress and follow-throughs " +
+                "are tracked over time.",
+            fontFamily = PoppinsFontFamily,
+            fontWeight = FontWeight.Normal,
+            fontSize = 14.sp,
+            lineHeight = 22.sp,
+            color = AppColors.OnOnboardingBodySurface,
+            textAlign = TextAlign.Start,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+private fun BiometricBody(
     biometricAvailable: Boolean,
     biometricEnabled: Boolean,
     onBiometricChange: (Boolean) -> Unit
@@ -343,7 +380,7 @@ private fun Step1Body(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Lock Follow Through with Face ID or Device PIN",
+                text = "Lock Follow Thru with Face ID or Device PIN",
                 fontFamily = PoppinsFontFamily,
                 fontWeight = FontWeight.Normal,
                 fontSize = 14.sp,
@@ -363,7 +400,7 @@ private fun Step1Body(
                     uncheckedBorderColor = androidx.compose.ui.graphics.Color.Transparent
                 ),
                 modifier = Modifier.semantics {
-                    contentDescription = "Lock Follow Through with biometrics"
+                    contentDescription = "Lock Follow Thru with biometrics"
                     stateDescription = if (biometricEnabled) "On" else "Off"
                     role = Role.Switch
                 }
@@ -373,7 +410,7 @@ private fun Step1Body(
 }
 
 @Composable
-private fun Step2Body() {
+private fun PrivacyBody() {
     Text(
         text = "Your data is stored only on your device. We do not access it.",
         fontFamily = PoppinsFontFamily,

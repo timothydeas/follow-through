@@ -27,6 +27,7 @@ data class SettingsUiState(
     val questionConfigs: List<QuestionConfig> = emptyList(),
     val editingKey: String? = null,
     val editingLabel: String = "",
+    val editingPlaceholder: String = "",
     val remindersEnabled: Boolean = false,
     val reminderHour: Int = 9,
     val reminderMinute: Int = 0,
@@ -66,21 +67,34 @@ class SettingsViewModel(
 
     fun startEditing(key: String) {
         val current = _uiState.value.questionConfigs.firstOrNull { it.key == key } ?: return
-        _uiState.update { it.copy(editingKey = key, editingLabel = current.label) }
+        _uiState.update {
+            it.copy(
+                editingKey = key,
+                editingLabel = current.label,
+                editingPlaceholder = current.placeholder
+            )
+        }
     }
 
     fun onEditingLabelChange(value: String) = _uiState.update { it.copy(editingLabel = value) }
 
+    fun onEditingPlaceholderChange(value: String) =
+        _uiState.update { it.copy(editingPlaceholder = value) }
+
     fun saveLabel() {
         viewModelScope.launch {
             val key = _uiState.value.editingKey ?: return@launch
-            val label = _uiState.value.editingLabel.trim().ifBlank { return@launch }
+            val label = _uiState.value.editingLabel.trim()
+            val placeholder = _uiState.value.editingPlaceholder.trim()
+            // Both the label and the placeholder are required to save.
+            if (label.isBlank() || placeholder.isBlank()) return@launch
             val existing = questionLabelDao.getLabelForKey(key)
             questionLabelDao.insertLabel(
                 QuestionLabel(
                     id = existing?.id ?: UUID.randomUUID().toString(),
                     questionKey = key,
                     customLabel = label,
+                    customPlaceholder = placeholder,
                     isEnabled = existing?.isEnabled ?: true
                 )
             )
@@ -105,6 +119,7 @@ class SettingsViewModel(
                     id = existing?.id ?: UUID.randomUUID().toString(),
                     questionKey = key,
                     customLabel = existing?.customLabel ?: defaultLabel,
+                    customPlaceholder = existing?.customPlaceholder,
                     isEnabled = enabled
                 )
             )

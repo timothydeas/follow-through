@@ -7,17 +7,19 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -181,6 +183,7 @@ fun CheckInFlowScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp)
                     .padding(top = 32.dp, bottom = 24.dp)
             ) {
@@ -195,7 +198,7 @@ fun CheckInFlowScreen(
 }
 
 @Composable
-private fun ColumnScope.StepContent(
+private fun StepContent(
     config: QuestionConfig,
     value: String,
     onValueChange: (String) -> Unit
@@ -212,12 +215,14 @@ private fun ColumnScope.StepContent(
                 .semantics { heading() }
         )
     }
-    Spacer(modifier = Modifier.height(24.dp))
+    // Fixed gap between the question and the input. The parent Column scrolls,
+    // so a long question and a long answer can both grow without the field
+    // ever crowding or overlapping the heading.
+    Spacer(modifier = Modifier.height(28.dp))
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .weight(1f)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -226,7 +231,7 @@ private fun ColumnScope.StepContent(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text(placeholderFor(config.key)) },
+            placeholder = { Text(placeholderFor(config)) },
             textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = DmSansFontFamily),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             colors = OutlinedTextFieldDefaults.colors(
@@ -236,7 +241,8 @@ private fun ColumnScope.StepContent(
                 unfocusedBorderColor = Color.Transparent
             ),
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .heightIn(min = 240.dp)
                 .focusRequester(fieldFocus)
         )
     }
@@ -264,20 +270,7 @@ private fun setFieldValue(vm: CheckInFlowViewModel, key: String, value: String) 
     else -> {}
 }
 
-internal fun placeholderFor(key: String): String = when (key) {
-    QuestionKeys.GOAL_OR_CHANGE ->
-        "A goal, a habit, something you want to change, or something you're struggling with"
-    QuestionKeys.AVOIDING ->
-        "Something you've been putting off looking at, even though part of you knows it matters"
-    QuestionKeys.CONFIDENCE ->
-        "You don't need proof you can do this before you start. What does your gut say?"
-    QuestionKeys.MADE_PROGRESS ->
-        "Yes, No, or describe where you feel you are right now"
-    QuestionKeys.COMPETING_PRIORITY ->
-        "Be honest — sometimes our perception or anticipation of a situation matters more than the situation itself. And if nothing is in your way right now, think ahead."
-    QuestionKeys.IMPLEMENTATION_INTENTION ->
-        "I will go for a walk when I finish my morning coffee."
-    QuestionKeys.ACCOUNTABILITY ->
-        "A person, a memory, a strategy — whatever keeps you going"
-    else -> ""
-}
+// Effective placeholder for a question — the user's custom placeholder when
+// set, otherwise the built-in default. Resolution happens in resolveConfigs;
+// the per-key default text lives in QuestionKeys.DEFAULT_PLACEHOLDERS.
+internal fun placeholderFor(config: QuestionConfig): String = config.placeholder

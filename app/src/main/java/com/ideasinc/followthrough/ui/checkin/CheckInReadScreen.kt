@@ -238,6 +238,12 @@ private fun EditView(
     fun labelFor(key: String) = uiState.questionConfigs.firstOrNull { it.key == key }?.label
         ?: QuestionKeys.DEFAULT_LABELS[key] ?: key
 
+    // Effective placeholder — the user's customization when set, otherwise the
+    // built-in default.
+    fun placeholderFor(key: String) =
+        uiState.questionConfigs.firstOrNull { it.key == key }?.placeholder
+            ?: QuestionKeys.DEFAULT_PLACEHOLDERS[key] ?: ""
+
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())

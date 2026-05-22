@@ -141,7 +141,7 @@ fun LaunchInsightScreen(text: String, onDismiss: () -> Unit) {
             )
             Spacer(Modifier.height(16.dp))
             Text(
-                text = "Follow Through",
+                text = "Follow Thru",
                 color = forgeOn,
                 fontFamily = PoppinsFontFamily,
                 fontWeight = FontWeight.SemiBold,

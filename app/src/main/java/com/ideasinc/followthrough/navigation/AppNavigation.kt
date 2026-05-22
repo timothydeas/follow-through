@@ -1,25 +1,9 @@
 ﻿package com.ideasinc.followthrough.navigation
 
 import android.content.Context
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -60,12 +44,11 @@ private const val ROUTE_STATS = "stats"
 internal const val PREFS_NAME = "grounded_prefs"
 internal const val KEY_ONBOARDING_VERSION = "onboarding_version"
 internal const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
-internal const val CURRENT_ONBOARDING_VERSION = 79
+internal const val CURRENT_ONBOARDING_VERSION = 82
 
 @Composable
 fun AppNavigation(
-    container: AppContainer,
-    windowWidthSizeClass: WindowWidthSizeClass
+    container: AppContainer
 ) {
     val context = LocalContext.current
     val navController = rememberNavController()
@@ -73,8 +56,6 @@ fun AppNavigation(
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
     val savedVersion = prefs.getInt(KEY_ONBOARDING_VERSION, 0)
     val startDestination = if (savedVersion >= CURRENT_ONBOARDING_VERSION) ROUTE_LAUNCH_INSIGHT else ROUTE_ONBOARDING
-
-    val isTablet = windowWidthSizeClass != WindowWidthSizeClass.Compact
 
     val listViewModel: ListViewModel = viewModel(
         factory = ListViewModel.Factory(
@@ -117,23 +98,13 @@ fun AppNavigation(
         }
 
         composable(ROUTE_LIST) {
-            if (isTablet) {
-                TabletLayout(
-                    container = container,
-                    listViewModel = listViewModel,
-                    navController = navController,
-                    onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
-                    onStatsClick = { navController.navigate(ROUTE_STATS) }
-                )
-            } else {
-                ListScreen(
-                    viewModel = listViewModel,
-                    onGoalClick = { id -> navController.navigate("goal_detail/$id") },
-                    onNewGoal = { navController.navigate(ROUTE_NEW_GOAL) },
-                    onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
-                    onStatsClick = { navController.navigate(ROUTE_STATS) }
-                )
-            }
+            ListScreen(
+                viewModel = listViewModel,
+                onGoalClick = { id -> navController.navigate("goal_detail/$id") },
+                onNewGoal = { navController.navigate(ROUTE_NEW_GOAL) },
+                onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
+                onStatsClick = { navController.navigate(ROUTE_STATS) }
+            )
         }
 
         composable(ROUTE_SETTINGS) {
@@ -183,7 +154,7 @@ fun AppNavigation(
         ) { backStackEntry ->
             val goalId = backStackEntry.arguments?.getString(ARG_GOAL_ID) ?: return@composable
             val vm: GoalDetailViewModel = viewModel(
-                factory = GoalDetailViewModel.Factory(container.goalDao, container.checkInDao, container.questionLabelDao, goalId)
+                factory = GoalDetailViewModel.Factory(container.goalDao, container.checkInDao, container.questionLabelDao, container.stepDao, goalId)
             )
             GoalDetailScreen(
                 viewModel = vm,
@@ -233,74 +204,6 @@ fun AppNavigation(
                 viewModel = vm,
                 onNavigateBack = { navController.popBackStack() }
             )
-        }
-    }
-}
-
-@Composable
-private fun TabletLayout(
-    container: AppContainer,
-    listViewModel: ListViewModel,
-    navController: androidx.navigation.NavHostController,
-    onSettingsClick: () -> Unit,
-    onStatsClick: () -> Unit
-) {
-    var selectedGoalId by remember { mutableStateOf<String?>(null) }
-    var selectionKey by remember { mutableStateOf(0) }
-
-    Row(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .weight(0.4f)
-                .fillMaxHeight()
-        ) {
-            ListScreen(
-                viewModel = listViewModel,
-                onGoalClick = { id ->
-                    selectedGoalId = id
-                    selectionKey++
-                },
-                onNewGoal = { navController.navigate(ROUTE_NEW_GOAL) },
-                onSettingsClick = onSettingsClick,
-                onStatsClick = onStatsClick
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .width(1.dp)
-                .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-        )
-
-        Box(
-            modifier = Modifier
-                .weight(0.6f)
-                .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            val goalId = selectedGoalId
-            if (goalId == null) {
-                Text(
-                    text = "Select a goal or tap + to create one",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            } else {
-                val vm: GoalDetailViewModel = viewModel(
-                    key = "${goalId}_$selectionKey",
-                    factory = GoalDetailViewModel.Factory(container.goalDao, container.checkInDao, container.questionLabelDao, goalId)
-                )
-                GoalDetailScreen(
-                    viewModel = vm,
-                    onBack = { selectedGoalId = null },
-                    onNavigateToList = { selectedGoalId = null },
-                    onAddCheckIn = { navController.navigate("checkin_flow/$goalId") },
-                    onCheckInClick = { checkInId -> navController.navigate("checkin_read/$checkInId") }
-                )
-            }
         }
     }
 }

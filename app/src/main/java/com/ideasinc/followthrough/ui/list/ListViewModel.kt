@@ -34,6 +34,7 @@ data class GoalRowData(
 
 data class ListUiState(
     val goals: List<GoalRowData> = emptyList(),
+    val completedGoals: List<GoalRowData> = emptyList(),
     val query: String = "",
     val streakDays: Int = 0,
     val streakFlexDayUsed: Boolean = false,
@@ -72,8 +73,17 @@ class ListViewModel(
         val total = goals.count { it.followedThrough }
         val streak = computeStreakWithFlex(allCheckIns.map { it.createdAt })
 
-        val filtered = if (query.isBlank()) goals
-        else goals.filter { it.title.lowercase().contains(query.lowercase()) }
+        // Completed goals get their own showcase, newest completion first.
+        val completedRows = goals
+            .filter { it.followedThrough }
+            .sortedByDescending { it.followedThroughAt ?: it.updatedAt }
+            .map { goal -> rowFor(goal, null, checkInsByGoal) }
+
+        // The active list (priority ranks, drag-and-drop, search) only holds
+        // goals that have not been followed through yet.
+        val activeGoals = goals.filter { !it.followedThrough }
+        val filtered = if (query.isBlank()) activeGoals
+        else activeGoals.filter { it.title.lowercase().contains(query.lowercase()) }
         val isFiltered = query.isNotBlank()
 
         val ordered: List<Goal> = if (dragState != null) {
@@ -96,6 +106,7 @@ class ListViewModel(
 
         ListUiState(
             goals = rows,
+            completedGoals = completedRows,
             query = query,
             streakDays = streak.days,
             streakFlexDayUsed = streak.flexDayUsed,

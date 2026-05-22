@@ -126,7 +126,7 @@ fun StatsScreen(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
-            StatsSection(title = "Follow Throughs") {
+            StatsSection(title = "Follow Thrus") {
                 if (state.followThroughTotal == 0) {
                     Text(
                         text = "No follow-throughs yet — tap 'I Followed Through' on any goal when you're ready.",

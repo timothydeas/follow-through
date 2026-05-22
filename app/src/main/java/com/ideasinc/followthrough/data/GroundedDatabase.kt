@@ -532,6 +532,48 @@ private val MIGRATION_18_19 = object : Migration(18, 19) {
     }
 }
 
+private val MIGRATION_23_24 = object : Migration(23, 24) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // The implementation intention default label was reworded to lead with
+        // the situation cue. Overwrite any existing value for this key so every
+        // user — including those with customized text — sees the new wording.
+        db.execSQL(
+            "UPDATE question_labels SET customLabel = " +
+                "'When [e.g., moment or situation], I will [e.g., what I''ll do].' " +
+                "WHERE questionKey = 'implementationIntention'"
+        )
+    }
+}
+
+private val MIGRATION_24_25 = object : Migration(24, 25) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Add the steps table for sub-goals. Cascades on goal deletion and is
+        // indexed by goalId, matching the Step entity Room generates.
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS steps (
+                id TEXT NOT NULL PRIMARY KEY,
+                goalId TEXT NOT NULL,
+                title TEXT NOT NULL,
+                isCompleted INTEGER NOT NULL DEFAULT 0,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL,
+                FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_steps_goalId ON steps(goalId)")
+    }
+}
+
+private val MIGRATION_25_26 = object : Migration(25, 26) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Add the per-question custom placeholder column. Nullable — a null
+        // value means "fall back to the built-in default placeholder".
+        db.execSQL("ALTER TABLE question_labels ADD COLUMN customPlaceholder TEXT")
+    }
+}
+
 private val MIGRATION_13_14 = object : Migration(13, 14) {
     override fun migrate(db: SupportSQLiteDatabase) {
         // Create goals table
@@ -636,9 +678,10 @@ private val MIGRATION_13_14 = object : Migration(13, 14) {
         FollowThroughEntry::class,
         Goal::class,
         CheckIn::class,
-        QuestionLabel::class
+        QuestionLabel::class,
+        Step::class
     ],
-    version = 23,
+    version = 26,
     exportSchema = false
 )
 abstract class GroundedDatabase : RoomDatabase() {
@@ -648,6 +691,7 @@ abstract class GroundedDatabase : RoomDatabase() {
     abstract fun goalDao(): GoalDao
     abstract fun checkInDao(): CheckInDao
     abstract fun questionLabelDao(): QuestionLabelDao
+    abstract fun stepDao(): StepDao
 
     companion object {
         @Volatile private var INSTANCE: GroundedDatabase? = null
@@ -666,7 +710,8 @@ abstract class GroundedDatabase : RoomDatabase() {
                         MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16,
                         MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19,
                         MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22,
-                        MIGRATION_22_23
+                        MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25,
+                        MIGRATION_25_26
                     )
                     .build().also { INSTANCE = it }
             }
