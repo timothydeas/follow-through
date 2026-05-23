@@ -185,7 +185,7 @@ fun ListScreen(
             ) {
                 Text(
                     text = buildAnnotatedString {
-                        withStyle(SpanStyle(color = accentColor)) { append("Follow Thru") }
+                        withStyle(SpanStyle(color = accentColor)) { append("FollowThru") }
                     },
                     style = MaterialTheme.typography.displayMedium,
                     modifier = Modifier
@@ -213,7 +213,7 @@ fun ListScreen(
             if (selectedTab == 0) {
                 if (uiState.streakDays > 0 || uiState.totalFollowThroughs > 0) {
                     val statsRowA11y = "Check-In Streak ${uiState.streakDays}, " +
-                        "Follow Thrus ${uiState.totalFollowThroughs}. " +
+                        "FollowThrus ${uiState.totalFollowThroughs}. " +
                         "Double tap to view full stats."
                     Row(
                         modifier = Modifier
@@ -241,8 +241,8 @@ fun ListScreen(
                             emoji = "✓",
                             emojiTint = null,
                             value = uiState.totalFollowThroughs,
-                            label = "Follow Thrus",
-                            a11y = "Follow Thrus ${uiState.totalFollowThroughs}"
+                            label = "FollowThrus",
+                            a11y = "FollowThrus ${uiState.totalFollowThroughs}"
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         Icon(
@@ -854,7 +854,7 @@ private fun EmptyState(hasQuery: Boolean) {
     ) {
         Text(
             text = if (hasQuery) "No goals match your search."
-            else "Welcome to Follow Thru. Tap the + button below to add your first goal or change you're working toward.",
+            else "Welcome to FollowThru. Tap the + button below to add your first goal or change you're working toward.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center

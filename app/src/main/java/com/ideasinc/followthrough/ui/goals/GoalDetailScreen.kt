@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.accessibility.AccessibilityManager
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,6 +34,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -397,9 +400,30 @@ fun GoalDetailScreen(
                         )
                     }
                 }
+
+                // Sticky Steps summary. Sits above the check-ins LazyColumn so it
+                // stays visible regardless of how many check-ins have accumulated.
+                // Collapsed by default — only the progress summary shows. Tap to
+                // expand and reveal the full Steps list with add/edit/delete.
+                var stepsExpanded by remember { mutableStateOf(false) }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                ) {
+                    StepsSummary(
+                        steps = uiState.steps,
+                        expanded = stepsExpanded,
+                        onToggleExpanded = { stepsExpanded = !stepsExpanded },
+                        onAddStep = viewModel::showAddStepDialog,
+                        onToggleStep = viewModel::toggleStep,
+                        onEditStep = viewModel::showEditStepDialog,
+                        onDeleteStep = viewModel::deleteStep
+                    )
+                }
             }
-            // Steps section and check-ins share one scrolling list so a goal
-            // with many steps and many check-ins never overflows.
+            // Check-ins are the primary content and live in their own scroller
+            // below the sticky Steps summary above.
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -412,15 +436,6 @@ fun GoalDetailScreen(
                 ),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                item {
-                    StepsSection(
-                        steps = uiState.steps,
-                        onAddStep = viewModel::showAddStepDialog,
-                        onToggleStep = viewModel::toggleStep,
-                        onEditStep = viewModel::showEditStepDialog,
-                        onDeleteStep = viewModel::deleteStep
-                    )
-                }
                 if (uiState.checkIns.isEmpty()) {
                     item {
                         Text(
@@ -511,8 +526,10 @@ private fun CheckInCard(
 // ─── Steps (sub-goals) ─────────────────────────────────────────────────────
 
 @Composable
-private fun StepsSection(
+private fun StepsSummary(
     steps: List<Step>,
+    expanded: Boolean,
+    onToggleExpanded: () -> Unit,
     onAddStep: () -> Unit,
     onToggleStep: (Step) -> Unit,
     onEditStep: (Step) -> Unit,
@@ -520,74 +537,140 @@ private fun StepsSection(
 ) {
     val completed = steps.count { it.isCompleted }
     val total = steps.size
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "Steps",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontFamily = DmSansFontFamily
-                ),
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier
-                    .weight(1f)
-                    .semantics { heading() }
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(12.dp)
             )
-            IconButton(
-                onClick = onAddStep,
-                modifier = Modifier.semantics { contentDescription = "Add step" }
+    ) {
+        if (total == 0) {
+            // Empty state — a quiet "+ Add steps" link inside the summary card.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .clickable(
+                        onClickLabel = "Add steps",
+                        role = Role.Button,
+                        onClick = onAddStep
+                    )
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Add steps",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            val progressLabel = "$completed of $total steps completed"
+            val toggleLabel = if (expanded) "Collapse steps" else "Expand steps"
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .clickable(
+                        onClickLabel = toggleLabel,
+                        role = Role.Button,
+                        onClick = onToggleExpanded
+                    )
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = "$progressLabel. $toggleLabel."
+                    }
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(completed.toFloat() / total)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(MaterialTheme.colorScheme.onSurfaceVariant)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = progressLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = if (expanded) Icons.Filled.KeyboardArrowUp
+                        else Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }
-        }
 
-        if (total == 0) {
-            Text(
-                text = "No steps yet. Break this goal into smaller steps.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        } else {
-            Text(
-                text = "$completed of $total completed",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            // Cascading progress bar. Decorative — the count above conveys the
-            // same information to TalkBack.
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(MaterialTheme.colorScheme.background)
-            ) {
-                Box(
+            if (expanded) {
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                )
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth(completed.toFloat() / total)
-                        .fillMaxHeight()
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(MaterialTheme.colorScheme.primary)
-                )
-            }
-            steps.forEach { step ->
-                StepRow(
-                    step = step,
-                    onToggle = { onToggleStep(step) },
-                    onEdit = { onEditStep(step) },
-                    onDelete = { onDeleteStep(step.id) }
-                )
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Steps",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontFamily = DmSansFontFamily
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics { heading() }
+                        )
+                        IconButton(
+                            onClick = onAddStep,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .semantics { contentDescription = "Add step" }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    steps.forEach { step ->
+                        StepRow(
+                            step = step,
+                            onToggle = { onToggleStep(step) },
+                            onEdit = { onEditStep(step) },
+                            onDelete = { onDeleteStep(step.id) }
+                        )
+                    }
+                }
             }
         }
     }

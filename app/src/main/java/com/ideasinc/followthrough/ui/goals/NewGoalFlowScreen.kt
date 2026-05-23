@@ -2,10 +2,7 @@
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -206,8 +203,6 @@ private fun ColumnScope.CheckInStepContent(
     value: String,
     onValueChange: (String) -> Unit
 ) {
-    val fieldFocus = remember { FocusRequester() }
-
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Text(
             text = config.label,
@@ -220,32 +215,24 @@ private fun ColumnScope.CheckInStepContent(
     }
     Spacer(modifier = Modifier.height(24.dp))
 
-    Box(
+    // The field stays unfocused on step entry — users tap to bring up the
+    // keyboard, so the placeholder is visible when landing on the step.
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = { Text(placeholderFor(config)) },
+        textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = DmSansFontFamily),
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = Color.Transparent,
+            unfocusedContainerColor = Color.Transparent,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = Color.Transparent
+        ),
         modifier = Modifier
             .fillMaxWidth()
             .weight(1f)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) { fieldFocus.requestFocus() }
-    ) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            placeholder = { Text(placeholderFor(config)) },
-            textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = DmSansFontFamily),
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = Color.Transparent
-            ),
-            modifier = Modifier
-                .fillMaxSize()
-                .focusRequester(fieldFocus)
-        )
-    }
+    )
 }
 
 private fun getFieldValue(state: NewGoalFlowUiState, key: String): String = when (key) {

@@ -12,6 +12,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -80,7 +82,7 @@ private const val KEY_SWIPE_HINT_SHOWN = "swipe_hint_shown"
 @Composable
 private fun ProgressDots(
     currentIndex: Int,
-    total: Int = 4,
+    total: Int = 2,
     modifier: Modifier = Modifier
 ) {
     val activeColor = AppColors.ForgeBackground
@@ -149,16 +151,16 @@ fun OnboardingScreen(
         }
     }
 
-    // Swipe forward — mirrors Continue button behavior, but swiping past the last step is a no-op.
+    // Two slides total. Biometric is persisted as soon as the user leaves
+    // slide 0 (Security & Privacy), so slide 1 (How it works) → "Get Started"
+    // doesn't need to re-persist. Swipe forward past the last slide is a no-op.
     val advanceFromSwipe: () -> Unit = {
         when (step) {
-            0 -> step = 1
-            1 -> step = 2
-            2 -> {
+            0 -> {
                 onBiometricPersist(biometricEnabled)
-                step = 3
+                step = 1
             }
-            // step 3: swipe-forward is a no-op — only the explicit "Got it" tap can complete onboarding.
+            // step 1: swipe-forward is a no-op — only the explicit "Get Started" tap completes.
         }
     }
     val goBack: () -> Unit = {
@@ -166,19 +168,15 @@ fun OnboardingScreen(
     }
     val onPrimaryClick: () -> Unit = {
         when (step) {
-            0 -> step = 1
-            1 -> step = 2
-            2 -> {
+            0 -> {
                 onBiometricPersist(biometricEnabled)
-                step = 3
+                step = 1
             }
-            3 -> onComplete()
+            1 -> onComplete()
         }
     }
     val buttonDescription = when (step) {
-        0 -> "Continue to step 2"
-        1 -> "Continue to step 3"
-        2 -> "Continue to step 4"
+        0 -> "Continue to step 2 of 2"
         else -> "Complete onboarding"
     }
 
@@ -203,24 +201,27 @@ fun OnboardingScreen(
                 }
             }
     ) {
-        // Fixed header — forge background, icon + title, ~58% of screen, never animates
+        // Persistent unified header — all three elements (icon, wordmark,
+        // tagline) sit on the brand-red ForgeBackground inherited from the
+        // root Column. Icon foreground paths render white against the red,
+        // matching the original onboarding look. Appears on both slides.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(0.58f)
                 .statusBarsPadding()
-                .padding(horizontal = 32.dp),
+                .padding(horizontal = 32.dp)
+                .padding(top = 16.dp, bottom = 16.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_launcher_foreground),
                     contentDescription = null,
-                    modifier = Modifier.size(130.dp)
+                    modifier = Modifier.size(96.dp)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Follow Thru",
+                    text = "FollowThru",
                     fontFamily = PoppinsFontFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = 32.sp,
@@ -228,94 +229,96 @@ fun OnboardingScreen(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.semantics { heading() }
                 )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Goals & Changes",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = AppColors.OnForgeBackground,
+                    textAlign = TextAlign.Center
+                )
             }
         }
 
-        // Content section — light surface (always), body crossfades between steps
-        Box(
+        // Body section fills remaining height. Holds the current slide body,
+        // progress dots, and the primary action button anchored at the bottom.
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(0.42f)
+                .weight(1f)
                 .background(AppColors.OnboardingBodySurface)
+                .navigationBarsPadding()
+                .padding(horizontal = 32.dp)
+                .padding(top = 24.dp, bottom = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
+            Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 32.dp)
-                    .padding(top = 8.dp, bottom = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AnimatedContent(
-                        targetState = step,
-                        transitionSpec = {
-                            fadeIn(animationSpec = tween(FADE_MS)) togetherWith
-                                fadeOut(animationSpec = tween(FADE_MS))
-                        },
-                        label = "onboarding-body",
-                        modifier = Modifier.fillMaxWidth()
-                    ) { currentStep ->
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            when (currentStep) {
-                                0 -> GoalsBody()
-                                1 -> HowItWorksBody()
-                                2 -> BiometricBody(
-                                    biometricAvailable = biometricAvailable,
-                                    biometricEnabled = biometricEnabled,
-                                    onBiometricChange = { biometricEnabled = it }
-                                )
-                                3 -> PrivacyBody()
-                            }
+                AnimatedContent(
+                    targetState = step,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(FADE_MS)) togetherWith
+                            fadeOut(animationSpec = tween(FADE_MS))
+                    },
+                    label = "onboarding-body",
+                    modifier = Modifier.fillMaxWidth()
+                ) { currentStep ->
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        when (currentStep) {
+                            0 -> SecurityAndPrivacyBody(
+                                biometricAvailable = biometricAvailable,
+                                biometricEnabled = biometricEnabled,
+                                onBiometricChange = { biometricEnabled = it }
+                            )
+                            1 -> HowItWorksBody()
                         }
                     }
                 }
+            }
 
-                ProgressDots(
-                    currentIndex = step,
-                    modifier = Modifier.graphicsLayer { translationX = hintOffsetPx.value }
-                )
+            ProgressDots(
+                currentIndex = step,
+                total = 2,
+                modifier = Modifier.graphicsLayer { translationX = hintOffsetPx.value }
+            )
 
-                Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-                Button(
-                    onClick = onPrimaryClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(buttonFocus)
-                        .semantics(mergeDescendants = true) {
-                            contentDescription = buttonDescription
-                        },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AppColors.ForgeBackground,
-                        contentColor = AppColors.OnForgeBackground
-                    ),
-                    shape = RoundedCornerShape(14.dp),
-                    contentPadding = PaddingValues(vertical = 16.dp)
-                ) {
-                    AnimatedContent(
-                        targetState = step == 3,
-                        transitionSpec = {
-                            fadeIn(animationSpec = tween(FADE_MS)) togetherWith
-                                fadeOut(animationSpec = tween(FADE_MS))
-                        },
-                        label = "button-label"
-                    ) { isLastStep ->
-                        Text(
-                            text = if (isLastStep) "Got it" else "Continue",
-                            fontFamily = PoppinsFontFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 16.sp
+            Button(
+                onClick = onPrimaryClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(buttonFocus)
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = buttonDescription
+                    },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AppColors.ForgeBackground,
+                    contentColor = AppColors.OnForgeBackground
+                ),
+                shape = RoundedCornerShape(14.dp),
+                contentPadding = PaddingValues(vertical = 16.dp)
+            ) {
+                AnimatedContent(
+                    targetState = step == 1,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(FADE_MS)) togetherWith
+                            fadeOut(animationSpec = tween(FADE_MS))
+                    },
+                    label = "button-label"
+                ) { isLastStep ->
+                    Text(
+                        text = if (isLastStep) "Get Started" else "Next",
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = FontWeight.SemiBold
                         )
-                    }
+                    )
                 }
             }
         }
@@ -323,101 +326,172 @@ fun OnboardingScreen(
 }
 
 @Composable
-private fun GoalsBody() {
-    Text(
-        text = "Goals & Changes",
-        fontFamily = PoppinsFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 26.sp,
-        color = AppColors.OnOnboardingBodySurface,
-        textAlign = TextAlign.Center
-    )
-}
-
-@Composable
-private fun HowItWorksBody() {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = "How it works",
-            fontFamily = PoppinsFontFamily,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 18.sp,
-            color = AppColors.OnOnboardingBodySurface,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.semantics { heading() }
-        )
-        Text(
-            text = "1. Add a goal or change you're working toward.\n\n" +
-                "2. Check in regularly. Each check-in walks you through reflection " +
-                "questions based on behavioral science.\n\n" +
-                "3. Mark when you follow through. Your progress and follow-throughs " +
-                "are tracked over time.",
-            fontFamily = PoppinsFontFamily,
-            fontWeight = FontWeight.Normal,
-            fontSize = 14.sp,
-            lineHeight = 22.sp,
-            color = AppColors.OnOnboardingBodySurface,
-            textAlign = TextAlign.Start,
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
-}
-
-@Composable
-private fun BiometricBody(
+private fun SecurityAndPrivacyBody(
     biometricAvailable: Boolean,
     biometricEnabled: Boolean,
     onBiometricChange: (Boolean) -> Unit
 ) {
-    if (biometricAvailable) {
-        Row(
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        if (biometricAvailable) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "App lock",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontSize = 18.sp,
+                        lineHeight = 24.sp
+                    ),
+                    color = AppColors.OnOnboardingBodySurface,
+                    modifier = Modifier.semantics { heading() }
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Lock FollowThru with Face ID or Device PIN",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = AppColors.OnOnboardingBodySurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Switch(
+                        checked = biometricEnabled,
+                        onCheckedChange = onBiometricChange,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            uncheckedTrackColor = AppColors.SwitchUncheckedTrack,
+                            uncheckedBorderColor = androidx.compose.ui.graphics.Color.Transparent
+                        ),
+                        modifier = Modifier.semantics {
+                            contentDescription = "Lock FollowThru with biometrics"
+                            stateDescription = if (biometricEnabled) "On" else "Off"
+                            role = Role.Switch
+                        }
+                    )
+                }
+            }
+        }
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "Lock Follow Thru with Face ID or Device PIN",
-                fontFamily = PoppinsFontFamily,
-                fontWeight = FontWeight.Normal,
-                fontSize = 14.sp,
-                lineHeight = 22.sp,
-                color = AppColors.OnOnboardingBodySurface,
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Switch(
-                checked = biometricEnabled,
-                onCheckedChange = onBiometricChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                    uncheckedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                    uncheckedTrackColor = AppColors.SwitchUncheckedTrack,
-                    uncheckedBorderColor = androidx.compose.ui.graphics.Color.Transparent
+                text = "Your privacy",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontSize = 18.sp,
+                    lineHeight = 24.sp
                 ),
-                modifier = Modifier.semantics {
-                    contentDescription = "Lock Follow Thru with biometrics"
-                    stateDescription = if (biometricEnabled) "On" else "Off"
-                    role = Role.Switch
-                }
+                color = AppColors.OnOnboardingBodySurface,
+                modifier = Modifier.semantics { heading() }
+            )
+            Text(
+                text = "Your data is stored only on your device. We do not access it.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = AppColors.OnOnboardingBodySurface
             )
         }
     }
 }
 
 @Composable
-private fun PrivacyBody() {
-    Text(
-        text = "Your data is stored only on your device. We do not access it.",
-        fontFamily = PoppinsFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 26.sp,
-        color = AppColors.OnOnboardingBodySurface,
-        textAlign = TextAlign.Center
-    )
+private fun HowItWorksBody() {
+    // The container now expands to fit content (header is wrap_content, body
+    // takes weight 1f), so the 3 cards fit naturally on Pixel 5/6 without
+    // scrolling. verticalScroll remains as a defensive fallback for very small
+    // phones or large-font-scale users where 4 stacked accessible-size blocks
+    // could still overflow.
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = "How it works",
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontSize = 24.sp,
+                lineHeight = 32.sp
+            ),
+            color = AppColors.OnOnboardingBodySurface,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { heading() }
+        )
+        HowItWorksStep(
+            number = 1,
+            title = "Add a goal",
+            description = "What you're working toward or want to change."
+        )
+        HowItWorksStep(
+            number = 2,
+            title = "Check in",
+            description = "Reflect with research-backed questions."
+        )
+        HowItWorksStep(
+            number = 3,
+            title = "Follow through",
+            description = "Mark when you've taken action."
+        )
+    }
 }
+
+@Composable
+private fun HowItWorksStep(number: Int, title: String, description: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            // Faint tint of the body text color — gives a subtle card surface
+            // against the white onboarding body without introducing a raw hex.
+            .background(AppColors.OnOnboardingBodySurface.copy(alpha = 0.06f))
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "Step $number. $title. $description"
+            },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(AppColors.ForgeBackground),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = number.toString(),
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = AppColors.OnForgeBackground
+            )
+        }
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontSize = 18.sp,
+                    lineHeight = 24.sp
+                ),
+                color = AppColors.OnOnboardingBodySurface
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyLarge,
+                color = AppColors.OnOnboardingBodySurface
+            )
+        }
+    }
+}
+

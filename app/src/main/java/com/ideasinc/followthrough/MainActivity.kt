@@ -81,7 +81,7 @@ class MainActivity : FragmentActivity() {
         }
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Unlock Follow Thru")
+            .setTitle("Unlock FollowThru")
             .setSubtitle("confirm your identity to continue")
             .setAllowedAuthenticators(
                 BiometricManager.Authenticators.BIOMETRIC_STRONG or

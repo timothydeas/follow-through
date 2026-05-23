@@ -195,7 +195,7 @@ fun SettingsScreen(
             title = { Text("Enable notifications", style = MaterialTheme.typography.titleMedium) },
             text = {
                 Text(
-                    "To receive reminders, please enable notifications for Follow Thru in your device Settings.",
+                    "To receive reminders, please enable notifications for FollowThru in your device Settings.",
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -217,7 +217,7 @@ fun SettingsScreen(
             title = { Text("Allow exact alarms", style = MaterialTheme.typography.titleMedium) },
             text = {
                 Text(
-                    "For accurate reminders, Follow Thru needs permission to schedule exact alarms. Tap below to enable it in Settings — it takes just a second.",
+                    "For accurate reminders, FollowThru needs permission to schedule exact alarms. Tap below to enable it in Settings — it takes just a second.",
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -290,7 +290,7 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = "Lock Follow Thru with Face ID or Device PIN",
+                        text = "Lock FollowThru with Face ID or Device PIN",
                         style = MaterialTheme.typography.bodyMedium.copy(fontFamily = PoppinsFontFamily),
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
@@ -312,7 +312,7 @@ fun SettingsScreen(
                     ),
                     modifier = Modifier.semantics {
                         contentDescription =
-                            "Lock Follow Thru with Face ID or Device PIN"
+                            "Lock FollowThru with Face ID or Device PIN"
                         stateDescription = if (biometricEnabled) "On" else "Off"
                         role = Role.Switch
                     }
@@ -626,14 +626,14 @@ fun SettingsScreen(
                 )
 
                 Text(
-                    text = "Follow Thru is not a substitute for professional medical, psychological, or coaching advice.",
+                    text = "FollowThru is not a substitute for professional medical, psychological, or coaching advice.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
 
                 Text(
-                    text = "Follow Thru uses research-backed questions to support personal reflection. All questions are optional and fully customizable — you are always in control.",
+                    text = "FollowThru uses research-backed questions to support personal reflection. All questions are optional and fully customizable — you are always in control.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 4.dp)

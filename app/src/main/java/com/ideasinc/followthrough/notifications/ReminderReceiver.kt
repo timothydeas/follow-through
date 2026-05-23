@@ -36,7 +36,7 @@ class ReminderReceiver : BroadcastReceiver() {
             "Reminders",
             NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
-            description = "Follow Thru reminders"
+            description = "FollowThru reminders"
         }
         nm.createNotificationChannel(channel)
     }
@@ -58,7 +58,7 @@ class ReminderReceiver : BroadcastReceiver() {
         val notification = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setColor(0xFF9B3A2E.toInt())
-            .setContentTitle("Follow Thru")
+            .setContentTitle("FollowThru")
             .setContentText("Check in on your top goal")
             .setContentIntent(tapPendingIntent)
             .setAutoCancel(true)
