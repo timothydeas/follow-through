@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -63,6 +64,7 @@ fun NewGoalFlowScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val backFocus = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
 
@@ -158,7 +160,18 @@ fun NewGoalFlowScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(
-                    onClick = if (isLast) viewModel::onSave else viewModel::onNextCheckInStep,
+                    onClick = {
+                        if (isLast) {
+                            viewModel.onSave()
+                        } else {
+                            // Drop focus before advancing so the next step
+                            // opens with the keyboard hidden and the
+                            // placeholder fully visible. The user can tap
+                            // the field to bring the IME back up.
+                            focusManager.clearFocus()
+                            viewModel.onNextCheckInStep()
+                        }
+                    },
                     enabled = canProceed,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
