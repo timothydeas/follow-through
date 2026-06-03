@@ -54,4 +54,20 @@ Branch: `mvp-launch-fixes` (off `main` @ bb41831). One commit per phase.
 - **D5.2** Intention-anchored per-goal reminders (Phase 2 #5 / Phase 3 #1) will be stored in **SharedPreferences** (mirroring the existing global reminder), **not** a new Room table — so no further schema change is needed and the v26→v27 migration stays a pure, low-risk table drop. ("add any new reminder fields/tables" → none needed.)
 - **D5.3** No emulator/`adb` and no instrumented-test infra exist in this environment, so the blocking test is implemented with **Robolectric** as a local unit test (executable here). An `androidTest` config is also wired for the device-based upgrade test during the testing week.
 
+### Phase 2 — First-session fixes
+- **#1 Onboarding re-shows on upgrade (critical).** `CURRENT_ONBOARDING_VERSION 93 → 94` so already-onboarded testers see the redesigned flow once after the in-place upgrade (no data reset). Header tagline changed `Goals & Changes → in every moment`; added the lead framing line ("We all set goals. Following through is the hard part — that's what FollowThru is for…") on slide 1.
+- **#2 Worked example.** Optional "See an example" toggle on slide 2 revealing a sample implementation intention ("When standup reaches my turn → I will share the one blocker I wrote down") + caption. Off the required path.
+- Slide-2 three-beat reframed to embody the in-the-moment essence: **Name the moment / Decide your move / Follow through**.
+- **Home persistent header**: wordmark now carries the "in every moment" tagline (merged into one heading semantics node).
+- **#3 Launch Insight curated.** Dropped the overlong "firefighter" message (a tightened version is already in the set). Auto-dismiss + tap-to-continue unchanged.
+- **#7 Lead-light check-in (the most-cited friction fix).** `CheckInFlowScreen` rebuilt from a 6-step wall into a single calm page: read-only **goal + your plan (implementation intention)** context at top, a one-line purpose cue, **one** light lead prompt (progress), and the rest (avoiding, confidence, what's-in-the-way, edit-intention, accountability) behind an inviting **"Reflect more"**. Save is always available, so a progress-only (or single-line) check-in works. Form starts blank; only answered questions are stored (`ifBlank{null}`). `CheckInFlowViewModel` now loads the goal title + latest intention for the read-only context.
+- **#4 Frictionless, visible-input.** Reflection fields use a **visible, persistent outline border**; `imePadding()` on the scroll container + bottom Save bar keeps the keyboard from covering the active field; check-in is reachable in ≤ 4 taps (Home → goal → + → field).
+- **#6 Goal framing (Fischbach).** Goal-creation placeholder reframed to an aspirational/approach example ("What you want to move toward — e.g., 'be heard at work'"), a soft hint only — no blocker/lint, Q1 wording unchanged.
+- **#7 q5 refined** to one clean clause: "What's getting in your way — the situation itself, or how you're seeing it?"
+- Verified: `:app:compileDebugKotlin` passes.
+
+### Decision log — Phase 2
+- **D2.1** q5 reword + goal-framing placeholder were changed in code defaults only (no new schema/migration). Users who never customized these have no `question_labels` row and see the new text immediately; the rare user who toggled-without-editing keeps their stored text. Avoids a v28 churn on the just-proven migration chain.
+- **D2.2** Persistent "in every moment" tagline added to onboarding + Home (the cold-start orientation moments). Adding it to every secondary screen's top bar is deferred (high churn, low marginal value) and listed for the testing week.
+
 (Per-phase entries appended below as work proceeds.)

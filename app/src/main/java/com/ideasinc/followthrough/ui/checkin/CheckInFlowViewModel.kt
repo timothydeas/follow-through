@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.ideasinc.followthrough.data.CheckIn
 import com.ideasinc.followthrough.data.CheckInDao
+import com.ideasinc.followthrough.data.GoalDao
 import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
 import com.ideasinc.followthrough.data.QuestionLabelDao
@@ -21,6 +22,11 @@ data class CheckInFlowUiState(
     val goalId: String = "",
     val checkInId: String = UUID.randomUUID().toString(),
     val questionConfigs: List<QuestionConfig> = emptyList(),
+    // Read-only context shown at the top of the check-in: the goal and the
+    // user's own implementation intention (carried from goal creation / prior
+    // check-ins). Never re-asked or stored as this check-in's answer.
+    val goalTitle: String = "",
+    val goalIntention: String? = null,
     // Index into the enabled-step list. After the last enabled step the
     // flow is finished and save() runs.
     val currentStepIndex: Int = 0,
@@ -57,6 +63,7 @@ internal fun CheckInFlowUiState.activeStepIndices(): List<Int> =
 class CheckInFlowViewModel(
     private val checkInDao: CheckInDao,
     private val questionLabelDao: QuestionLabelDao,
+    private val goalDao: GoalDao,
     private val goalId: String
 ) : ViewModel() {
 
@@ -69,7 +76,19 @@ class CheckInFlowViewModel(
     init {
         viewModelScope.launch {
             val labels = questionLabelDao.getAllLabels().first()
-            _uiState.update { it.copy(questionConfigs = resolveConfigs(labels)) }
+            val goal = goalDao.getGoalById(goalId)
+            // Goal-level implementation intention = the most recent non-blank
+            // intention across this goal's check-ins (the plan the user set).
+            val intention = checkInDao.getCheckInsForGoal(goalId).first()
+                .sortedByDescending { it.createdAt }
+                .firstNotNullOfOrNull { it.implementationIntention?.takeIf { s -> s.isNotBlank() } }
+            _uiState.update {
+                it.copy(
+                    questionConfigs = resolveConfigs(labels),
+                    goalTitle = goal?.title ?: "",
+                    goalIntention = intention
+                )
+            }
         }
     }
 
@@ -148,11 +167,12 @@ class CheckInFlowViewModel(
     class Factory(
         private val checkInDao: CheckInDao,
         private val questionLabelDao: QuestionLabelDao,
+        private val goalDao: GoalDao,
         private val goalId: String
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            CheckInFlowViewModel(checkInDao, questionLabelDao, goalId) as T
+            CheckInFlowViewModel(checkInDao, questionLabelDao, goalDao, goalId) as T
     }
 }
 

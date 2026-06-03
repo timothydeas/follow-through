@@ -182,15 +182,26 @@ fun ListScreen(
                     .padding(start = 20.dp, end = 4.dp, top = 24.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = buildAnnotatedString {
-                        withStyle(SpanStyle(color = accentColor)) { append("FollowThru") }
-                    },
-                    style = MaterialTheme.typography.displayMedium,
+                Column(
                     modifier = Modifier
                         .weight(1f)
-                        .semantics { heading() }
-                )
+                        .semantics(mergeDescendants = true) {
+                            heading()
+                            contentDescription = "FollowThru — in every moment"
+                        }
+                ) {
+                    Text(
+                        text = buildAnnotatedString {
+                            withStyle(SpanStyle(color = accentColor)) { append("FollowThru") }
+                        },
+                        style = MaterialTheme.typography.displayMedium
+                    )
+                    Text(
+                        text = "in every moment",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 IconButton(
                     onClick = onSettingsClick,
                     modifier = Modifier.size(48.dp)

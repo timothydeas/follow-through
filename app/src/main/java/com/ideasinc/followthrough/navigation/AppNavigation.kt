@@ -44,7 +44,9 @@ private const val ROUTE_STATS = "stats"
 internal const val PREFS_NAME = "grounded_prefs"
 internal const val KEY_ONBOARDING_VERSION = "onboarding_version"
 internal const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
-internal const val CURRENT_ONBOARDING_VERSION = 93
+// Bumped 93 → 94 for the MVP onboarding redesign so existing closed-testing
+// users re-see onboarding once after upgrading in place (no data is reset).
+internal const val CURRENT_ONBOARDING_VERSION = 94
 
 @Composable
 fun AppNavigation(
@@ -178,6 +180,7 @@ fun AppNavigation(
                 factory = CheckInFlowViewModel.Factory(
                     container.checkInDao,
                     container.questionLabelDao,
+                    container.goalDao,
                     goalId
                 )
             )

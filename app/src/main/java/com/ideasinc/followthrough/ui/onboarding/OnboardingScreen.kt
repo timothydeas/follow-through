@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -231,7 +232,7 @@ fun OnboardingScreen(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Goals & Changes",
+                    text = "in every moment",
                     style = MaterialTheme.typography.bodyLarge,
                     color = AppColors.OnForgeBackground,
                     textAlign = TextAlign.Center
@@ -337,6 +338,16 @@ private fun SecurityAndPrivacyBody(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
+        // Lead framing — orients a cold user in one line: the follow-through
+        // identity, stated positively (no defensive "not a task manager").
+        Text(
+            text = "We all set goals. Following through is the hard part — that's what FollowThru is for: acting on your intention, in the moment.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = AppColors.OnOnboardingBodySurface,
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { liveRegion = LiveRegionMode.Polite }
+        )
         if (biometricAvailable) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -430,19 +441,63 @@ private fun HowItWorksBody() {
         )
         HowItWorksStep(
             number = 1,
-            title = "Add a goal",
-            description = "What you're working toward or want to change."
+            title = "Name the moment",
+            description = "The situation where following through gets hard."
         )
         HowItWorksStep(
             number = 2,
-            title = "Check in",
-            description = "Reflect with research-backed questions."
+            title = "Decide your move",
+            description = "When [cue], I will [action] — your plan for that moment."
         )
         HowItWorksStep(
             number = 3,
             title = "Follow through",
-            description = "Mark when you've taken action."
+            description = "Act on your plan, then mark it."
         )
+
+        // Optional worked example — kept off the required path behind a toggle
+        // so it never lengthens onboarding for someone who just wants to start.
+        var showExample by remember { mutableStateOf(false) }
+        val revealLabel = if (showExample) "Hide example" else "See an example"
+        Text(
+            text = revealLabel,
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+            color = AppColors.ForgeBackground,
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(
+                    role = Role.Button,
+                    onClickLabel = revealLabel,
+                    onClick = { showExample = !showExample }
+                )
+                .padding(vertical = 8.dp, horizontal = 4.dp)
+        )
+        if (showExample) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(AppColors.OnOnboardingBodySurface.copy(alpha = 0.06f))
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                    .semantics(mergeDescendants = true) {
+                        contentDescription =
+                            "Example. When standup reaches my turn, I will share the one blocker I wrote down. " +
+                                "A small, specific plan you can actually act on in the moment."
+                    },
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = "“When standup reaches my turn → I will share the one blocker I wrote down.”",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = AppColors.OnOnboardingBodySurface
+                )
+                Text(
+                    text = "A small, specific plan you can actually act on in the moment.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppColors.OnOnboardingBodySurface.copy(alpha = 0.75f)
+                )
+            }
+        }
     }
 }
 

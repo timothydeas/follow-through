@@ -36,7 +36,7 @@ object QuestionKeys {
         MADE_PROGRESS to "Do you feel you've made progress?",
         AVOIDING to "Is there something you already know would help you here, but you've been avoiding finding out or facing?",
         CONFIDENCE to "How confident do you feel you'll figure this out?",
-        COMPETING_PRIORITY to "What's getting in your way right now — is it the situation itself, or how you're seeing it or expecting it to go? If nothing is, what might get in the way later?",
+        COMPETING_PRIORITY to "What's getting in your way — the situation itself, or how you're seeing it?",
         IMPLEMENTATION_INTENTION to "When [e.g., moment or situation], I will [e.g., what I'll do].",
         ACCOUNTABILITY to "Who holds you accountable?"
     )
@@ -44,7 +44,7 @@ object QuestionKeys {
     // Default placeholder (example-answer) text per question. Mirrors the
     // values the check-in flow used before placeholders became customizable.
     val DEFAULT_PLACEHOLDERS = mapOf(
-        GOAL_OR_CHANGE to "A goal, a habit, something you want to change, or something you're struggling with",
+        GOAL_OR_CHANGE to "What you want to move toward — e.g., \"be heard at work\" or \"take care of my health\"",
         AVOIDING to "Something you've been putting off looking at, even though part of you knows it matters",
         CONFIDENCE to "You don't need proof you can do this before you start. What does your gut say?",
         MADE_PROGRESS to "Yes, No, or describe where you feel you are right now",
