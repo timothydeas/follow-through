@@ -81,4 +81,57 @@ Branch: `mvp-launch-fixes` (off `main` @ bb41831). One commit per phase.
 - **D3.1 (escalation → documented default).** **Intention-anchored per-goal reminders (#1 / Phase 2 #5) are NOT implemented in this run** and are handed to the testing week. Rationale: the global local-notification reminder (Settings) is in place and correct; extending to per-goal scheduling (N alarms, intention-text notification body, deep-link-to-goal, boot reschedule) is a sizable, separately-verifiable feature that I could not implement *and* device-verify within this run without risking half-finished notification code. Per the operating rule I chose the safe, documented default (ship the proven global reminder, defer the anchored variant) rather than land unverified alarm code. No schema was added for it (see D5.2), so adding it later needs no migration.
 - **D3.2** The optional "adjust the plan after a missed follow-through" nudge (#2 cognitive-barrier path) is also deferred — there is currently no explicit "missed" event (follow-through is a single goal flag), so a faithful, non-judgmental implementation is a small feature in its own right. Listed for the testing week. The non-shaming, reversible, flex-protected behavior that exists already honors the core of the guardrail.
 
-(Per-phase entries appended below as work proceeds.)
+### Phase 4 — Accessibility deep pass
+The app already carries strong TalkBack semantics throughout; this pass confirmed the existing screens and brought the new/changed screens up to the same bar. **Code-level remediation (per screen):**
+- **Onboarding** — headings on titles; progress dots are a polite live region announcing "Step n of 2"; primary button + swipe carry contentDescriptions; app-lock `Switch` has `Role.Switch` + on/off state. New "See an example" toggle has `Role.Button` + click label; revealed block is one merged node. Lead framing is a polite live region.
+- **Launch Insight** — whole screen is a single node reading only the insight; `clearAndSetSemantics`; auto-dismiss timer skipped when an a11y service is active (read at own pace, tap to continue).
+- **Home / List** — wordmark+tagline merged into one heading ("FollowThru — in every moment"); FAB, settings, search all labeled; drag handle is decorative (`clearAndSetSemantics{}`) with explicit ≥48dp reorder arrow buttons + "move to position" dialog for non-gesture users; stat chips merged.
+- **New Goal Flow** — step label is a polite live region; question headings; `imePadding()`.
+- **Goal Detail** — back/edit/delete labeled; the follow-through button announces its state and "double tap to undo"; reassurance overlay is one node. (Steps UI removed.)
+- **Check-In (rebuilt)** — "Check in" heading; read-only context is one merged node ("Your goal… Your plan…"); each field carries its question as `contentDescription`; "Reflect more" toggle has `Role.Button` + label; Save is full-width ≥48dp; `imePadding()` on the scroller + Save bar.
+- **Settings** — switches have role+state; theme choices are a `selectableGroup` of radio rows; day chips are ≥48dp with selected state; "Send feedback" row has `Role.Button` + click label.
+- **Stats** — heading; stat rows merged ("label value"); "Your FollowThrus" row has `Role.Button` + click label.
+- **Your FollowThrus (new)** — heading; back labeled; each record card is one merged node (title + plan + what-you-did + date) with `Role.Button` "Open goal".
+- **Customize Questions / Check-In Read** — unchanged; retain existing semantics.
+
+**Deferred to the testing week (require a real device / can't be auto-verified here):** dynamic type at 200% with no clipping on every screen; measured AA contrast sweep in light + dark; visible focus-indicator sweep; explicit reduced-motion handling for the onboarding swipe-hint/fade and card-drag scale animations. Targets are ≥48dp and tokens route through `AppColors` (see Phase-2/Design notes).
+
+---
+
+## Automated verification — results
+
+| Check | Result |
+|---|---|
+| `:app:compileDebugKotlin` | ✅ PASS |
+| `:app:assembleDebug` (debug APK) | ✅ PASS — `app/build/outputs/apk/debug/app-debug.apk` produced |
+| `:app:testDebugUnitTest` (unit + Robolectric) | ✅ PASS — `tests=2, failures=0, errors=0` |
+| **🔒 BLOCKING migration test (v26→v27)** | ✅ **PASS** — populated v26 DB upgrades with `goals`/`check_ins`/`question_labels` intact; `steps`/`notes`/`follow_throughs` dropped (see Phase 5) |
+| `:app:lintDebug` (incl. a11y rules) | ✅ PASS — **0 errors, 68 warnings**; no accessibility errors. Warnings are routine: `GradleDependency`/`UseTomlInstead` (newer dep versions available), `ObsoleteSdkInt`, `ConstantLocale`, `MonochromeLauncherIcon`, `DataExtractionRules`, etc. |
+| **Privacy check** | ✅ PASS — no network/analytics/location/Firebase/OkHttp/Retrofit anywhere. Source matches for `http(s)` are only XML namespace URIs + the user-tapped privacy-policy link. |
+| Manifest permissions (merged) | `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM`, `RECEIVE_BOOT_COMPLETED`, `USE_BIOMETRIC` + `USE_FINGERPRINT` (pre-existing biometric lib), and the internal `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` (AndroidX, signature-level). **No INTERNET, no location** — the Play In-App Review library added none. |
+| "Your FollowThrus" present & honest | ✅ reachable only via an explicit Stats row, never auto-surfaced, no "proof you can" framing, not a done-tasks bucket; no done-tasks bucket on Home. |
+| Reminder scheduling test | ⚠️ Not added — global reminder unchanged this run; intention-anchored reminders were deferred (D3.1), so no new scheduling logic to test. |
+
+**Reminder/instrumented note:** no emulator or `adb` exists in this environment, so the device-based upgrade test and any instrumented (`androidTest`) tests can't be executed here. The blocking migration is proven via the Robolectric JVM test instead; an `androidTest` dependency set is wired for the testing-week device run.
+
+---
+
+## Human verification checklist — auto cannot complete these (testing week)
+- [ ] **Real-device matrix:** Pixel phone + 7" and 10"+ tablets, portrait + landscape — first-run path, no stretching on tablet, keyboard never covers fields, check-in ≤ 4 taps.
+- [ ] **Manual TalkBack sweep** on all 8 screens (+ Your FollowThrus, Customize Questions, Check-In Read).
+- [ ] **Dynamic type @ 200%** with no clipping on every screen.
+- [ ] **Dark-mode visual sweep** (Light/Dark/System) on every screen, incl. Launch Insight + Your FollowThrus; measured **AA contrast**.
+- [ ] **Reduced-motion**: verify onboarding swipe-hint/fade + card-drag scale respect the system setting.
+- [ ] **Real upgrade test:** install prior **v26** build, upgrade in place; confirm `Goal`/`CheckIn`/`QuestionLabel` survive and `Step`+legacy tables are gone — no crash/data loss — **and that an already-onboarded user sees the redesigned onboarding** after upgrade (onboarding version 93→94).
+- [ ] **Visible focus indicators** sweep (keyboard/switch navigation).
+- [ ] **Play In-App Review** actually surfaces after ≥3 check-ins on a Play-installed build (Google rate-limits; verify wiring, not guaranteed appearance); **Send feedback** opens the mail app to `ideas@insightsemerge.com`.
+- [ ] **Signed release AAB**, version bump (already `versionCode=2`, `versionName=1.1`), then Play steps: Data Safety = zero data collection, content rating Everyone, category Productivity, no ads, phone + tablet screenshots, "not a substitute for professional advice" disclaimer present.
+- [ ] **(Deferred features to finish or descope before GA):** intention-anchored per-goal reminders (D3.1); optional adjust-the-plan-after-miss nudge (D3.2); "in every moment" tagline on remaining secondary screens (D2.2).
+
+### Store-listing positioning (hand to listing author)
+Lead the title/short description and first screenshot with the **follow-through identity** — "we all set goals; following through is the hard part" — so arrivals understand this is the *follow-through* tool, not a planner/to-do/tracker. Own "follow-through" positively; **do not** add a defensive "not a task manager" line. **No pricing or "free/free-forever" copy.** Use Play tags (habits, motivation, self-improvement).
+
+---
+
+## Ready-for-testing-week status
+**This is "ready for your testing week," NOT "ready to ship."** The build compiles, lints clean (0 errors), assembles a debug APK, and the **blocking v26→v27 migration test passes**. Privacy-first architecture is intact (no network/analytics/location added). Phases 1, 2, 3 (less the deferred anchored reminders), 4 (code-level), and 5 are complete and committed one-per-phase. Remaining before GA: the device/visual/upgrade checks above and the two deferred features (D3.1, D3.2). No release AAB is signed and no human/device verification has been performed — those are explicitly handed back.
