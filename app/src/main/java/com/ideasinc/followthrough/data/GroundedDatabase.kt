@@ -691,7 +691,6 @@ abstract class GroundedDatabase : RoomDatabase() {
     abstract fun goalDao(): GoalDao
     abstract fun checkInDao(): CheckInDao
     abstract fun questionLabelDao(): QuestionLabelDao
-    abstract fun stepDao(): StepDao
 
     companion object {
         @Volatile private var INSTANCE: GroundedDatabase? = null

@@ -9,8 +9,6 @@ import com.ideasinc.followthrough.data.Goal
 import com.ideasinc.followthrough.data.GoalDao
 import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionLabelDao
-import com.ideasinc.followthrough.data.Step
-import com.ideasinc.followthrough.data.StepDao
 import com.ideasinc.followthrough.data.resolveConfigs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,36 +16,27 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 data class GoalDetailUiState(
     val goal: Goal? = null,
     val checkIns: List<CheckIn> = emptyList(),
     val questionConfigs: List<QuestionConfig> = emptyList(),
-    val steps: List<Step> = emptyList(),
     val shouldNavigateToList: Boolean = false,
     val showEditDialog: Boolean = false,
     val editTitle: String = "",
-    val showReassurance: Boolean = false,
-    // Step add/edit dialog. stepEditorTargetId == null → adding a new step;
-    // non-null → editing the step with that id.
-    val showStepDialog: Boolean = false,
-    val stepDialogText: String = "",
-    val stepEditorTargetId: String? = null
+    val showReassurance: Boolean = false
 )
 
 private data class GoalDetailData(
     val goal: Goal?,
     val checkIns: List<CheckIn>,
-    val configs: List<QuestionConfig>,
-    val steps: List<Step>
+    val configs: List<QuestionConfig>
 )
 
 class GoalDetailViewModel(
     private val goalDao: GoalDao,
     private val checkInDao: CheckInDao,
     private val questionLabelDao: QuestionLabelDao,
-    private val stepDao: StepDao,
     private val goalId: String
 ) : ViewModel() {
 
@@ -59,17 +48,15 @@ class GoalDetailViewModel(
             combine(
                 goalDao.getGoalByIdAsFlow(goalId),
                 checkInDao.getCheckInsForGoal(goalId),
-                questionLabelDao.getAllLabels(),
-                stepDao.getStepsForGoal(goalId)
-            ) { goal, checkIns, labels, steps ->
-                GoalDetailData(goal, checkIns, resolveConfigs(labels), steps)
+                questionLabelDao.getAllLabels()
+            ) { goal, checkIns, labels ->
+                GoalDetailData(goal, checkIns, resolveConfigs(labels))
             }.collect { data ->
                 _uiState.update {
                     it.copy(
                         goal = data.goal,
                         checkIns = data.checkIns,
-                        questionConfigs = data.configs,
-                        steps = data.steps
+                        questionConfigs = data.configs
                     )
                 }
             }
@@ -144,75 +131,14 @@ class GoalDetailViewModel(
         }
     }
 
-    // ─── Steps (sub-goals) ───────────────────────────────────────────────
-
-    fun showAddStepDialog() = _uiState.update {
-        it.copy(showStepDialog = true, stepDialogText = "", stepEditorTargetId = null)
-    }
-
-    fun showEditStepDialog(step: Step) = _uiState.update {
-        it.copy(showStepDialog = true, stepDialogText = step.title, stepEditorTargetId = step.id)
-    }
-
-    fun onStepDialogTextChange(value: String) =
-        _uiState.update { it.copy(stepDialogText = value) }
-
-    fun dismissStepDialog() = _uiState.update {
-        it.copy(showStepDialog = false, stepDialogText = "", stepEditorTargetId = null)
-    }
-
-    fun saveStep() {
-        viewModelScope.launch {
-            val state = _uiState.value
-            val title = state.stepDialogText.trim()
-            if (title.isBlank()) return@launch
-            val now = System.currentTimeMillis()
-            val targetId = state.stepEditorTargetId
-            if (targetId == null) {
-                stepDao.insertStep(
-                    Step(
-                        id = UUID.randomUUID().toString(),
-                        goalId = goalId,
-                        title = title,
-                        isCompleted = false,
-                        createdAt = now,
-                        updatedAt = now
-                    )
-                )
-            } else {
-                val existing = state.steps.firstOrNull { it.id == targetId } ?: return@launch
-                stepDao.updateStep(existing.copy(title = title, updatedAt = now))
-            }
-            _uiState.update {
-                it.copy(showStepDialog = false, stepDialogText = "", stepEditorTargetId = null)
-            }
-        }
-    }
-
-    fun toggleStep(step: Step) {
-        viewModelScope.launch {
-            stepDao.updateStep(
-                step.copy(
-                    isCompleted = !step.isCompleted,
-                    updatedAt = System.currentTimeMillis()
-                )
-            )
-        }
-    }
-
-    fun deleteStep(stepId: String) {
-        viewModelScope.launch { stepDao.deleteById(stepId) }
-    }
-
     class Factory(
         private val goalDao: GoalDao,
         private val checkInDao: CheckInDao,
         private val questionLabelDao: QuestionLabelDao,
-        private val stepDao: StepDao,
         private val goalId: String
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            GoalDetailViewModel(goalDao, checkInDao, questionLabelDao, stepDao, goalId) as T
+            GoalDetailViewModel(goalDao, checkInDao, questionLabelDao, goalId) as T
     }
 }

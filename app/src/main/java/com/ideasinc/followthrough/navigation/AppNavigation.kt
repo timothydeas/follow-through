@@ -154,7 +154,7 @@ fun AppNavigation(
         ) { backStackEntry ->
             val goalId = backStackEntry.arguments?.getString(ARG_GOAL_ID) ?: return@composable
             val vm: GoalDetailViewModel = viewModel(
-                factory = GoalDetailViewModel.Factory(container.goalDao, container.checkInDao, container.questionLabelDao, container.stepDao, goalId)
+                factory = GoalDetailViewModel.Factory(container.goalDao, container.checkInDao, container.questionLabelDao, goalId)
             )
             GoalDetailScreen(
                 viewModel = vm,

@@ -7,7 +7,6 @@ import com.ideasinc.followthrough.data.GoalDao
 import com.ideasinc.followthrough.data.GroundedDatabase
 import com.ideasinc.followthrough.data.NoteDao
 import com.ideasinc.followthrough.data.QuestionLabelDao
-import com.ideasinc.followthrough.data.StepDao
 
 class AppContainer(context: Context) {
     private val database: GroundedDatabase = GroundedDatabase.getInstance(context)
@@ -16,5 +15,4 @@ class AppContainer(context: Context) {
     val goalDao: GoalDao = database.goalDao()
     val checkInDao: CheckInDao = database.checkInDao()
     val questionLabelDao: QuestionLabelDao = database.questionLabelDao()
-    val stepDao: StepDao = database.stepDao()
 }

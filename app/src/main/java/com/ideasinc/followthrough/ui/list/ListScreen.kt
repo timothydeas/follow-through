@@ -115,7 +115,6 @@ fun ListScreen(
     val touchExplorationOn = rememberIsTouchExplorationEnabled()
 
     var moveDialogTarget: MoveDialogTarget? by remember { mutableStateOf(null) }
-    var selectedTab by remember { mutableStateOf(0) }
 
     // Each LazyColumn index corresponds directly to a goal's flat position.
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
@@ -205,13 +204,7 @@ fun ListScreen(
                 }
             }
 
-            ListTabBar(
-                selectedTab = selectedTab,
-                onSelect = { selectedTab = it }
-            )
-
-            if (selectedTab == 0) {
-                if (uiState.streakDays > 0 || uiState.totalFollowThroughs > 0) {
+            if (uiState.streakDays > 0 || uiState.totalFollowThroughs > 0) {
                     val statsRowA11y = "Check-In Streak ${uiState.streakDays}, " +
                         "FollowThrus ${uiState.totalFollowThroughs}. " +
                         "Double tap to view full stats."
@@ -301,28 +294,6 @@ fun ListScreen(
                         }
                     }
                 }
-            } else {
-                Spacer(modifier = Modifier.height(8.dp))
-                if (uiState.completedGoals.isEmpty()) {
-                    CompletedEmptyState()
-                } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(
-                            uiState.completedGoals,
-                            key = { row -> "completed_${row.goal.id}" }
-                        ) { row ->
-                            CompletedGoalCard(
-                                row = row,
-                                onClick = { onGoalClick(row.goal.id) }
-                            )
-                        }
-                    }
-                }
-            }
         }
     }
 }
@@ -709,138 +680,6 @@ private fun SearchBar(
                 }
             }
         }
-    }
-}
-
-// ─── Tabs ─────────────────────────────────────────────────────────────────
-
-@Composable
-private fun ListTabBar(
-    selectedTab: Int,
-    onSelect: (Int) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-    ) {
-        ListTab(
-            label = "Active",
-            selected = selectedTab == 0,
-            modifier = Modifier.weight(1f),
-            onClick = { onSelect(0) }
-        )
-        ListTab(
-            label = "Completed",
-            selected = selectedTab == 1,
-            modifier = Modifier.weight(1f),
-            onClick = { onSelect(1) }
-        )
-    }
-}
-
-@Composable
-private fun ListTab(
-    label: String,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    val accent = AppColors.BrandAccentText
-    Column(
-        modifier = modifier
-            .selectable(
-                selected = selected,
-                role = Role.Tab,
-                onClick = onClick
-            )
-            .heightIn(min = 48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleSmall,
-            color = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(2.dp)
-                .background(if (selected) accent else Color.Transparent)
-        )
-    }
-}
-
-// ─── Completed goals showcase ─────────────────────────────────────────────
-
-@Composable
-private fun CompletedGoalCard(
-    row: GoalRowData,
-    onClick: () -> Unit
-) {
-    val completedAt = row.goal.followedThroughAt
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(
-                    onClickLabel = "Open goal",
-                    role = Role.Button,
-                    onClick = onClick
-                )
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = row.goal.title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = if (completedAt != null)
-                        "Completed ${formatDate(completedAt)}"
-                    else "Completed",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CompletedEmptyState() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "Your completed goals will appear here.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
     }
 }
 

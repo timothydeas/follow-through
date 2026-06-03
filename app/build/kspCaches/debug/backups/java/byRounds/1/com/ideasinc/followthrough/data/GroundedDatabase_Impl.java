@@ -37,8 +37,6 @@ public final class GroundedDatabase_Impl extends GroundedDatabase {
 
   private volatile QuestionLabelDao _questionLabelDao;
 
-  private volatile StepDao _stepDao;
-
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
@@ -285,7 +283,6 @@ public final class GroundedDatabase_Impl extends GroundedDatabase {
     _typeConvertersMap.put(GoalDao.class, GoalDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(CheckInDao.class, CheckInDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(QuestionLabelDao.class, QuestionLabelDao_Impl.getRequiredConverters());
-    _typeConvertersMap.put(StepDao.class, StepDao_Impl.getRequiredConverters());
     return _typeConvertersMap;
   }
 
@@ -370,20 +367,6 @@ public final class GroundedDatabase_Impl extends GroundedDatabase {
           _questionLabelDao = new QuestionLabelDao_Impl(this);
         }
         return _questionLabelDao;
-      }
-    }
-  }
-
-  @Override
-  public StepDao stepDao() {
-    if (_stepDao != null) {
-      return _stepDao;
-    } else {
-      synchronized(this) {
-        if(_stepDao == null) {
-          _stepDao = new StepDao_Impl(this);
-        }
-        return _stepDao;
       }
     }
   }
