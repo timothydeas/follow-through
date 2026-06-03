@@ -39,4 +39,19 @@ Branch: `mvp-launch-fixes` (off `main` @ bb41831). One commit per phase.
 - **Cloud sync / AI accountability partner / social sharing** — none present in the codebase; nothing to remove (see D0.1).
 - Verified: `:app:compileDebugKotlin` passes.
 
+### Phase 5 — Data layer / migration  ✅ (done early to lock the blocking gate)
+- **MIGRATION_26_27** added (explicit, **never** `fallbackToDestructiveMigration`): drops `follow_throughs` (child) → `notes` (parent) → `steps`. `Goal` / `CheckIn` / `QuestionLabel` are **not touched**.
+- `@Database` bumped **26 → 27**; entities reduced to `Goal`, `CheckIn`, `QuestionLabel`; `exportSchema = true` with `room.schemaLocation = app/schemas` (v27 schema committed at `app/schemas/.../27.json`).
+- Removed the `Converters`/`NoteType` type-converter (only the legacy `notes` table used it). Deleted dead legacy code: `GroundedNote`, `FollowThroughEntry`, `Step`, `NoteDao`, `FollowThroughDao`, and `ui/{stepflow,editor,readview,followthrough}` (all were a closed dead-code set, never reachable from navigation). `AppContainer` no longer exposes `noteDao`/`followThroughDao`.
+- `versionCode 1 → 2`, `versionName "1.0" → "1.1"` for the in-place update.
+
+> ### 🔒 BLOCKING migration test — **PASS**
+> `app/src/test/.../Migration26To27Test.kt` (Robolectric JVM test — runs without an emulator). Builds a **populated** v26 DB by hand (real v26 table shapes + `steps`/`notes`/`follow_throughs` with rows), opens it through Room with `MIGRATION_26_27`, and asserts: `goals`/`check_ins`/`question_labels` rows + fields (incl. a followed-through goal and an implementation-intention string) survive, and `steps`/`notes`/`follow_throughs` are dropped. Plus an empty-DB case.
+> **Result: `tests=2, failures=0, errors=0`** via `./gradlew :app:testDebugUnitTest`.
+
+### Decision log — Phase 5
+- **D5.1** Did Phase 5 **before** Phases 2–4 to de-risk and prove the blocking gate as early as possible. Phases 2–4 do not touch `Goal`/`CheckIn`/`QuestionLabel` columns, so this reordering is safe. Commits remain one-per-phase.
+- **D5.2** Intention-anchored per-goal reminders (Phase 2 #5 / Phase 3 #1) will be stored in **SharedPreferences** (mirroring the existing global reminder), **not** a new Room table — so no further schema change is needed and the v26→v27 migration stays a pure, low-risk table drop. ("add any new reminder fields/tables" → none needed.)
+- **D5.3** No emulator/`adb` and no instrumented-test infra exist in this environment, so the blocking test is implemented with **Robolectric** as a local unit test (executable here). An `androidTest` config is also wired for the device-based upgrade test during the testing week.
+
 (Per-phase entries appended below as work proceeds.)

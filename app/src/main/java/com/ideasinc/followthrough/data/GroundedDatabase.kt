@@ -4,18 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverter
-import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-
-class Converters {
-    @TypeConverter
-    fun fromNoteType(type: NoteType): String = type.name
-
-    @TypeConverter
-    fun toNoteType(value: String): NoteType = NoteType.valueOf(value)
-}
 
 private val MIGRATION_1_2 = object : Migration(1, 2) {
     override fun migrate(db: SupportSQLiteDatabase) {
@@ -671,23 +661,33 @@ private val MIGRATION_13_14 = object : Migration(13, 14) {
     }
 }
 
-@TypeConverters(Converters::class)
+internal val MIGRATION_26_27 = object : Migration(26, 27) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // MVP cleanup: the sub-goal "steps" feature and the two legacy
+        // pre-Goal tables ("notes" and its child "follow_throughs") are removed.
+        // Goal / CheckIn / QuestionLabel are untouched, so all user goals,
+        // check-ins, and question customizations survive the upgrade intact.
+        //
+        // follow_throughs is dropped first because it holds a foreign key into
+        // notes (ON DELETE CASCADE); dropping the child before the parent keeps
+        // SQLite happy regardless of foreign_keys pragma state.
+        db.execSQL("DROP TABLE IF EXISTS follow_throughs")
+        db.execSQL("DROP TABLE IF EXISTS notes")
+        db.execSQL("DROP TABLE IF EXISTS steps")
+    }
+}
+
 @Database(
     entities = [
-        GroundedNote::class,
-        FollowThroughEntry::class,
         Goal::class,
         CheckIn::class,
-        QuestionLabel::class,
-        Step::class
+        QuestionLabel::class
     ],
-    version = 26,
-    exportSchema = false
+    version = 27,
+    exportSchema = true
 )
 abstract class GroundedDatabase : RoomDatabase() {
 
-    abstract fun noteDao(): NoteDao
-    abstract fun followThroughDao(): FollowThroughDao
     abstract fun goalDao(): GoalDao
     abstract fun checkInDao(): CheckInDao
     abstract fun questionLabelDao(): QuestionLabelDao
@@ -710,7 +710,7 @@ abstract class GroundedDatabase : RoomDatabase() {
                         MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19,
                         MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22,
                         MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25,
-                        MIGRATION_25_26
+                        MIGRATION_25_26, MIGRATION_26_27
                     )
                     .build().also { INSTANCE = it }
             }
