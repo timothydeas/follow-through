@@ -481,18 +481,26 @@ private fun HowItWorksBody() {
                     .padding(horizontal = 14.dp, vertical = 12.dp)
                     .semantics(mergeDescendants = true) {
                         contentDescription =
-                            "Example. When standup reaches my turn, I will share the one blocker I wrote down. " +
-                                "A small, specific plan you can actually act on in the moment."
+                            "Example. Goal: take care of my health. " +
+                                "Plan: when I pour my morning coffee, I will make a breakfast I actually look forward to. " +
+                                "Your goal is what you're moving toward — take care of my health. " +
+                                "Your plan is the exact move for the moment. You'll write your own."
                     },
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    text = "“When standup reaches my turn → I will share the one blocker I wrote down.”",
+                    text = "Goal: Take care of my health",
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                    color = AppColors.OnOnboardingBodySurface
+                )
+                Text(
+                    text = "Plan: When I pour my morning coffee → I will make a breakfast I actually look forward to.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = AppColors.OnOnboardingBodySurface
                 )
                 Text(
-                    text = "A small, specific plan you can actually act on in the moment.",
+                    text = "Your goal is what you're moving toward — “take care of my health.” " +
+                        "Your plan is the exact move for the moment. You'll write your own.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = AppColors.OnOnboardingBodySurface.copy(alpha = 0.75f)
                 )

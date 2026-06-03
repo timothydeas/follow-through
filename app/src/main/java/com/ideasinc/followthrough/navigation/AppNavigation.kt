@@ -48,7 +48,9 @@ internal const val KEY_ONBOARDING_VERSION = "onboarding_version"
 internal const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
 // Bumped 93 → 94 for the MVP onboarding redesign so existing closed-testing
 // users re-see onboarding once after upgrading in place (no data is reset).
-internal const val CURRENT_ONBOARDING_VERSION = 94
+// Bumped 94 → 95 so the refreshed "See an example" (health example) re-shows
+// once for already-onboarded installs after this upgrade (no data is reset).
+internal const val CURRENT_ONBOARDING_VERSION = 95
 
 @Composable
 fun AppNavigation(
