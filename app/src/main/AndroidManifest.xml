@@ -29,6 +29,7 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="com.ideasinc.followthrough.action.REMINDER" />
+                <action android:name="com.ideasinc.followthrough.action.GOAL_REMINDER" />
             </intent-filter>
         </receiver>
 

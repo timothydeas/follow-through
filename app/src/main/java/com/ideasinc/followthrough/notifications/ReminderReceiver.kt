@@ -1,4 +1,4 @@
-﻿package com.ideasinc.followthrough.notifications
+package com.ideasinc.followthrough.notifications
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -19,9 +19,25 @@ class ReminderReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         ensureChannel(context)
-        postNotification(context)
 
         val day = intent.getIntExtra(EXTRA_REMINDER_DAY, -1)
+
+        if (intent.action == ACTION_GOAL_REMINDER) {
+            // Per-goal reminder: surface this goal's implementation intention.
+            val goalId = intent.getStringExtra(EXTRA_GOAL_ID)
+            if (goalId == null) return
+            val reminder = GoalReminderScheduler.read(context, goalId)
+            val body = reminder?.body?.takeIf { it.isNotBlank() }
+                ?: "Time to follow through on your plan."
+            postNotification(context, body, goalNotificationId(goalId))
+            if (day in Calendar.SUNDAY..Calendar.SATURDAY) {
+                GoalReminderScheduler.rescheduleAfterFire(context, goalId, day)
+            }
+            return
+        }
+
+        // Global reminder (unchanged).
+        postNotification(context, "Check in on your top goal", REMINDER_NOTIFICATION_ID)
         if (day in Calendar.SUNDAY..Calendar.SATURDAY) {
             ReminderScheduler.rescheduleAfterFire(context, day)
         }
@@ -41,7 +57,7 @@ class ReminderReceiver : BroadcastReceiver() {
         nm.createNotificationChannel(channel)
     }
 
-    private fun postNotification(context: Context) {
+    private fun postNotification(context: Context, text: String, notificationId: Int) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             ?: return
 
@@ -50,7 +66,7 @@ class ReminderReceiver : BroadcastReceiver() {
         }
         val tapPendingIntent = PendingIntent.getActivity(
             context,
-            0,
+            notificationId,
             tapIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -59,13 +75,14 @@ class ReminderReceiver : BroadcastReceiver() {
             .setSmallIcon(R.mipmap.ic_launcher)
             .setColor(0xFF9B3A2E.toInt())
             .setContentTitle("FollowThru")
-            .setContentText("Check in on your top goal")
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(tapPendingIntent)
             .setAutoCancel(true)
             .build()
 
         try {
-            nm.notify(REMINDER_NOTIFICATION_ID, notification)
+            nm.notify(notificationId, notification)
         } catch (_: SecurityException) {
             // POST_NOTIFICATIONS not granted on Android 13+ — drop the notification silently.
         }

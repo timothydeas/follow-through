@@ -13,6 +13,8 @@ class BootReceiver : BroadcastReceiver() {
             action != "android.intent.action.QUICKBOOT_POWERON"
         ) return
 
-        ReminderScheduler.rescheduleAllFromPrefs(context.applicationContext)
+        val appContext = context.applicationContext
+        ReminderScheduler.rescheduleAllFromPrefs(appContext)
+        GoalReminderScheduler.rescheduleAllFromPrefs(appContext)
     }
 }

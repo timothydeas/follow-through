@@ -97,20 +97,27 @@ object ReminderScheduler {
         )
     }
 
-    private fun computeNextTriggerMs(dayOfWeek: Int, hour: Int, minute: Int): Long {
-        val now = Calendar.getInstance()
-        val target = Calendar.getInstance().apply {
-            set(Calendar.DAY_OF_WEEK, dayOfWeek)
-            set(Calendar.HOUR_OF_DAY, hour)
-            set(Calendar.MINUTE, minute)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        while (target.timeInMillis <= now.timeInMillis) {
-            target.add(Calendar.WEEK_OF_YEAR, 1)
-        }
-        return target.timeInMillis
+}
+
+/**
+ * Next epoch-ms at which [dayOfWeek] (Calendar.SUNDAY..SATURDAY) falls at
+ * [hour]:[minute], always in the future. Shared by the global reminder and the
+ * per-goal reminders ([GoalReminderScheduler]) so both compute trigger times
+ * identically.
+ */
+internal fun computeNextTriggerMs(dayOfWeek: Int, hour: Int, minute: Int): Long {
+    val now = Calendar.getInstance()
+    val target = Calendar.getInstance().apply {
+        set(Calendar.DAY_OF_WEEK, dayOfWeek)
+        set(Calendar.HOUR_OF_DAY, hour)
+        set(Calendar.MINUTE, minute)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
     }
+    while (target.timeInMillis <= now.timeInMillis) {
+        target.add(Calendar.WEEK_OF_YEAR, 1)
+    }
+    return target.timeInMillis
 }
 
 fun canScheduleExactAlarmsCompat(context: Context): Boolean {
