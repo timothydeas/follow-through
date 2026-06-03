@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -73,11 +74,18 @@ fun CheckInFlowScreen(
     val announce = rememberA11yAnnouncer()
     val backFocus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
 
     LaunchedEffect(uiState.shouldExit, uiState.didSave) {
-        if (uiState.didSave) announce("Check-in saved")
+        if (uiState.didSave) {
+            announce("Check-in saved")
+            // Honest, non-sentiment-gated Play review prompt after genuine use.
+            (context as? android.app.Activity)?.let {
+                com.ideasinc.followthrough.feedback.AppReview.onCheckInSaved(it)
+            }
+        }
         if (uiState.shouldExit) onNavigateBack()
     }
 

@@ -15,6 +15,7 @@ import com.ideasinc.followthrough.ui.checkin.CheckInFlowScreen
 import com.ideasinc.followthrough.ui.checkin.CheckInFlowViewModel
 import com.ideasinc.followthrough.ui.checkin.CheckInReadScreen
 import com.ideasinc.followthrough.ui.checkin.CheckInReadViewModel
+import com.ideasinc.followthrough.ui.followthrough.FollowThrusScreen
 import com.ideasinc.followthrough.ui.goals.GoalDetailScreen
 import com.ideasinc.followthrough.ui.goals.GoalDetailViewModel
 import com.ideasinc.followthrough.ui.goals.NewGoalFlowScreen
@@ -40,6 +41,7 @@ private const val ROUTE_ONBOARDING = "onboarding"
 private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_CUSTOMIZE_QUESTIONS = "customize_questions"
 private const val ROUTE_STATS = "stats"
+private const val ROUTE_FOLLOWTHRUS = "followthrus"
 
 internal const val PREFS_NAME = "grounded_prefs"
 internal const val KEY_ONBOARDING_VERSION = "onboarding_version"
@@ -127,7 +129,16 @@ fun AppNavigation(
         composable(ROUTE_STATS) {
             StatsScreen(
                 container = container,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onOpenFollowThrus = { navController.navigate(ROUTE_FOLLOWTHRUS) }
+            )
+        }
+
+        composable(ROUTE_FOLLOWTHRUS) {
+            FollowThrusScreen(
+                container = container,
+                onBack = { navController.popBackStack() },
+                onGoalClick = { id -> navController.navigate("goal_detail/$id") }
             )
         }
 

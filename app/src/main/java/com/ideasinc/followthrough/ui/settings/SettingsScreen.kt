@@ -88,6 +88,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ideasinc.followthrough.BuildConfig
 import com.ideasinc.followthrough.di.AppContainer
+import com.ideasinc.followthrough.feedback.AppReview
 import com.ideasinc.followthrough.notifications.PREFS_REMINDERS
 import com.ideasinc.followthrough.notifications.ReminderScheduler
 import com.ideasinc.followthrough.notifications.canScheduleExactAlarmsCompat
@@ -637,6 +638,34 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+
+            // Independent, always-available feedback link (opt-in, no tracking).
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        onClickLabel = "Send feedback by email",
+                        role = Role.Button,
+                        onClick = { AppReview.sendFeedback(context) }
+                    )
+                    .heightIn(min = 48.dp)
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Send feedback",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontFamily = PoppinsFontFamily),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 

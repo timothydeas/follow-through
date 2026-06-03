@@ -73,6 +73,9 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.compose.material3:material3-window-size-class:1.3.0")
+    // Google's official Play In-App Review API (no data collection of ours).
+    implementation("com.google.android.play:review:2.0.2")
+    implementation("com.google.android.play:review-ktx:2.0.2")
     implementation(libs.reorderable)
     debugImplementation(libs.androidx.ui.tooling)
 
