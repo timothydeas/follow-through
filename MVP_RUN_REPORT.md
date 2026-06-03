@@ -135,3 +135,41 @@ Lead the title/short description and first screenshot with the **follow-through 
 
 ## Ready-for-testing-week status
 **This is "ready for your testing week," NOT "ready to ship."** The build compiles, lints clean (0 errors), assembles a debug APK, and the **blocking v26→v27 migration test passes**. Privacy-first architecture is intact (no network/analytics/location added). Phases 1, 2, 3 (less the deferred anchored reminders), 4 (code-level), and 5 are complete and committed one-per-phase. Remaining before GA: the device/visual/upgrade checks above and the two deferred features (D3.1, D3.2). No release AAB is signed and no human/device verification has been performed — those are explicitly handed back.
+
+---
+
+# Follow-up run — Per-goal intention reminders + onboarding example (2026-06-03)
+
+Branch: `followthru-pergoal-reminders` (off `mvp-launch-fixes`). One commit per section. This run implements the previously-deferred **D3.1 intention-anchored per-goal reminders** plus the onboarding worked-example refresh.
+
+## What shipped
+
+1. **Per-goal implementation-intention reminders (additive; reuses existing plumbing).**
+   - New `GoalReminderScheduler` persists **one reminder per goal in SharedPreferences** (`grounded_goal_reminders`, keyed by `goalId`), scheduling one exact alarm per selected weekday. It reuses the global reminder's `setExactAndAllowWhileIdle`, the shared `canScheduleExactAlarmsCompat` permission check, and the shared `computeNextTriggerMs` — **no new alarm infrastructure, no new permission.**
+   - `ReminderReceiver` now branches on a new `ACTION_GOAL_REMINDER`: it posts a notification whose body **surfaces that goal's implementation intention** (BigText), under a per-goal notification id, then reschedules that goal+day for next week. `BootReceiver` reschedules per-goal reminders alongside the global one.
+   - **"Remind me for this"** UI (time + day-of-week, local notification only) on **Goal Detail** and as an **optional step in the New Goal Flow** once a plan is written. The global reminder is untouched and still works.
+   - The exact-alarm permission gate is **reused, not duplicated**: the permission flow, time-picker button, day chips and the two permission dialogs were extracted from `SettingsScreen` into a shared `ReminderControls.kt` that both the global reminder and per-goal reminders use. The "go to settings, come back" exact-alarm flow and POST_NOTIFICATIONS request are the same code path.
+   - **No orphans:** deleting a goal removes its reminder (cancels alarms + clears its prefs entry); abandoning the New Goal Flow removes any reminder set up in-flow.
+
+2. **Onboarding "See an example" → health example.** Goal "Take care of my health"; Plan "When I pour my morning coffee → I will make a breakfast I actually look forward to"; goal-vs-plan caption. Still optional, behind the "See an example" toggle, off the required path; a11y description updated.
+
+3. **Onboarding increment.** `CURRENT_ONBOARDING_VERSION` bumped **94 → 95** so already-onboarded installs re-see onboarding once on upgrade. **No user data is reset** — only the onboarding-seen gate advances.
+
+## ⚠️ Premise correction (surfaced before implementing)
+The task brief assumed the Room schema "already defines a reminder with `goalId`, `anchoredToIntention`, `time`, `daysOfWeek`, `notification.body`" and that the goal stores a structured **cue/action**. Neither exists: the app's only reminder was a *single global* reminder in SharedPreferences, and a goal's implementation intention is a *single free-text string* (`CheckIn.implementationIntention`), not split cue/action. With the user's go-ahead, per-goal reminders were persisted in **SharedPreferences keyed by `goalId`** (no schema change, leaving the v26→v27 migration and its test untouched), and the notification body surfaces the **single free-text intention** (no cue/action was fabricated).
+
+## Automated verification — results
+
+| Check | Result |
+|---|---|
+| `:app:compileDebugKotlin` | ✅ PASS |
+| `:app:assembleDebug` | ✅ PASS |
+| `:app:testDebugUnitTest` | ✅ PASS |
+| **BLOCKING v26→v27 migration test** | ✅ **PASS** — `Migration26To27Test`: `tests=2, failures=0, errors=0` (undisturbed) |
+| `:app:lintDebug` (incl. a11y rules) | ✅ PASS — **0 errors**; no new accessibility errors. New UI routes colour through `AppColors` and keeps ≥48dp touch targets (shared day chips + switches + time-picker button). |
+| Privacy grep | ✅ PASS — no INTERNET / location / analytics / Firebase / GMS references in source. |
+| Manifest permissions (merged) | Unchanged set: `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM`, `RECEIVE_BOOT_COMPLETED` (+ pre-existing biometric-lib & AndroidX signature permissions). **No new permission.** Only manifest change: added the internal `GOAL_REMINDER` action to the existing (non-exported) `ReminderReceiver` filter. |
+
+## Needs a real-device check (no emulator/adb here)
+- **Per-goal reminder set → fires at the chosen time:** the scheduling/permission/boot/notification paths are wired and unit-compiled, but the end-to-end "alarm actually fires the right notification at the chosen day/time, survives reboot, and respects per-goal enable/disable" path **must be verified on a real device** — it cannot be exercised in this environment.
+- **Onboarding bump 94→95:** existing closed-testing users **will see onboarding once more** after upgrading in place (no data reset). Confirm the redesigned slide + refreshed health example appear on a real in-place upgrade.
