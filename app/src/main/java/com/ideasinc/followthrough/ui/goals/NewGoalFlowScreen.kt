@@ -12,9 +12,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Info
@@ -41,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -52,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
+import com.ideasinc.followthrough.notifications.GoalReminderScheduler
 import com.ideasinc.followthrough.ui.checkin.placeholderFor
 import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
@@ -63,13 +68,19 @@ fun NewGoalFlowScreen(
     onGoalCreated: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     val backFocus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
     LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
 
     LaunchedEffect(uiState.shouldExit) {
-        if (uiState.shouldExit) onNavigateBack()
+        if (uiState.shouldExit) {
+            // Flow abandoned — drop any reminder the user set up in-flow so a
+            // goal that never got saved leaves no orphaned alarm behind.
+            GoalReminderScheduler.remove(context, viewModel.newGoalId)
+            onNavigateBack()
+        }
     }
     LaunchedEffect(uiState.savedGoalId) {
         uiState.savedGoalId?.let { onGoalCreated(it) }
@@ -200,11 +211,22 @@ fun NewGoalFlowScreen(
                 .filter { uiState.questionConfigs[it].isEnabled }
             if (phase.stepIndex < enabled.size) {
                 val config = uiState.questionConfigs[enabled[phase.stepIndex]]
-                CheckInStepContent(
-                    config = config,
-                    value = getFieldValue(uiState, config.key),
-                    onValueChange = { v -> setFieldValue(viewModel, config.key, v) }
-                )
+                if (config.key == QuestionKeys.IMPLEMENTATION_INTENTION) {
+                    // Implementation-intention step also offers an optional
+                    // per-goal reminder once a plan has been written.
+                    IntentionStepContent(
+                        config = config,
+                        value = uiState.implementationIntention,
+                        onValueChange = viewModel::onImplementationIntentionChange,
+                        goalId = viewModel.newGoalId
+                    )
+                } else {
+                    CheckInStepContent(
+                        config = config,
+                        value = getFieldValue(uiState, config.key),
+                        onValueChange = { v -> setFieldValue(viewModel, config.key, v) }
+                    )
+                }
             }
         }
     }
@@ -246,6 +268,62 @@ private fun ColumnScope.CheckInStepContent(
             .fillMaxWidth()
             .weight(1f)
     )
+}
+
+/**
+ * The implementation-intention step. Same single-field layout as the other
+ * steps, but the field no longer fills the screen — below it, once a plan is
+ * written, an optional "Remind me for this" reminder appears. The whole step
+ * scrolls so the reminder controls stay reachable with the keyboard up.
+ */
+@Composable
+private fun ColumnScope.IntentionStepContent(
+    config: QuestionConfig,
+    value: String,
+    onValueChange: (String) -> Unit,
+    goalId: String
+) {
+    val scrollState = rememberScrollState()
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .fillMaxWidth()
+            .verticalScroll(scrollState)
+    ) {
+        Text(
+            text = config.label,
+            style = MaterialTheme.typography.headlineMedium.copy(fontFamily = DmSansFontFamily),
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { heading() }
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text(placeholderFor(config)) },
+            textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = DmSansFontFamily),
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = Color.Transparent
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 120.dp)
+        )
+        if (value.isNotBlank()) {
+            Spacer(modifier = Modifier.height(24.dp))
+            GoalReminderControls(
+                goalId = goalId,
+                reminderBody = value.trim(),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
 }
 
 private fun getFieldValue(state: NewGoalFlowUiState, key: String): String = when (key) {

@@ -50,6 +50,9 @@ class NewGoalFlowViewModel(
 ) : ViewModel() {
 
     private val goalId = UUID.randomUUID().toString()
+    // Exposed so the optional in-flow reminder can be attached to the same id the
+    // goal will be saved under. If the flow is discarded the screen removes it.
+    val newGoalId: String get() = goalId
     // Initialize with defaults so the UI is ready before DB query completes
     private val _uiState = MutableStateFlow(NewGoalFlowUiState(questionConfigs = resolveConfigs(emptyList())))
     val uiState: StateFlow<NewGoalFlowUiState> = _uiState.asStateFlow()

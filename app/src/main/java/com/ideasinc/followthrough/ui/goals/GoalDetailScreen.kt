@@ -79,6 +79,7 @@ import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.data.CheckIn
 import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
+import com.ideasinc.followthrough.notifications.GoalReminderScheduler
 import com.ideasinc.followthrough.ui.launch.insightDisplayDurationMs
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
 import com.ideasinc.followthrough.ui.theme.AppColors
@@ -96,6 +97,7 @@ fun GoalDetailScreen(
     onCheckInClick: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showUndoDialog by remember { mutableStateOf(false) }
     val backFocus = remember { FocusRequester() }
@@ -130,7 +132,13 @@ fun GoalDetailScreen(
             },
             confirmButton = {
                 TextButton(
-                    onClick = { showDeleteDialog = false; viewModel.deleteGoal() },
+                    onClick = {
+                        showDeleteDialog = false
+                        // Drop the goal's reminder (cancel alarms + clear its
+                        // SharedPreferences entry) so nothing is orphaned.
+                        uiState.goal?.id?.let { GoalReminderScheduler.remove(context, it) }
+                        viewModel.deleteGoal()
+                    },
                     colors = ButtonDefaults.textButtonColors(contentColor = AppColors.Destructive),
                     modifier = Modifier.focusRequester(confirmFocus)
                 ) { Text("Delete") }
@@ -355,6 +363,27 @@ fun GoalDetailScreen(
                         )
                     }
                 }
+
+                // Optional per-goal reminder anchored to this goal's plan. The
+                // notification body surfaces the most recent implementation
+                // intention; if none is written yet it falls back to the title.
+                val intention = uiState.checkIns
+                    .firstOrNull { !it.implementationIntention.isNullOrBlank() }
+                    ?.implementationIntention?.trim()
+                val reminderBody = intention?.takeIf { it.isNotBlank() } ?: goal.title
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                )
+                GoalReminderControls(
+                    goalId = goal.id,
+                    reminderBody = reminderBody,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                )
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                )
             }
             // Check-ins are the primary content and live in their own scroller.
             LazyColumn(

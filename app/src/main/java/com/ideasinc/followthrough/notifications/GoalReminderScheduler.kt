@@ -93,6 +93,16 @@ object GoalReminderScheduler {
         }
     }
 
+    /** Refreshes the stored notification body for an existing reminder (e.g. when
+     *  the goal's implementation intention is edited). No-op if the goal has no
+     *  saved reminder. */
+    fun updateBody(context: Context, goalId: String, body: String) {
+        val p = prefs(context)
+        val ids = p.getStringSet(KEY_GOAL_IDS, emptySet()) ?: emptySet()
+        if (goalId !in ids) return
+        p.edit().putString(keyBody(goalId), body).apply()
+    }
+
     /** Turns a goal's reminder off: cancels its alarms but keeps the time/day
      *  selection so re-enabling restores it. */
     fun disable(context: Context, goalId: String) {
