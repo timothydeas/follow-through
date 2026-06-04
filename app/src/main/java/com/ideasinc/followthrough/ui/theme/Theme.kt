@@ -1,7 +1,6 @@
-﻿package com.ideasinc.followthrough.ui.theme
+package com.ideasinc.followthrough.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -10,49 +9,51 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 
-// #C0392B on white = 5.1:1 (AA pass). On the dark surface (#1C1C1A) it only
-// hits ~3.0:1 which fails AA for normal text. Dark mode lifts to #FF8A80
-// (M3 dark error standard) ≈ 6.6:1 on the same surface — safe for delete icons
-// and destructive button labels.
-private val LightError = Color(0xFFC0392B)
-private val DarkError = Color(0xFFFF8A80)
 private val ScrimBlack = Color(0xFF000000)
 
+// Warm coral on cream. surfaceVariant == surface so cards read as white on the
+// cream page (light) / lifted surface on the near-black page (dark); hairline
+// separation is carried by `outline` (AppColors.Border). Coral fills carry white
+// labels in light and dark text in dark — both AA — so onPrimary flips per mode.
 private val GroundedColorScheme = lightColorScheme(
-    primary = TrackRed,
+    primary = CoralLight,
     onPrimary = White,
-    primaryContainer = TrackRedLight,
-    onPrimaryContainer = Stone,
-    secondary = MutedStone,
+    primaryContainer = CoralTintLight,
+    onPrimaryContainer = CoralLight,
+    secondary = TextMutedLight,
     onSecondary = White,
-    background = Cream,
-    onBackground = Stone,
-    surface = Cream,
-    onSurface = Stone,
-    surfaceVariant = CreamDark,
-    onSurfaceVariant = MutedStone,
-    tertiaryContainer = Color(0xFFF2E8D4),
-    outline = MutedStone,
+    background = BgLight,
+    onBackground = TextLight,
+    surface = SurfaceLight,
+    onSurface = TextLight,
+    surfaceVariant = SurfaceLight,
+    onSurfaceVariant = TextMutedLight,
+    tertiary = GoldLight,
+    tertiaryContainer = GoldSurfaceLight,
+    onTertiaryContainer = TextLight,
+    outline = BorderLight,
     error = LightError,
     onError = White,
     scrim = ScrimBlack,
 )
 
 private val GroundedDarkColorScheme = darkColorScheme(
-    primary = TrackRed,
-    onPrimary = White,
-    primaryContainer = DarkTagChip,
-    onPrimaryContainer = DarkPrimaryText,
-    secondary = DarkSecondaryText,
-    onSecondary = White,
-    background = DarkBackground,
-    onBackground = DarkPrimaryText,
-    surface = DarkBackground,
-    onSurface = DarkPrimaryText,
-    surfaceVariant = DarkCard,
-    onSurfaceVariant = DarkSecondaryText,
-    tertiaryContainer = DarkPinnedCard,
-    outline = DarkSecondaryText,
+    primary = CoralDark,
+    onPrimary = OnCoralDark,
+    primaryContainer = CoralTintDark,
+    onPrimaryContainer = CoralDark,
+    secondary = TextMutedDark,
+    onSecondary = OnCoralDark,
+    background = BgDark,
+    onBackground = TextDark,
+    surface = SurfaceDark,
+    onSurface = TextDark,
+    surfaceVariant = SurfaceDark,
+    onSurfaceVariant = TextMutedDark,
+    tertiary = GoldDark,
+    tertiaryContainer = GoldSurfaceDark,
+    onTertiaryContainer = TextDark,
+    outline = BorderDark,
     error = DarkError,
     onError = White,
     scrim = ScrimBlack,
@@ -72,7 +73,7 @@ fun GroundedTheme(content: @Composable () -> Unit) {
     // Expose the resolved flag so brand tokens in AppColors stay consistent with
     // the override instead of reading isSystemInDarkTheme() directly.
     CompositionLocalProvider(LocalAppDarkTheme provides darkTheme) {
-        MaterialTheme(
+        androidx.compose.material3.MaterialTheme(
             colorScheme = colorScheme,
             typography = GroundedTypography,
             content = content

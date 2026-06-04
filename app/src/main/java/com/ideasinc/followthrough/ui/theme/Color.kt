@@ -2,27 +2,46 @@ package com.ideasinc.followthrough.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// New palette — track red primary on white surfaces.
-val Cream = Color(0xFFFFFFFF)
-val TrackRed = Color(0xFF9B3A2E)
-// Subtle warm tint used as the background for the top 2 priority goal cards.
-val TrackRedLight = Color(0xFFFFF3F2)
-val Stone = Color(0xFF1A1A1A)
-val MutedStone = Color(0xFF6A6A62)
-// Very subtle off-white for card surfaces so they read as distinct from the background.
-val CreamDark = Color(0xFFF7F5F2)
+// ─── Brand palette — warm coral on cream, tuned to pass WCAG AA ──────────────
+// The Loveable prototype's bright coral (#E26155) only hits ~3.3:1 and fails AA
+// for text, so the brand coral is a slightly deeper, AA-passing coral. Every
+// token below is chosen so each light/dark pairing scores in the high 90s.
+// Raw literals live ONLY in this file; screens route through MaterialTheme /
+// AppColors.
+
+// Light
+val CoralLight = Color(0xFFB5402C)       // buttons (white label 5.6:1), links, chips, fills, icons
+val CoralTintLight = Color(0xFFF6D9D2)   // decorative pale-coral circle backing only
+val BgLight = Color(0xFFFBF6EF)          // warm cream page
+val SurfaceLight = Color(0xFFFFFFFF)     // cards
+val BorderLight = Color(0xFFECE3DA)      // hairline
+val TextLight = Color(0xFF2A2622)        // 16:1 on cream
+val TextMutedLight = Color(0xFF6E645D)   // 5.4:1 on cream / 5.8:1 on white — AA pass
+val GoldSurfaceLight = Color(0xFFF8EAC7) // celebratory streak card only
+val GoldLight = Color(0xFFC9A24A)        // gold flame / number on the streak card
+
+// Dark — full parity, also high-90s
+val CoralDark = Color(0xFFE8775F)        // text/icon on dark 5.9:1; dark text on coral fill 5.9:1
+val CoralTintDark = Color(0xFF3A2A25)    // decorative dark coral circle backing
+val BgDark = Color(0xFF1E1B19)
+val SurfaceDark = Color(0xFF2A2622)
+val BorderDark = Color(0xFF3A332E)
+val TextDark = Color(0xFFF3ECE4)
+val TextMutedDark = Color(0xFFB5AAA1)
+val GoldSurfaceDark = Color(0xFF3A3320)
+val GoldDark = Color(0xFFD9B65E)
+
+// Dark text used on a coral fill (button labels, selected day chips, FAB glyph).
+val OnCoralDark = Color(0xFF1E1B19)
+
 val White = Color(0xFFFFFFFF)
 
-// #9B3A2E on white is 5.5:1 — passes WCAG AA for normal text.
-val TrackRedAccessible = Color(0xFF9B3A2E)
+// ─── Backward-compatible aliases ─────────────────────────────────────────────
+// Kept so the small number of files that reference these names keep compiling.
+val Stone = TextLight
+// Gold streak accent — used by the Home summary flame and Stats streak card.
+val Accent = GoldLight
 
-// Accent — gold used for streak indicators and celebratory moments only. Never for text.
-val Accent = Color(0xFFC9A24A)
-
-// Dark mode colors
-val DarkBackground = Color(0xFF1C1C1A)
-val DarkCard = Color(0xFF2A2A27)
-val DarkPrimaryText = Color(0xFFFFFFFF)
-val DarkSecondaryText = Color(0xFF9A9890)
-val DarkTagChip = Color(0xFF2A3C2D)
-val DarkPinnedCard = Color(0xFF3A1F19)
+// Destructive accents — #C0392B on cream ≈ 5.0:1 (AA). Dark lifts to #FF8A80.
+val LightError = Color(0xFFC0392B)
+val DarkError = Color(0xFFFF8A80)

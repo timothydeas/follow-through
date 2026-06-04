@@ -10,11 +10,11 @@ import androidx.compose.ui.graphics.Color
 // isSystemInDarkTheme() conditionals. Light/dark adaptation lives in this file.
 
 private val OverlayScrimBlack = Color(0xFF000000)
-private val OverlayContainerSurface = Color(0xFF2C2C28)
+private val OverlayContainerSurface = Color(0xFF2A2622)
 
 object AppColors {
-    // Priority goal card (always TrackRed bg with white text — high-contrast brand
-    // call-out in both modes).
+    // Priority goal card accent (coral). Used as the 4dp left strip on priority
+    // cards — same coral in both modes, carries no text.
     val PriorityContainer: Color
         @Composable
         @ReadOnlyComposable
@@ -25,25 +25,56 @@ object AppColors {
         @ReadOnlyComposable
         get() = MaterialTheme.colorScheme.onPrimary
 
-    // Cancel/Save-style text buttons on regular surfaces. TrackRed lacks contrast
-    // on the dark surface, so dark mode falls back to onSurface (white).
+    // The one coral for text/links/icons/small accents. Both modes pass AA:
+    // light #B5402C on cream 5.2:1, dark #E8775F on dark surface 5.9:1.
     val BrandAccentText: Color
         @Composable
         @ReadOnlyComposable
-        get() = if (LocalAppDarkTheme.current)
-            MaterialTheme.colorScheme.onSurface
-        else
-            MaterialTheme.colorScheme.primary
+        get() = MaterialTheme.colorScheme.primary
+
+    // Pale-coral circle backing for "How it works" glyphs and example cards.
+    // Decorative only — the glyph on it uses [OnCoralTint] (coral), never white.
+    val CoralTint: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = MaterialTheme.colorScheme.primaryContainer
+
+    val OnCoralTint: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = MaterialTheme.colorScheme.onPrimaryContainer
+
+    // Hairline border / divider color (#ECE3DA light, #3A332E dark).
+    val Border: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = MaterialTheme.colorScheme.outline
+
+    // Gold — celebratory streak only. Never body text.
+    val Gold: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = MaterialTheme.colorScheme.tertiary
+
+    val GoldSurface: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = MaterialTheme.colorScheme.tertiaryContainer
+
+    val OnGoldSurface: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = MaterialTheme.colorScheme.onTertiaryContainer
 
     // Destructive (delete) accents. Dark mode lifts to a brighter red so it meets
-    // WCAG AA against the dark surface (#1C1C1A): #FF8A80 ≈ 6.6:1.
+    // WCAG AA against the dark surface.
     val Destructive: Color
         @Composable
         @ReadOnlyComposable
         get() = MaterialTheme.colorScheme.error
 
-    // Full-screen forge background (LaunchInsight, Onboarding header, follow-through
-    // reassurance). Same TrackRed in both modes — it's a brand moment, not a surface.
+    // Full-screen brand background (LaunchInsight). Coral in both modes — it's a
+    // brand moment, not a surface. Label uses OnForgeBackground.
     val ForgeBackground: Color
         @Composable
         @ReadOnlyComposable
@@ -63,15 +94,14 @@ object AppColors {
 
     val OnOverlaySurface: Color = White
 
-    // Switch unchecked track: muted primary (works in both modes via alpha).
+    // Onboarding body surface — temporary; the redesigned onboarding routes
+    // through theme tokens and these are removed once it lands.
+    val OnboardingBodySurface: Color = White
+    val OnOnboardingBodySurface: Color = Stone
+
+    // Switch unchecked track: a neutral muted tone (works in both modes).
     val SwitchUncheckedTrack: Color
         @Composable
         @ReadOnlyComposable
-        get() = MaterialTheme.colorScheme.primary.copy(alpha = 0.65f)
-
-    // Onboarding body section uses an explicitly light surface even in dark mode
-    // (it sits on the forge red, so a dark card would clash). Always light.
-    val OnboardingBodySurface: Color = White
-
-    val OnOnboardingBodySurface: Color = Stone
+        get() = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
 }
