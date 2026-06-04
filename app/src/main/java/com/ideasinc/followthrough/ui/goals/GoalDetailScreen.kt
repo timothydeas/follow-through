@@ -9,7 +9,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -444,60 +446,103 @@ private fun FollowThroughButtons(
     onFollowThrough: () -> Unit,
     onAdjust: () -> Unit
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Button(
-            onClick = { if (!followedThrough) onFollowThrough() },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ),
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier
-                .weight(1f)
-                .height(52.dp)
-                .semantics {
-                    contentDescription =
-                        if (followedThrough) "Followed through"
-                        else "I followed through"
-                }
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_check_circle),
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = if (followedThrough) "Followed through" else "I followed through",
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+    // The labels must never truncate. Side by side they wrap to two lines and
+    // both buttons grow to the taller of the pair (IntrinsicSize.Min). On a
+    // narrow phone where even two lines would be cramped, stack them full-width.
+    BoxWithConstraints {
+        if (maxWidth < 340.dp) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                FollowedThroughButton(followedThrough, onFollowThrough, Modifier.fillMaxWidth())
+                AdjustButton(followedThrough, onAdjust, Modifier.fillMaxWidth())
+            }
+        } else {
+            Row(
+                modifier = Modifier.height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                FollowedThroughButton(
+                    followedThrough,
+                    onFollowThrough,
+                    Modifier.weight(1f).fillMaxHeight()
+                )
+                AdjustButton(
+                    followedThrough,
+                    onAdjust,
+                    Modifier.weight(1f).fillMaxHeight()
+                )
+            }
         }
-        OutlinedButton(
-            onClick = onAdjust,
-            enabled = followedThrough,
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier
-                .weight(1f)
-                .height(52.dp)
-                .semantics { contentDescription = "Missed it? Adjust" }
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_rotate_ccw),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Missed it? Adjust",
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.primary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+    }
+}
+
+@Composable
+private fun FollowedThroughButton(
+    followedThrough: Boolean,
+    onFollowThrough: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = { if (!followedThrough) onFollowThrough() },
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        ),
+        shape = RoundedCornerShape(14.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+        modifier = modifier
+            .heightIn(min = 52.dp)
+            .semantics {
+                contentDescription =
+                    if (followedThrough) "Followed through"
+                    else "I followed through"
+            }
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_check_circle),
+            contentDescription = null,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = if (followedThrough) "Followed through" else "I followed through",
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+            maxLines = 2,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.weight(1f, fill = false)
+        )
+    }
+}
+
+@Composable
+private fun AdjustButton(
+    followedThrough: Boolean,
+    onAdjust: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick = onAdjust,
+        enabled = followedThrough,
+        shape = RoundedCornerShape(14.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+        modifier = modifier
+            .heightIn(min = 52.dp)
+            .semantics { contentDescription = "Missed it? Adjust" }
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_rotate_ccw),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "Missed it? Adjust",
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 2,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.weight(1f, fill = false)
+        )
     }
 }
 
