@@ -8,7 +8,9 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,8 +19,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,16 +36,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
@@ -75,6 +69,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -89,8 +84,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.ideasinc.followthrough.R
+import com.ideasinc.followthrough.notifications.GoalReminderScheduler
 import com.ideasinc.followthrough.ui.rememberIsTouchExplorationEnabled
-import com.ideasinc.followthrough.ui.theme.Accent
 import com.ideasinc.followthrough.ui.theme.AppColors
 import kotlinx.coroutines.flow.drop
 import sh.calvin.reorderable.ReorderableItem
@@ -167,7 +163,11 @@ fun ListScreen(
                 shape = CircleShape,
                 modifier = Modifier.semantics { contentDescription = "Add new goal" }
             ) {
-                Icon(Icons.Default.Add, contentDescription = null)
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_plus),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp)
+                )
             }
         }
     ) { innerPadding ->
@@ -207,7 +207,7 @@ fun ListScreen(
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Settings,
+                        painter = painterResource(id = R.drawable.ic_settings),
                         contentDescription = "Open settings",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
@@ -222,6 +222,10 @@ fun ListScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
                             .clickable(
                                 onClickLabel = "Tap to see full stats",
                                 role = Role.Button,
@@ -230,30 +234,28 @@ fun ListScreen(
                             .semantics(mergeDescendants = true) {
                                 contentDescription = statsRowA11y
                             }
-                            .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                            .padding(start = 18.dp, end = 14.dp, top = 16.dp, bottom = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         StatChip(
-                            emoji = "🔥",
-                            emojiTint = Accent,
+                            iconRes = R.drawable.ic_flame,
+                            iconTint = AppColors.Gold,
                             value = uiState.streakDays,
-                            label = "Check-In Streak",
-                            a11y = "Check-In Streak ${uiState.streakDays}"
+                            label = "Check-In Streak"
                         )
+                        Spacer(modifier = Modifier.width(28.dp))
                         StatChip(
-                            emoji = "✓",
-                            emojiTint = null,
+                            iconRes = R.drawable.ic_check_circle,
+                            iconTint = MaterialTheme.colorScheme.primary,
                             value = uiState.totalFollowThroughs,
-                            label = "FollowThrus",
-                            a11y = "FollowThrus ${uiState.totalFollowThroughs}"
+                            label = "FollowThrus"
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            painter = painterResource(id = R.drawable.ic_chevron_right),
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(24.dp)
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
@@ -289,6 +291,7 @@ fun ListScreen(
                                 // can only be constructed here.
                                 DraggableGoalCard(
                                     row = row,
+                                    number = idx + 1,
                                     isDragging = dragging,
                                     showA11yArrows = touchExplorationOn,
                                     canMoveUp = idx > 0,
@@ -311,32 +314,34 @@ fun ListScreen(
 
 @Composable
 private fun StatChip(
-    emoji: String,
-    emojiTint: androidx.compose.ui.graphics.Color?,
+    iconRes: Int,
+    iconTint: androidx.compose.ui.graphics.Color,
     value: Int,
-    label: String,
-    a11y: String
+    label: String
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = a11y }
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.clearAndSetSemantics { contentDescription = "$label $value" }
     ) {
-        Text(
-            text = emoji,
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = emojiTint ?: MaterialTheme.colorScheme.onSurface
+        Icon(
+            painter = painterResource(id = iconRes),
+            contentDescription = null,
+            tint = iconTint,
+            modifier = Modifier.size(24.dp)
         )
-        Text(
-            text = "$value",
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Column {
+            Text(
+                text = "$value",
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -347,6 +352,7 @@ private data class MoveDialogTarget(val goalId: String, val totalCount: Int)
 @Composable
 private fun DraggableGoalCard(
     row: GoalRowData,
+    number: Int,
     isDragging: Boolean,
     showA11yArrows: Boolean,
     canMoveUp: Boolean,
@@ -357,8 +363,6 @@ private fun DraggableGoalCard(
     onMoveDown: () -> Unit,
     onArrowLongPress: () -> Unit
 ) {
-    val isPriority = row.rank != null
-
     val elevation by animateDpAsState(
         targetValue = if (isDragging) 12.dp else 0.dp,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
@@ -370,12 +374,10 @@ private fun DraggableGoalCard(
         label = "cardScale"
     )
 
-    // dragModifier carries the long-press handle from the ReorderableScope.
-    // Applying it to the whole Surface lets the user long-press anywhere on
-    // the card to start dragging. Priority is signaled by a 4dp left-border
-    // accent (drawn as the first child of the inner Row) rather than a solid
-    // brand-color background, so all card text reads against the normal
-    // surfaceVariant — same as non-priority cards — in both light and dark.
+    // dragModifier carries the long-press handle from the ReorderableScope, so a
+    // long-press anywhere on the card starts a drag. The card is a white surface
+    // with a hairline border on the cream page (prototype look); ordering is
+    // shown by the coral number badge inside.
     Surface(
         modifier = dragModifier
             .fillMaxWidth()
@@ -384,41 +386,30 @@ private fun DraggableGoalCard(
                 scaleY = scale
             }
             .zIndex(if (isDragging) 1f else 0f),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, AppColors.Border),
         tonalElevation = elevation,
         shadowElevation = elevation
     ) {
-        // height(IntrinsicSize.Min) lets the 4dp accent strip fillMaxHeight
-        // and track the content's intrinsic height (full edge-to-edge).
-        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-            if (isPriority) {
-                Box(
-                    modifier = Modifier
-                        .width(4.dp)
-                        .fillMaxHeight()
-                        .background(AppColors.PriorityContainer)
-                )
-            }
-            Box(modifier = Modifier.weight(1f)) {
-                GoalCardContent(
-                    row = row,
-                    onClick = onClick,
-                    showA11yArrows = showA11yArrows,
-                    canMoveUp = canMoveUp,
-                    canMoveDown = canMoveDown,
-                    onMoveUp = onMoveUp,
-                    onMoveDown = onMoveDown,
-                    onArrowLongPress = onArrowLongPress
-                )
-            }
-        }
+        GoalCardContent(
+            row = row,
+            number = number,
+            onClick = onClick,
+            showA11yArrows = showA11yArrows,
+            canMoveUp = canMoveUp,
+            canMoveDown = canMoveDown,
+            onMoveUp = onMoveUp,
+            onMoveDown = onMoveDown,
+            onArrowLongPress = onArrowLongPress
+        )
     }
 }
 
 @Composable
 private fun GoalCardContent(
     row: GoalRowData,
+    number: Int,
     onClick: () -> Unit,
     showA11yArrows: Boolean,
     canMoveUp: Boolean,
@@ -427,6 +418,10 @@ private fun GoalCardContent(
     onMoveDown: () -> Unit,
     onArrowLongPress: () -> Unit
 ) {
+    val context = LocalContext.current
+    val hasReminder = remember(row.goal.id, row.intention) {
+        GoalReminderScheduler.read(context, row.goal.id)?.enabled == true
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -436,27 +431,28 @@ private fun GoalCardContent(
                 onClick = onClick
             )
             .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            if (row.rank != null) {
-                // Rank number keeps the brand accent so the 1/2/3 ordering reads
-                // at a glance, even though the rest of the card uses normal
-                // onSurface colors.
+            // Coral number badge — the goal's position in the list.
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
+                    .clearAndSetSemantics {},
+                contentAlignment = Alignment.Center
+            ) {
                 Text(
-                    text = "${row.rank}",
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = AppColors.BrandAccentText
-                    ),
-                    modifier = Modifier
-                        .padding(end = 10.dp)
-                        .semantics { contentDescription = "Priority rank ${row.rank}" }
+                    text = "$number",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
+            Spacer(Modifier.width(12.dp))
             Text(
                 text = row.goal.title,
                 style = MaterialTheme.typography.headlineSmall,
@@ -465,6 +461,17 @@ private fun GoalCardContent(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
+            if (hasReminder) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_bell),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .padding(start = 8.dp)
+                        .size(18.dp)
+                        .clearAndSetSemantics {}
+                )
+            }
             if (showA11yArrows) {
                 A11yReorderArrows(
                     canMoveUp = canMoveUp,
@@ -478,22 +485,24 @@ private fun GoalCardContent(
             DragHandleIcon()
         }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        // The goal's implementation intention ("When …, I will …"). Falls back to
+        // the check-in count when no plan is written yet.
+        if (!row.intention.isNullOrBlank()) {
+            Text(
+                text = row.intention,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 38.dp)
+            )
+        } else {
             Text(
                 text = "${row.checkInCount} check-in${if (row.checkInCount == 1) "" else "s"}",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 38.dp)
             )
-            row.latestCheckInDate?.let {
-                Text(
-                    text = formatDate(it),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }
@@ -643,15 +652,16 @@ private fun SearchBar(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, AppColors.Border, RoundedCornerShape(12.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Search,
+                painter = painterResource(id = R.drawable.ic_search),
                 contentDescription = "Search",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp)

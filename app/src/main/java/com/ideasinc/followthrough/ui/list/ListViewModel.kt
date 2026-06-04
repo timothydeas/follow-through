@@ -29,7 +29,10 @@ data class GoalRowData(
     val goal: Goal,
     val checkInCount: Int,
     val latestCheckInDate: Long?,
-    val rank: Int?  // 1, 2, or 3 for the top three positions; null for everything below
+    val rank: Int?,  // 1, 2, or 3 for the top three positions; null for everything below
+    // The goal's implementation intention ("When …, I will …"), taken from the
+    // most recent check-in that recorded one. Null when no plan is written yet.
+    val intention: String?
 )
 
 data class ListUiState(
@@ -260,11 +263,17 @@ class ListViewModel(
 
     private fun rowFor(goal: Goal, rank: Int?, checkInsByGoal: Map<String, List<CheckIn>>): GoalRowData {
         val cis = checkInsByGoal[goal.id] ?: emptyList()
+        val intention = cis
+            .filter { !it.implementationIntention.isNullOrBlank() }
+            .maxByOrNull { it.createdAt }
+            ?.implementationIntention
+            ?.trim()
         return GoalRowData(
             goal = goal,
             checkInCount = cis.size,
             latestCheckInDate = cis.maxOfOrNull { it.createdAt },
-            rank = rank
+            rank = rank,
+            intention = intention
         )
     }
 
