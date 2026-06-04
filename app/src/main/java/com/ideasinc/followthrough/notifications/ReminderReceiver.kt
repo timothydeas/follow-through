@@ -87,7 +87,7 @@ class ReminderReceiver : BroadcastReceiver() {
 
         val notification = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setColor(0xFF9B3A2E.toInt())
+            .setColor(0xFFB5402C.toInt())
             .setContentTitle("FollowThru")
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
