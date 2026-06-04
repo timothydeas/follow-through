@@ -18,7 +18,11 @@ val BorderLight = Color(0xFFECE3DA)      // hairline
 val TextLight = Color(0xFF2A2622)        // 16:1 on cream
 val TextMutedLight = Color(0xFF6E645D)   // 5.4:1 on cream / 5.8:1 on white — AA pass
 val GoldSurfaceLight = Color(0xFFF8EAC7) // celebratory streak card only
-val GoldLight = Color(0xFFC9A24A)        // gold flame / number on the streak card
+val GoldLight = Color(0xFFC9A24A)        // gold accent on the streak card
+// Darker gold used ONLY for the streak flame icon: #C9A24A is ~2:1 on the pale
+// gold surface (near-invisible in light mode); #9C7A1A is ~3.4:1 so the flame
+// reads as a real icon. Dark mode keeps GoldDark, which already clears 3:1.
+val GoldIconLight = Color(0xFF9C7A1A)
 
 // Dark — full parity, also high-90s
 val CoralDark = Color(0xFFE8775F)        // text/icon on dark 5.9:1; dark text on coral fill 5.9:1

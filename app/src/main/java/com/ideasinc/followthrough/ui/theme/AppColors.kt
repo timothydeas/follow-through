@@ -56,6 +56,15 @@ object AppColors {
         @ReadOnlyComposable
         get() = MaterialTheme.colorScheme.tertiary
 
+    // Darker gold reserved for the streak flame icon so it meets 3:1 on the pale
+    // gold surface. Light uses #9C7A1A (~3.4:1); dark keeps GoldDark (~6.5:1 on
+    // the dark gold surface). Distinct from [Gold] so the streak number and any
+    // other gold accent are unchanged.
+    val GoldIcon: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = if (LocalAppDarkTheme.current) GoldDark else GoldIconLight
+
     val GoldSurface: Color
         @Composable
         @ReadOnlyComposable

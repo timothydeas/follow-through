@@ -28,11 +28,12 @@ AA targets: 4.5:1 normal text, 3.0:1 large/bold and UI components. Approximate m
 | Coral text/link on page | #B5402C on #FBF6EF ≈ 5.2:1 | #E8775F on #1E1B19 ≈ 5.9:1 |
 | Button label on coral fill | white on #B5402C ≈ 5.6:1 | #1E1B19 on #E8775F ≈ 5.9:1 |
 | Selected day-circle label on coral | white ≈ 5.6:1 | dark ≈ 5.9:1 |
-| Gold streak card text | #2A2622 on #F8EAC7 ≈ 14:1 | #F3ECE4 on #3A3320 ≈ 11:1 |
+| Gold streak card text (number) | #2A2622 on #F8EAC7 ≈ 14:1 | #F3ECE4 on #3A3320 ≈ 11:1 |
+| Streak flame icon (`goldIcon`) | #9C7A1A on #F8EAC7 ≈ 3.4:1 | #D9B65E on #3A3320 ≈ 6.5:1 |
 | Destructive | #C0392B on #FBF6EF ≈ 5.0:1 | #FF8A80 on #2A2622 ≈ 6.6:1 |
 
 - The bright prototype coral `#E26155` (≈ 3.3:1) is **not** used for any text in either theme.
-- **Gold flame on the gold streak card** is decorative/redundant — the streak value is carried by the large dark number (≈ 14:1) and the card's merged `contentDescription`, so the lower-contrast gold glyph is exempt. (The only place gold appears; never used for body text.)
+- **Gold flame on the gold streak card** uses a dedicated darker `goldIcon` (#9C7A1A light, GoldDark #D9B65E dark) so it meets the 3:1 UI-component bar in both themes (≈ 3.4:1 / ≈ 6.5:1) — the plain `gold` token (#C9A24A) was only ~2:1 on the pale-gold surface. The streak value is still carried by the large dark number (≈ 14:1) and the card's merged `contentDescription`; the flame is now a real icon, not a decorative exception. `gold`/`goldSurface` and all other gold usage are unchanged.
 - ≥48dp targets, TalkBack labels on toggles, day circles, FAB, follow-through buttons, and switches; selected/heading semantics preserved; reduced-motion and font-scaling paths untouched.
 - `lintDebug`: **0 error-severity issues**, no Contrast/TouchTarget/ContentDescription findings introduced.
 

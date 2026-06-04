@@ -235,7 +235,7 @@ private fun FollowThroughStreakCard(streak: Int) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_flame),
                 contentDescription = null,
-                tint = AppColors.Gold,
+                tint = AppColors.GoldIcon,
                 modifier = Modifier.size(32.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
