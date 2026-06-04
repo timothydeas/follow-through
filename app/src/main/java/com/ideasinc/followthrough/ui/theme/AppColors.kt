@@ -94,11 +94,6 @@ object AppColors {
 
     val OnOverlaySurface: Color = White
 
-    // Onboarding body surface — temporary; the redesigned onboarding routes
-    // through theme tokens and these are removed once it lands.
-    val OnboardingBodySurface: Color = White
-    val OnOnboardingBodySurface: Color = Stone
-
     // Switch unchecked track: a neutral muted tone (works in both modes).
     val SwitchUncheckedTrack: Color
         @Composable
