@@ -167,7 +167,7 @@ fun CustomizeQuestionsScreen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
         ) {
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+            HorizontalDivider(color = AppColors.Border)
 
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                 uiState.questionConfigs.forEach { config ->
@@ -220,7 +220,7 @@ fun CustomizeQuestionsScreen(
                         )
                     }
                     HorizontalDivider(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        color = AppColors.Border,
                         thickness = 0.5.dp
                     )
                 }

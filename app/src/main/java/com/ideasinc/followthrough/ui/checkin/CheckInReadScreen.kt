@@ -362,7 +362,7 @@ private fun EditField(
             )
         }
         HorizontalDivider(
-            color = MaterialTheme.colorScheme.surfaceVariant,
+            color = AppColors.Border,
             thickness = 1.dp,
             modifier = Modifier.padding(top = 6.dp)
         )
@@ -387,7 +387,7 @@ private fun ReadField(label: String, content: String) {
             color = MaterialTheme.colorScheme.onSurface
         )
         HorizontalDivider(
-            color = MaterialTheme.colorScheme.surfaceVariant,
+            color = AppColors.Border,
             thickness = 1.dp,
             modifier = Modifier.padding(top = 6.dp)
         )
