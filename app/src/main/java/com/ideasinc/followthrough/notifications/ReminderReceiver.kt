@@ -29,7 +29,7 @@ class ReminderReceiver : BroadcastReceiver() {
             val reminder = GoalReminderScheduler.read(context, goalId)
             val body = reminder?.body?.takeIf { it.isNotBlank() }
                 ?: "Time to follow through on your plan."
-            postNotification(context, body, goalNotificationId(goalId))
+            postNotification(context, body, goalNotificationId(goalId), goalId)
             if (day in Calendar.SUNDAY..Calendar.SATURDAY) {
                 GoalReminderScheduler.rescheduleAfterFire(context, goalId, day)
             }
@@ -57,12 +57,26 @@ class ReminderReceiver : BroadcastReceiver() {
         nm.createNotificationChannel(channel)
     }
 
-    private fun postNotification(context: Context, text: String, notificationId: Int) {
+    private fun postNotification(
+        context: Context,
+        text: String,
+        notificationId: Int,
+        goalId: String? = null
+    ) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             ?: return
 
         val tapIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = if (goalId != null) {
+                // Per-goal: reuse the running task (onNewIntent) when possible so
+                // tapping deep-links to this goal without tearing the app down or
+                // re-prompting biometric; a cold start still routes via onCreate.
+                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            } else {
+                // Global reminder: unchanged.
+                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            if (goalId != null) putExtra(EXTRA_GOAL_ID, goalId)
         }
         val tapPendingIntent = PendingIntent.getActivity(
             context,

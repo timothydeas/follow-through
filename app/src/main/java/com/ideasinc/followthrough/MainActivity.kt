@@ -1,5 +1,6 @@
 ﻿package com.ideasinc.followthrough
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.fragment.app.FragmentActivity
@@ -23,11 +24,17 @@ import com.ideasinc.followthrough.navigation.CURRENT_ONBOARDING_VERSION
 import com.ideasinc.followthrough.navigation.KEY_BIOMETRIC_ENABLED
 import com.ideasinc.followthrough.navigation.KEY_ONBOARDING_VERSION
 import com.ideasinc.followthrough.navigation.PREFS_NAME
+import com.ideasinc.followthrough.notifications.EXTRA_GOAL_ID
 import com.ideasinc.followthrough.ui.theme.GroundedTheme
 
 class MainActivity : FragmentActivity() {
 
     private var authCleared by mutableStateOf(false)
+
+    // A per-goal reminder tap arrives as an EXTRA_GOAL_ID on the launch intent
+    // (cold start) or the new intent (already running). AppNavigation observes
+    // this and deep-links to that goal's detail, synthesising Home underneath.
+    private var pendingGoalId by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,6 +53,8 @@ class MainActivity : FragmentActivity() {
 
         val needsBiometric = onboardingComplete && biometricEnabled && !alreadyAuthenticated
         authCleared = !needsBiometric
+
+        pendingGoalId = goalIdOf(intent)
 
         setContent {
             GroundedTheme {
@@ -66,7 +75,11 @@ class MainActivity : FragmentActivity() {
                             .fillMaxSize()
                     ) {
                         if (authCleared) {
-                            AppNavigation(container = container)
+                            AppNavigation(
+                                container = container,
+                                pendingGoalId = pendingGoalId,
+                                onGoalConsumed = { pendingGoalId = null }
+                            )
                         }
                     }
                 }
@@ -78,10 +91,21 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Adopt the new intent as the activity's current intent, then surface any
+        // per-goal deep link to the navigation layer.
+        setIntent(intent)
+        goalIdOf(intent)?.let { pendingGoalId = it }
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBoolean(KEY_AUTH_DONE, authCleared)
     }
+
+    private fun goalIdOf(intent: Intent?): String? =
+        intent?.getStringExtra(EXTRA_GOAL_ID)?.takeIf { it.isNotBlank() }
 
     private fun showBiometricPrompt() {
         val executor = ContextCompat.getMainExecutor(this)

@@ -2,9 +2,11 @@
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -56,7 +58,9 @@ internal const val CURRENT_ONBOARDING_VERSION = 96
 
 @Composable
 fun AppNavigation(
-    container: AppContainer
+    container: AppContainer,
+    pendingGoalId: String? = null,
+    onGoalConsumed: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val navController = rememberNavController()
@@ -71,6 +75,22 @@ fun AppNavigation(
             container.checkInDao
         )
     )
+
+    // A tapped per-goal reminder deep-links here. Reset the back stack to Home
+    // and push that goal's detail on top, so Back returns to Home rather than
+    // dropping out of the app. If the goal was deleted, just land on Home.
+    LaunchedEffect(pendingGoalId) {
+        val goalId = pendingGoalId ?: return@LaunchedEffect
+        val exists = container.goalDao.getGoalById(goalId) != null
+        navController.navigate(ROUTE_LIST) {
+            popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+            launchSingleTop = true
+        }
+        if (exists) {
+            navController.navigate("goal_detail/$goalId")
+        }
+        onGoalConsumed()
+    }
 
     NavHost(navController = navController, startDestination = startDestination) {
         composable(ROUTE_ONBOARDING) {
