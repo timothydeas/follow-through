@@ -1,6 +1,7 @@
 package com.ideasinc.followthrough.ui.followthrough
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,12 +11,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -39,7 +40,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ideasinc.followthrough.R
 import com.ideasinc.followthrough.di.AppContainer
+import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -56,6 +59,7 @@ import java.util.Locale
 fun FollowThrusScreen(
     container: AppContainer,
     onBack: () -> Unit,
+    onSettingsClick: () -> Unit,
     onGoalClick: (String) -> Unit
 ) {
     val vm: FollowThrusViewModel = viewModel(
@@ -81,7 +85,7 @@ fun FollowThrusScreen(
                     modifier = Modifier.focusRequester(backFocus)
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        painter = painterResource(id = R.drawable.ic_arrow_left),
                         contentDescription = "Go back",
                         tint = MaterialTheme.colorScheme.onSurface
                     )
@@ -94,9 +98,18 @@ fun FollowThrusScreen(
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
+                        .weight(1f)
                         .padding(start = 4.dp)
                         .semantics { heading() }
                 )
+                IconButton(onClick = onSettingsClick) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_settings),
+                        contentDescription = "Open settings",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     ) { innerPadding ->
@@ -126,7 +139,7 @@ fun FollowThrusScreen(
         ) {
             item {
                 Text(
-                    text = "Your own record of times you showed up for yourself.",
+                    text = "Your own record. Yours to revisit, for whatever reason.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -151,47 +164,48 @@ private fun FollowThruCard(record: FollowThruRecord, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
             .clickable(role = Role.Button, onClickLabel = "Open goal", onClick = onClick)
             .padding(16.dp)
             .semantics(mergeDescendants = true) { contentDescription = a11y },
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = record.title,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        // Muted goal name + date row.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = record.title,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+            dateText?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        // The moment / plan, given prominence.
         record.intention?.let {
-            LabeledLine(label = "Your plan", value = it)
-        }
-        record.whatYouDid?.let {
-            LabeledLine(label = "What you did", value = it)
-        }
-        dateText?.let {
             Text(
                 text = it,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        // What they did — set as a quiet italic note.
+        record.whatYouDid?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-    }
-}
-
-@Composable
-private fun LabeledLine(label: String, value: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
     }
 }
 

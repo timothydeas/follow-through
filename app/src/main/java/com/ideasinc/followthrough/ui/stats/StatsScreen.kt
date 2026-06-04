@@ -1,21 +1,23 @@
-﻿package com.ideasinc.followthrough.ui.stats
+package com.ideasinc.followthrough.ui.stats
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -28,23 +30,30 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ideasinc.followthrough.R
 import com.ideasinc.followthrough.di.AppContainer
+import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
 
 @Composable
 fun StatsScreen(
     container: AppContainer,
     onBack: () -> Unit,
+    onSettingsClick: () -> Unit,
     onOpenFollowThrus: () -> Unit
 ) {
     val vm: StatsViewModel = viewModel(
@@ -70,22 +79,31 @@ fun StatsScreen(
                     modifier = Modifier.focusRequester(backFocus)
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        painter = painterResource(id = R.drawable.ic_arrow_left),
                         contentDescription = "Go back",
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 Text(
-                    text = "Stats",
+                    text = "Your progress",
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontFamily = PoppinsFontFamily,
                         fontWeight = FontWeight.SemiBold
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
+                        .weight(1f)
                         .padding(start = 4.dp)
                         .semantics { heading() }
                 )
+                IconButton(onClick = onSettingsClick) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_settings),
+                        contentDescription = "Open settings",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     ) { innerPadding ->
@@ -112,58 +130,67 @@ fun StatsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+            Text(
+                text = "A gentle look at your own rhythm. Looking anyway, gently, is how we learn.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
+            )
 
-            StatsSection(title = "Check-Ins") {
-                StatRow("Current Streak", "${state.checkInCurrentStreak}")
-                if (state.checkInCurrentStreakFlexUsed) {
-                    Text(
-                        text = "Missed a day or two? Your streak is protected — up to two missed days won't reset your progress.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                }
-                StatRow("Longest Streak", "${state.checkInLongestStreak}")
-                StatRow("Total All Time", "${state.checkInTotal}")
+            FollowThroughStreakCard(streak = state.followThroughCurrentStreak)
+
+            SectionLabel("CHECK-INS")
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatTile("${state.checkInCurrentStreak}", "Current", Modifier.weight(1f))
+                StatTile("${state.checkInLongestStreak}", "Longest", Modifier.weight(1f))
+                StatTile("${state.checkInTotal}", "Total", Modifier.weight(1f))
+            }
+            if (state.checkInCurrentStreakFlexUsed) {
+                Text(
+                    text = "Missed a day or two? Your streak is protected — up to two missed days won't reset your progress.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-
-            StatsSection(title = "FollowThrus") {
-                if (state.followThroughTotal == 0) {
-                    Text(
-                        text = "No follow-throughs yet — tap 'I Followed Through' on any goal when you're ready.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    StatRow("Current Streak", "${state.followThroughCurrentStreak}")
-                    StatRow("Total All Time", "${state.followThroughTotal}")
-                    StatRow("This Week", "${state.followThroughThisWeek}")
-                    StatRow("This Month", "${state.followThroughThisMonth}")
+            SectionLabel("FOLLOW-THROUGH")
+            if (state.followThroughTotal == 0) {
+                Text(
+                    text = "No follow-throughs yet — tap “I followed through” on any goal when you're ready.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    StatTile("${state.followThroughTotal}", "Total", Modifier.weight(1f))
+                    StatTile("${state.followThroughThisWeek}", "This week", Modifier.weight(1f))
+                    StatTile("${state.followThroughThisMonth}", "This month", Modifier.weight(1f))
                 }
             }
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
             // "Your FollowThrus" — always reachable from Stats, never auto-surfaced.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
                     .clickable(
                         role = Role.Button,
                         onClickLabel = "Open Your FollowThrus",
                         onClick = onOpenFollowThrus
                     )
-                    .heightIn(min = 48.dp)
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .heightIn(min = 56.dp)
+                    .padding(horizontal = 18.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "Your FollowThrus",
-                    style = MaterialTheme.typography.bodyMedium.copy(
+                    style = MaterialTheme.typography.bodyLarge.copy(
                         fontFamily = PoppinsFontFamily,
                         fontWeight = FontWeight.SemiBold
                     ),
@@ -171,54 +198,99 @@ fun StatsScreen(
                     modifier = Modifier.weight(1f)
                 )
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    painter = painterResource(id = R.drawable.ic_chevron_right),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
                 )
             }
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
         }
     }
 }
 
+/**
+ * The Follow-Through Streak card — the one gold surface in the app. Gold flame +
+ * a large dark number (14:1 on the pale-gold surface), with a reassurance line.
+ */
 @Composable
-private fun StatsSection(title: String, content: @Composable () -> Unit) {
-    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+private fun FollowThroughStreakCard(streak: Int) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(AppColors.GoldSurface)
+            .padding(20.dp)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "Follow-Through Streak. $streak ${if (streak == 1) "day" else "days"} in a row. " +
+                    "One miss won't break it. You've got a built-in reserve."
+            },
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         Text(
-            text = title,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontFamily = PoppinsFontFamily,
-                fontWeight = FontWeight.SemiBold
-            ),
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier
-                .padding(bottom = 12.dp)
-                .semantics { heading() }
+            text = "Follow-Through Streak",
+            style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp),
+            color = AppColors.OnGoldSurface
         )
-        content()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_flame),
+                contentDescription = null,
+                tint = AppColors.Gold,
+                modifier = Modifier.size(32.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = "$streak",
+                style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = AppColors.OnGoldSurface
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = if (streak == 1) "day in a row" else "days in a row",
+                style = MaterialTheme.typography.bodyLarge,
+                color = AppColors.OnGoldSurface
+            )
+        }
+        Text(
+            text = "One miss won't break it. You've got a built-in reserve.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = AppColors.OnGoldSurface
+        )
     }
 }
 
 @Composable
-private fun StatRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .semantics { contentDescription = "$label $value" },
-        verticalAlignment = Alignment.CenterVertically
+private fun SectionLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.semantics { heading() }
+    )
+}
+
+@Composable
+private fun StatTile(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
+            .padding(vertical = 18.dp, horizontal = 12.dp)
+            .clearAndSetSemantics { contentDescription = "$label $value" },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f)
+            text = value,
+            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onSurface
         )
         Text(
-            text = value,
-            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = MaterialTheme.colorScheme.onSurface
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
     }
 }

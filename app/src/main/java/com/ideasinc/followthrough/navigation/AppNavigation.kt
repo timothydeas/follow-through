@@ -134,6 +134,7 @@ fun AppNavigation(
             StatsScreen(
                 container = container,
                 onBack = { navController.popBackStack() },
+                onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
                 onOpenFollowThrus = { navController.navigate(ROUTE_FOLLOWTHRUS) }
             )
         }
@@ -142,6 +143,7 @@ fun AppNavigation(
             FollowThrusScreen(
                 container = container,
                 onBack = { navController.popBackStack() },
+                onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
                 onGoalClick = { id -> navController.navigate("goal_detail/$id") }
             )
         }
