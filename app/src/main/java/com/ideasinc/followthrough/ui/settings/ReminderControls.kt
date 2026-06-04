@@ -10,21 +10,22 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -223,10 +224,11 @@ internal fun formatReminderTime(hour: Int, minute: Int): String {
 }
 
 /**
- * The seven day-of-week toggle chips. Fits one row when ≥ 336dp is available,
- * otherwise falls back to a 4 + 3 two-row layout so every chip keeps a full
- * 48 × 48dp touch target. [onToggle] receives the day and whether it is
- * currently selected (before the toggle).
+ * The seven day-of-week toggle circles. Selected = coral fill with a white (dark
+ * in dark mode) label; unselected = an outlined circle. Fits one row when ≥ 336dp
+ * is available, otherwise falls back to a 4 + 3 two-row layout so every circle
+ * keeps a full 48 × 48dp touch target. [onToggle] receives the day and whether it
+ * is currently selected (before the toggle).
  */
 @Composable
 internal fun ReminderDayChips(
@@ -245,27 +247,34 @@ internal fun ReminderDayChips(
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val singleRow = maxWidth >= 48.dp * 7
         if (singleRow) {
-            Row(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 days.forEach { (day, label, fullName) ->
                     val selected = day in selectedDays
                     ReminderDayChip(label, fullName, selected) { onToggle(day, selected) }
                 }
             }
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Row(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     days.take(4).forEach { (day, label, fullName) ->
                         val selected = day in selectedDays
                         ReminderDayChip(label, fullName, selected) { onToggle(day, selected) }
                     }
                 }
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     days.drop(4).forEach { (day, label, fullName) ->
                         val selected = day in selectedDays
                         ReminderDayChip(label, fullName, selected) { onToggle(day, selected) }
                     }
-                    // Keep row-2 chips the same width as row 1.
-                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
         }
@@ -273,39 +282,45 @@ internal fun ReminderDayChips(
 }
 
 /**
- * One day-of-week toggle chip. `weight(1f)` + `heightIn(min = 48.dp)` guarantee
- * a ≥ 48 × 48dp touch target; the caller sizes the row so the weighted width
- * never drops below 48dp.
+ * One day-of-week toggle circle. The 48dp outer Box is the touch target; the
+ * 42dp inner circle is the visual chip — coral-filled when selected, outlined
+ * otherwise.
  */
 @Composable
-private fun RowScope.ReminderDayChip(
+private fun ReminderDayChip(
     label: String,
     fullName: String,
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    TextButton(
-        onClick = onClick,
+    Box(
         modifier = Modifier
-            .weight(1f)
-            .heightIn(min = 48.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(
-                if (selected) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.surfaceVariant
-            )
+            .size(48.dp)
+            .clip(CircleShape)
+            .clickable(role = Role.Button, onClick = onClick)
             .semantics {
                 contentDescription = fullName
                 stateDescription = if (selected) "Selected" else "Not selected"
                 role = Role.Button
             },
-        contentPadding = PaddingValues(0.dp)
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = if (selected) MaterialTheme.colorScheme.onPrimary
-                else MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .then(
+                    if (selected) Modifier.background(MaterialTheme.colorScheme.primary)
+                    else Modifier.border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (selected) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurface
+            )
+        }
     }
 }
