@@ -18,9 +18,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -46,6 +43,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -54,6 +52,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ideasinc.followthrough.R
 import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
 import com.ideasinc.followthrough.notifications.GoalReminderScheduler
@@ -127,7 +126,7 @@ fun NewGoalFlowScreen(
                     modifier = Modifier.focusRequester(backFocus)
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        painter = painterResource(id = R.drawable.ic_arrow_left),
                         contentDescription = "Go back",
                         tint = MaterialTheme.colorScheme.onSurface
                     )
@@ -262,7 +261,7 @@ private fun ColumnScope.CheckInStepContent(
             focusedContainerColor = Color.Transparent,
             unfocusedContainerColor = Color.Transparent,
             focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = Color.Transparent
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline
         ),
         modifier = Modifier
             .fillMaxWidth()
@@ -271,8 +270,10 @@ private fun ColumnScope.CheckInStepContent(
 }
 
 /**
- * The implementation-intention step. Same single-field layout as the other
- * steps, but the field no longer fills the screen — below it, once a plan is
+ * The action-plan step. Two labelled inputs — "When …" (the moment) and "I will
+ * …" (the action) — matching the prototype, but the result is stored as the
+ * single `implementationIntention` free-text string (so the reminder
+ * notification and check-in record read one sentence). Below, once a plan is
  * written, an optional "Remind me for this" reminder appears. The whole step
  * scrolls so the reminder controls stay reachable with the keyboard up.
  */
@@ -284,6 +285,14 @@ private fun ColumnScope.IntentionStepContent(
     goalId: String
 ) {
     val scrollState = rememberScrollState()
+    // Seed the two fields from the stored sentence once on entry; thereafter the
+    // fields are the source of truth and we push the concatenation up to the VM.
+    val initial = remember(goalId) { splitIntention(value) }
+    var whenText by remember(goalId) { mutableStateOf(initial.first) }
+    var actionText by remember(goalId) { mutableStateOf(initial.second) }
+
+    fun push() = onValueChange(joinIntention(whenText, actionText))
+
     Column(
         modifier = Modifier
             .weight(1f)
@@ -291,7 +300,7 @@ private fun ColumnScope.IntentionStepContent(
             .verticalScroll(scrollState)
     ) {
         Text(
-            text = config.label,
+            text = "Your action plan",
             style = MaterialTheme.typography.headlineMedium.copy(fontFamily = DmSansFontFamily),
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
@@ -299,21 +308,18 @@ private fun ColumnScope.IntentionStepContent(
                 .semantics { heading() }
         )
         Spacer(modifier = Modifier.height(24.dp))
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            placeholder = { Text(placeholderFor(config)) },
-            textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = DmSansFontFamily),
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = Color.Transparent
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 120.dp)
+        PlanField(
+            label = "When… (the moment or situation)",
+            value = whenText,
+            placeholder = "e.g., I pour my morning coffee",
+            onValueChange = { whenText = it; push() }
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        PlanField(
+            label = "I will… (what you'll do)",
+            value = actionText,
+            placeholder = "e.g., make a breakfast I look forward to",
+            onValueChange = { actionText = it; push() }
         )
         if (value.isNotBlank()) {
             Spacer(modifier = Modifier.height(24.dp))
@@ -324,6 +330,68 @@ private fun ColumnScope.IntentionStepContent(
             )
         }
     }
+}
+
+@Composable
+private fun PlanField(
+    label: String,
+    value: String,
+    placeholder: String,
+    onValueChange: (String) -> Unit
+) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelLarge.copy(fontFamily = DmSansFontFamily),
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = { Text(placeholder) },
+        textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = DmSansFontFamily),
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = Color.Transparent,
+            unfocusedContainerColor = Color.Transparent,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+        ),
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+// Two-field <-> single-string mapping. The stored sentence is the single source
+// of truth (read by the reminder notification and the check-in record); the two
+// fields are a presentation convenience.
+private const val WHEN_PREFIX = "When "
+private const val I_WILL_SEP = ", I will "
+
+private fun joinIntention(whenText: String, actionText: String): String {
+    val w = whenText.trim()
+    val a = actionText.trim()
+    return when {
+        w.isEmpty() && a.isEmpty() -> ""
+        w.isEmpty() -> "I will $a"
+        a.isEmpty() -> "$WHEN_PREFIX$w"
+        else -> "$WHEN_PREFIX$w$I_WILL_SEP$a"
+    }
+}
+
+private fun splitIntention(value: String): Pair<String, String> {
+    val v = value.trim()
+    if (v.isEmpty()) return "" to ""
+    val sepIdx = v.indexOf(I_WILL_SEP)
+    if (v.startsWith(WHEN_PREFIX) && sepIdx >= 0) {
+        val whenPart = v.substring(WHEN_PREFIX.length, sepIdx)
+        val actionPart = v.substring(sepIdx + I_WILL_SEP.length)
+        return whenPart to actionPart
+    }
+    if (v.startsWith(WHEN_PREFIX)) return v.substring(WHEN_PREFIX.length) to ""
+    if (v.startsWith("I will ")) return "" to v.substring("I will ".length)
+    // Free-text that doesn't fit the template — keep it all in the "When" field
+    // so nothing is lost on edit.
+    return v to ""
 }
 
 private fun getFieldValue(state: NewGoalFlowUiState, key: String): String = when (key) {

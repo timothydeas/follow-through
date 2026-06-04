@@ -8,11 +8,14 @@ import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import com.ideasinc.followthrough.navigation.AppNavigation
@@ -46,14 +49,26 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             GroundedTheme {
-                if (authCleared) {
-                    AppNavigation(container = container)
-                } else {
+                // Adaptive: phone and tablet render the identical single-column
+                // design. On wide screens we only cap the content at a
+                // comfortable max width and centre it against the cream page —
+                // no tablet-specific layout, no two-pane. On phones (< 600dp)
+                // widthIn is a no-op, so the design is unchanged.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
+                    contentAlignment = Alignment.TopCenter
+                ) {
                     Box(
                         modifier = Modifier
+                            .widthIn(max = 600.dp)
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.background)
-                    )
+                    ) {
+                        if (authCleared) {
+                            AppNavigation(container = container)
+                        }
+                    }
                 }
             }
         }
