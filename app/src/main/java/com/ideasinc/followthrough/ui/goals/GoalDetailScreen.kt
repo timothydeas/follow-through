@@ -31,22 +31,17 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -65,6 +60,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -76,6 +72,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ideasinc.followthrough.R
 import com.ideasinc.followthrough.data.CheckIn
 import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
@@ -314,110 +311,81 @@ fun GoalDetailScreen(
             }
         }
     ) { innerPadding ->
-        Column(
+        val goal = uiState.goal
+        // The goal's plan — the most recent implementation intention. Drives both
+        // the read-only "Your intention" card and the reminder notification body.
+        val intention = uiState.checkIns
+            .firstOrNull { !it.implementationIntention.isNullOrBlank() }
+            ?.implementationIntention?.trim()
+        val reminderBody = intention?.takeIf { it.isNotBlank() } ?: goal?.title ?: ""
+
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(innerPadding),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val goal = uiState.goal
             if (goal != null) {
                 val followedThrough = goal.followedThrough
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 12.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            if (followedThrough) showUndoDialog = true
-                            else viewModel.followThrough()
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .semantics {
-                                // Stays tappable once followed through — a tap then
-                                // opens the undo confirmation dialog.
-                                contentDescription =
-                                    if (followedThrough)
-                                        "Followed through. Double tap to undo."
-                                    else "I followed through"
-                            }
-                    ) {
-                        Icon(
-                            imageVector = if (followedThrough) Icons.Filled.CheckCircle
-                                else Icons.Outlined.CheckCircle,
-                            contentDescription = null,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = if (followedThrough) "Followed through ✓" else "I followed through",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontFamily = DmSansFontFamily
-                            )
-                        )
+
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SectionLabel("YOUR INTENTION")
+                        IntentionCard(intention = intention)
                     }
                 }
 
-                // Optional per-goal reminder anchored to this goal's plan. The
-                // notification body surfaces the most recent implementation
-                // intention; if none is written yet it falls back to the title.
-                val intention = uiState.checkIns
-                    .firstOrNull { !it.implementationIntention.isNullOrBlank() }
-                    ?.implementationIntention?.trim()
-                val reminderBody = intention?.takeIf { it.isNotBlank() } ?: goal.title
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.padding(horizontal = 24.dp)
-                )
-                GoalReminderControls(
-                    goalId = goal.id,
-                    reminderBody = reminderBody,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
-                )
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.padding(horizontal = 24.dp)
-                )
-            }
-            // Check-ins are the primary content and live in their own scroller.
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentPadding = PaddingValues(
-                    start = 16.dp,
-                    end = 16.dp,
-                    top = 4.dp,
-                    bottom = 96.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                if (uiState.checkIns.isEmpty()) {
-                    item {
-                        Text(
-                            text = "No check-ins yet. Tap + to add one.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
+                item {
+                    FollowThroughButtons(
+                        followedThrough = followedThrough,
+                        onFollowThrough = { viewModel.followThrough() },
+                        onAdjust = { showUndoDialog = true }
+                    )
+                }
+
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SectionLabel("REMINDER")
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 24.dp)
-                        )
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surface)
+                                .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
+                                .padding(16.dp)
+                        ) {
+                            GoalReminderControls(
+                                goalId = goal.id,
+                                reminderBody = reminderBody,
+                                toggleLabel = "Anchor a reminder to this intention"
+                            )
+                        }
                     }
-                } else {
-                    items(uiState.checkIns, key = { it.id }) { checkIn ->
-                        CheckInCard(
-                            checkIn = checkIn,
-                            configs = uiState.questionConfigs,
-                            onClick = { onCheckInClick(checkIn.id) }
-                        )
-                    }
+                }
+
+                item { SectionLabel("CHECK-INS") }
+            }
+
+            if (uiState.checkIns.isEmpty()) {
+                item {
+                    Text(
+                        text = "No check-ins yet. Tap + to add one.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp)
+                    )
+                }
+            } else {
+                items(uiState.checkIns, key = { it.id }) { checkIn ->
+                    CheckInCard(
+                        checkIn = checkIn,
+                        configs = uiState.questionConfigs,
+                        onClick = { onCheckInClick(checkIn.id) }
+                    )
                 }
             }
         }
@@ -426,6 +394,110 @@ fun GoalDetailScreen(
     if (uiState.showReassurance) {
         ReassuranceOverlay(onDismiss = viewModel::onReassuranceDone)
     }
+    }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.semantics { heading() }
+    )
+}
+
+@Composable
+private fun IntentionCard(intention: String?) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
+            .padding(16.dp)
+    ) {
+        if (!intention.isNullOrBlank()) {
+            Text(
+                text = intention,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        } else {
+            Text(
+                text = "No plan yet. Add a check-in to set your “When …, I will …”.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * The follow-through pair: a coral "I followed through" primary and an outlined
+ * "Missed it? Adjust" (rotate-ccw) that reverses the mark. Adjust is enabled only
+ * once the goal has been marked, since there's nothing to undo before that.
+ */
+@Composable
+private fun FollowThroughButtons(
+    followedThrough: Boolean,
+    onFollowThrough: () -> Unit,
+    onAdjust: () -> Unit
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Button(
+            onClick = { if (!followedThrough) onFollowThrough() },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ),
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier
+                .weight(1f)
+                .height(52.dp)
+                .semantics {
+                    contentDescription =
+                        if (followedThrough) "Followed through"
+                        else "I followed through"
+                }
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_check_circle),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = if (followedThrough) "Followed through" else "I followed through",
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        OutlinedButton(
+            onClick = onAdjust,
+            enabled = followedThrough,
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier
+                .weight(1f)
+                .height(52.dp)
+                .semantics { contentDescription = "Missed it? Adjust" }
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_rotate_ccw),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Missed it? Adjust",
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -441,8 +513,9 @@ private fun CheckInCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
             .clickable(
                 onClickLabel = "Open check-in to edit",
                 role = Role.Button,

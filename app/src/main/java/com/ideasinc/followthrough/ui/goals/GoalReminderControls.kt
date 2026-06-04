@@ -64,7 +64,8 @@ private val DEFAULT_DAYS: Set<Int> = setOf(
 fun GoalReminderControls(
     goalId: String,
     reminderBody: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    toggleLabel: String = "Remind me for this"
 ) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS_GOAL_REMINDERS, Context.MODE_PRIVATE) }
@@ -154,7 +155,7 @@ fun GoalReminderControls(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Remind me for this",
+                text = toggleLabel,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
