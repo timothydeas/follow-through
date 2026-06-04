@@ -21,9 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,6 +48,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -70,6 +68,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ideasinc.followthrough.BuildConfig
+import com.ideasinc.followthrough.R
 import com.ideasinc.followthrough.di.AppContainer
 import com.ideasinc.followthrough.feedback.AppReview
 import com.ideasinc.followthrough.notifications.PREFS_REMINDERS
@@ -209,7 +208,7 @@ fun SettingsScreen(
                     modifier = Modifier.focusRequester(backFocus)
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        painter = painterResource(id = R.drawable.ic_arrow_left),
                         contentDescription = "Go back",
                         tint = MaterialTheme.colorScheme.onSurface
                     )
@@ -234,7 +233,7 @@ fun SettingsScreen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
         ) {
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+            HorizontalDivider(color = AppColors.Border)
 
             // Biometric section
             Row(
@@ -277,7 +276,7 @@ fun SettingsScreen(
                 )
             }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+            HorizontalDivider(color = AppColors.Border)
 
             // Customize questions row
             Row(
@@ -298,13 +297,14 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f)
                 )
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    painter = painterResource(id = R.drawable.ic_chevron_right),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+            HorizontalDivider(color = AppColors.Border)
 
             // Appearance section
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
@@ -333,7 +333,7 @@ fun SettingsScreen(
                 }
             }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+            HorizontalDivider(color = AppColors.Border)
 
             // Reminders section
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
@@ -487,7 +487,7 @@ fun SettingsScreen(
                 }
             }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+            HorizontalDivider(color = AppColors.Border)
 
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                 Text(
@@ -560,7 +560,7 @@ fun SettingsScreen(
                 )
             }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+            HorizontalDivider(color = AppColors.Border)
 
             // Independent, always-available feedback link (opt-in, no tracking).
             Row(
@@ -582,13 +582,14 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f)
                 )
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    painter = painterResource(id = R.drawable.ic_chevron_right),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+            HorizontalDivider(color = AppColors.Border)
         }
     }
 }
