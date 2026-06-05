@@ -127,48 +127,6 @@ object GoalReminderScheduler {
             .apply()
     }
 
-    /**
-     * Removes every persisted per-goal reminder and cancels all their alarms.
-     * Used before importing a backup so the imported set fully replaces the old
-     * one (rather than merging).
-     */
-    fun clearAll(context: Context) {
-        val p = prefs(context)
-        val ids = (p.getStringSet(KEY_GOAL_IDS, emptySet()) ?: emptySet()).toSet()
-        for (goalId in ids) cancelAlarms(context, goalId)
-        p.edit().clear().apply()
-    }
-
-    /**
-     * Restores a reminder from a backup: persists every field verbatim —
-     * including the enabled flag and the day/time selection — and, when it was
-     * enabled and exact alarms are permitted, (re)schedules its alarms. This is
-     * the import counterpart to [schedule]/[disable], routing back through the
-     * same alarm plumbing so a restored reminder behaves identically to one the
-     * user set by hand.
-     */
-    fun restore(context: Context, goalId: String, reminder: GoalReminder) {
-        val p = prefs(context)
-        val ids = (p.getStringSet(KEY_GOAL_IDS, emptySet()) ?: emptySet()).toMutableSet()
-        ids.add(goalId)
-        p.edit()
-            .putStringSet(KEY_GOAL_IDS, ids)
-            .putBoolean(keyEnabled(goalId), reminder.enabled)
-            .putInt(keyHour(goalId), reminder.hour)
-            .putInt(keyMinute(goalId), reminder.minute)
-            .putStringSet(keyDays(goalId), reminder.days.map { it.toString() }.toSet())
-            .putString(keyBody(goalId), reminder.body)
-            .apply()
-
-        cancelAlarms(context, goalId)
-        if (!reminder.enabled || reminder.days.isEmpty()) return
-        val am = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        if (!canScheduleExactAlarmsCompat(context)) return
-        for (day in reminder.days) {
-            scheduleAlarmForDay(context, am, goalId, day, reminder.hour, reminder.minute)
-        }
-    }
-
     /** Re-arms the alarm for a single [day] after it fires (next week). */
     fun rescheduleAfterFire(context: Context, goalId: String, day: Int) {
         val reminder = read(context, goalId) ?: return

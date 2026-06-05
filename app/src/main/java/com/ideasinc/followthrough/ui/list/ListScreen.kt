@@ -46,7 +46,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -86,10 +85,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.ideasinc.followthrough.R
-import com.ideasinc.followthrough.di.AppContainer
 import com.ideasinc.followthrough.notifications.GoalReminderScheduler
 import com.ideasinc.followthrough.ui.rememberIsTouchExplorationEnabled
-import com.ideasinc.followthrough.ui.settings.ImportData
 import com.ideasinc.followthrough.ui.theme.AppColors
 import kotlinx.coroutines.flow.drop
 import sh.calvin.reorderable.ReorderableItem
@@ -101,7 +98,6 @@ import java.util.Locale
 @Composable
 fun ListScreen(
     viewModel: ListViewModel,
-    container: AppContainer,
     onGoalClick: (String) -> Unit,
     onNewGoal: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -277,10 +273,7 @@ fun ListScreen(
                 val totalCount = uiState.goals.size
 
                 if (totalCount == 0) {
-                    EmptyState(
-                        hasQuery = uiState.query.isNotBlank(),
-                        container = container
-                    )
+                    EmptyState(hasQuery = uiState.query.isNotBlank())
                 } else {
                     LazyColumn(
                         state = lazyListState,
@@ -712,43 +705,20 @@ private fun SearchBar(
 }
 
 @Composable
-private fun EmptyState(hasQuery: Boolean, container: AppContainer) {
+private fun EmptyState(hasQuery: Boolean) {
     Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 32.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            Text(
-                text = if (hasQuery) "No goals match your search."
-                else "Welcome to FollowThru. Tap the + button below to add your first goal or change you're working toward.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-            // On the true empty state (no goals, not a no-results search), offer
-            // to restore a backup made on this or another device.
-            if (!hasQuery) {
-                ImportData(container = container) { launch ->
-                    OutlinedButton(
-                        onClick = launch,
-                        modifier = Modifier.semantics {
-                            contentDescription = "Import data from a backup file"
-                        }
-                    ) {
-                        Text(
-                            text = "Import data",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = AppColors.BrandAccentText
-                        )
-                    }
-                }
-            }
-        }
+        Text(
+            text = if (hasQuery) "No goals match your search."
+            else "Welcome to FollowThru. Tap the + button below to add your first goal or change you're working toward.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
     }
 }
 

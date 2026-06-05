@@ -25,10 +25,4 @@ interface CheckInDao {
 
     @Query("DELETE FROM check_ins WHERE id = :id")
     suspend fun deleteById(id: String)
-
-    // Wipes every check-in. Used when a data import replaces all existing data
-    // (goals cascade-delete their check-ins, but this is called explicitly first
-    // so the clear is independent of foreign-key pragma state).
-    @Query("DELETE FROM check_ins")
-    suspend fun deleteAll()
 }

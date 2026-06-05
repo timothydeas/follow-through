@@ -19,9 +19,4 @@ interface QuestionLabelDao {
 
     @Query("DELETE FROM question_labels WHERE questionKey = :key")
     suspend fun deleteByKey(key: String)
-
-    // Wipes every question-label customization. Used when a data import replaces
-    // all existing data.
-    @Query("DELETE FROM question_labels")
-    suspend fun deleteAll()
 }
