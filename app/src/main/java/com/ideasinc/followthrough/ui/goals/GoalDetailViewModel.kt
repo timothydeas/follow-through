@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 data class GoalDetailUiState(
     val goal: Goal? = null,
@@ -24,7 +25,16 @@ data class GoalDetailUiState(
     val shouldNavigateToList: Boolean = false,
     val showEditDialog: Boolean = false,
     val editTitle: String = "",
-    val showReassurance: Boolean = false
+    val showReassurance: Boolean = false,
+    // Intention editor (the "YOUR INTENTION" card / pencil). When [structured]
+    // the two "When… / I will…" fields drive the value; otherwise the single
+    // [intentionText] field holds a legacy/free-form plan verbatim.
+    val showIntentionEditor: Boolean = false,
+    val intentionStructured: Boolean = true,
+    val intentionWhen: String = "",
+    val intentionAction: String = "",
+    val intentionText: String = "",
+    val intentionTargetCheckInId: String? = null
 )
 
 private data class GoalDetailData(
@@ -87,6 +97,82 @@ class GoalDetailViewModel(
                 )
             )
             _uiState.update { it.copy(showEditDialog = false) }
+        }
+    }
+
+    /**
+     * Opens the intention editor for this goal. The plan lives on a check-in's
+     * `implementationIntention` string; we target the most recent check-in that
+     * carries one, falling back to the most recent check-in so a goal without a
+     * plan yet can still add one. The stored string decides the editor shape:
+     * a "When …, I will …" sentence opens the two fields; anything else (legacy
+     * or free-form) loads into a single field so nothing is lost.
+     */
+    fun startEditIntention() {
+        val checkIns = _uiState.value.checkIns
+        val target = checkIns.firstOrNull { !it.implementationIntention.isNullOrBlank() }
+            ?: checkIns.firstOrNull()
+        val current = target?.implementationIntention?.trim().orEmpty()
+        val structured = current.isBlank() || isStructuredIntention(current)
+        val (whenText, actionText) = if (structured) splitIntention(current) else "" to ""
+        _uiState.update {
+            it.copy(
+                showIntentionEditor = true,
+                intentionTargetCheckInId = target?.id,
+                intentionStructured = structured,
+                intentionWhen = whenText,
+                intentionAction = actionText,
+                intentionText = if (structured) "" else current
+            )
+        }
+    }
+
+    fun dismissIntentionEditor() = _uiState.update { it.copy(showIntentionEditor = false) }
+
+    fun onIntentionWhenChange(value: String) = _uiState.update { it.copy(intentionWhen = value) }
+
+    fun onIntentionActionChange(value: String) = _uiState.update { it.copy(intentionAction = value) }
+
+    fun onIntentionTextChange(value: String) = _uiState.update { it.copy(intentionText = value) }
+
+    fun saveIntention() {
+        viewModelScope.launch {
+            val state = _uiState.value
+            val newValue = if (state.intentionStructured) {
+                joinIntention(state.intentionWhen, state.intentionAction)
+            } else {
+                state.intentionText.trim()
+            }
+            val stored = newValue.ifBlank { null }
+            val now = System.currentTimeMillis()
+
+            val target = state.intentionTargetCheckInId
+                ?.let { id -> state.checkIns.firstOrNull { it.id == id } }
+            when {
+                target != null ->
+                    checkInDao.insertCheckIn(
+                        target.copy(implementationIntention = stored, updatedAt = now)
+                    )
+                // No check-in to host the plan yet — create a minimal one so the
+                // goal is never left uneditable. (New goals always have one, so
+                // this is only a safety net for an empty legacy goal.)
+                stored != null -> {
+                    val goal = state.goal
+                    if (goal != null) {
+                        checkInDao.insertCheckIn(
+                            CheckIn(
+                                id = UUID.randomUUID().toString(),
+                                goalId = goalId,
+                                goalOrChange = goal.title,
+                                implementationIntention = stored,
+                                createdAt = now,
+                                updatedAt = now
+                            )
+                        )
+                    }
+                }
+            }
+            _uiState.update { it.copy(showIntentionEditor = false) }
         }
     }
 

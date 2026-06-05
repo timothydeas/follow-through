@@ -212,6 +212,42 @@ fun GoalDetailScreen(
         )
     }
 
+    if (uiState.showIntentionEditor) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissIntentionEditor,
+            title = { Text("Edit your intention", style = MaterialTheme.typography.headlineSmall) },
+            text = {
+                Column {
+                    IntentionEditorFields(
+                        structured = uiState.intentionStructured,
+                        whenText = uiState.intentionWhen,
+                        actionText = uiState.intentionAction,
+                        freeText = uiState.intentionText,
+                        onWhenChange = viewModel::onIntentionWhenChange,
+                        onActionChange = viewModel::onIntentionActionChange,
+                        onFreeTextChange = viewModel::onIntentionTextChange
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = viewModel::saveIntention,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = AppColors.BrandAccentText
+                    )
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = viewModel::dismissIntentionEditor,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = AppColors.BrandAccentText
+                    )
+                ) { Text("Cancel") }
+            }
+        )
+    }
+
     if (showUndoDialog) {
         AlertDialog(
             onDismissRequest = { showUndoDialog = false },
@@ -333,8 +369,24 @@ fun GoalDetailScreen(
 
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SectionLabel("YOUR INTENTION")
-                        IntentionCard(intention = intention)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            SectionLabel("YOUR INTENTION", modifier = Modifier.weight(1f))
+                            IconButton(
+                                onClick = viewModel::startEditIntention,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit intention",
+                                    tint = AppColors.BrandAccentText,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                        IntentionCard(
+                            intention = intention,
+                            onClick = viewModel::startEditIntention
+                        )
                     }
                 }
 
@@ -400,23 +452,24 @@ fun GoalDetailScreen(
 }
 
 @Composable
-private fun SectionLabel(text: String) {
+private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.semantics { heading() }
+        modifier = modifier.semantics { heading() }
     )
 }
 
 @Composable
-private fun IntentionCard(intention: String?) {
+private fun IntentionCard(intention: String?, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
+            .clickable(onClickLabel = "Edit intention", onClick = onClick)
             .padding(16.dp)
     ) {
         if (!intention.isNullOrBlank()) {

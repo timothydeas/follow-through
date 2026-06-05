@@ -332,68 +332,6 @@ private fun ColumnScope.IntentionStepContent(
     }
 }
 
-@Composable
-private fun PlanField(
-    label: String,
-    value: String,
-    placeholder: String,
-    onValueChange: (String) -> Unit
-) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.labelLarge.copy(fontFamily = DmSansFontFamily),
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-    Spacer(modifier = Modifier.height(8.dp))
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        placeholder = { Text(placeholder) },
-        textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = DmSansFontFamily),
-        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = Color.Transparent,
-            unfocusedContainerColor = Color.Transparent,
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline
-        ),
-        modifier = Modifier.fillMaxWidth()
-    )
-}
-
-// Two-field <-> single-string mapping. The stored sentence is the single source
-// of truth (read by the reminder notification and the check-in record); the two
-// fields are a presentation convenience.
-private const val WHEN_PREFIX = "When "
-private const val I_WILL_SEP = ", I will "
-
-private fun joinIntention(whenText: String, actionText: String): String {
-    val w = whenText.trim()
-    val a = actionText.trim()
-    return when {
-        w.isEmpty() && a.isEmpty() -> ""
-        w.isEmpty() -> "I will $a"
-        a.isEmpty() -> "$WHEN_PREFIX$w"
-        else -> "$WHEN_PREFIX$w$I_WILL_SEP$a"
-    }
-}
-
-private fun splitIntention(value: String): Pair<String, String> {
-    val v = value.trim()
-    if (v.isEmpty()) return "" to ""
-    val sepIdx = v.indexOf(I_WILL_SEP)
-    if (v.startsWith(WHEN_PREFIX) && sepIdx >= 0) {
-        val whenPart = v.substring(WHEN_PREFIX.length, sepIdx)
-        val actionPart = v.substring(sepIdx + I_WILL_SEP.length)
-        return whenPart to actionPart
-    }
-    if (v.startsWith(WHEN_PREFIX)) return v.substring(WHEN_PREFIX.length) to ""
-    if (v.startsWith("I will ")) return "" to v.substring("I will ".length)
-    // Free-text that doesn't fit the template — keep it all in the "When" field
-    // so nothing is lost on edit.
-    return v to ""
-}
-
 private fun getFieldValue(state: NewGoalFlowUiState, key: String): String = when (key) {
     QuestionKeys.GOAL_OR_CHANGE -> state.goalOrChange
     QuestionKeys.AVOIDING -> state.avoiding
