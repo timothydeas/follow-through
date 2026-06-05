@@ -2,6 +2,7 @@ package com.ideasinc.followthrough.data.backup
 
 import android.content.Context
 import android.net.Uri
+import androidx.room.withTransaction
 import com.ideasinc.followthrough.BuildConfig
 import com.ideasinc.followthrough.di.AppContainer
 import com.ideasinc.followthrough.navigation.KEY_BIOMETRIC_ENABLED
@@ -117,16 +118,23 @@ object BackupManager {
     suspend fun applyImport(context: Context, container: AppContainer, data: BackupData) {
         val appContext = context.applicationContext
 
-        // 1. Replace database tables. Clear children before parents so the wipe
-        //    doesn't depend on foreign-key pragma state; insert parents before
-        //    children so each check-in's goal already exists.
-        container.checkInDao.deleteAll()
-        container.goalDao.deleteAll()
-        container.questionLabelDao.deleteAll()
+        // 1. Replace database tables atomically. The wipe and every re-insert run
+        //    inside a single Room transaction: if any step throws, the whole
+        //    transaction rolls back and the user's existing data is left intact
+        //    (nothing half-deleted, nothing half-written). Clear children before
+        //    parents so the wipe doesn't depend on foreign-key pragma state;
+        //    insert parents before children so each check-in's goal already
+        //    exists. Reminders/settings are deliberately re-armed only *after*
+        //    this commits — see step 2 — so a rolled-back import touches nothing.
+        container.database.withTransaction {
+            container.checkInDao.deleteAll()
+            container.goalDao.deleteAll()
+            container.questionLabelDao.deleteAll()
 
-        for (goal in data.goals) container.goalDao.insertGoal(goal)
-        for (checkIn in data.checkIns) container.checkInDao.insertCheckIn(checkIn)
-        for (label in data.questionLabels) container.questionLabelDao.insertLabel(label)
+            for (goal in data.goals) container.goalDao.insertGoal(goal)
+            for (checkIn in data.checkIns) container.checkInDao.insertCheckIn(checkIn)
+            for (label in data.questionLabels) container.questionLabelDao.insertLabel(label)
+        }
 
         // 2. Replace per-goal reminders, then re-schedule each through the
         //    existing scheduler (no-op alarm-wise if permission is missing).
