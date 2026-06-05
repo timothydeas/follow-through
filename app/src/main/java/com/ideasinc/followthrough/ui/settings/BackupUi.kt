@@ -1,5 +1,6 @@
 package com.ideasinc.followthrough.ui.settings
 
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.AlertDialog
@@ -28,6 +29,8 @@ import java.util.Locale
 // visual (a Settings row, an empty-state button, …) is the caller's choice.
 // Nothing here requires a storage permission and nothing leaves the device.
 
+private const val TAG = "BackupUi"
+
 private val backupFileDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
 /**
@@ -54,6 +57,7 @@ fun ExportData(
                 BackupManager.export(context, container, uri)
                 onResult(true, "Your data was exported.")
             } catch (e: Exception) {
+                Log.e(TAG, "Export write failed", e)
                 onResult(false, "Export failed. Please try again.")
             }
         }
@@ -79,6 +83,7 @@ fun ExportData(
                     try {
                         createLauncher.launch(name)
                     } catch (e: Exception) {
+                        Log.e(TAG, "CreateDocument launch failed", e)
                         onResult(false, "Couldn't open the file picker.")
                     }
                 }) { Text("Continue") }
@@ -117,6 +122,7 @@ fun ImportData(
                 BackupManager.applyImport(context, container, data)
                 onImported("Your data was imported.")
             } catch (e: Exception) {
+                Log.e(TAG, "applyImport failed", e)
                 errorMessage = "Import failed. Your existing data was not changed."
             }
         }
@@ -130,9 +136,11 @@ fun ImportData(
             val data = try {
                 BackupManager.readAndDecode(context, uri)
             } catch (e: BackupFormatException) {
+                Log.e(TAG, "readAndDecode rejected file", e)
                 errorMessage = e.message ?: "This file isn't a valid FollowThru backup."
                 return@launch
             } catch (e: Exception) {
+                Log.e(TAG, "readAndDecode failed", e)
                 errorMessage = "Couldn't read that file. Please pick a FollowThru backup."
                 return@launch
             }
@@ -181,8 +189,20 @@ fun ImportData(
 
     content {
         try {
-            openLauncher.launch(arrayOf("application/json", "application/octet-stream", "text/plain"))
+            // Use a single permissive "*/*" filter rather than an explicit
+            // MIME-type set. ACTION_OPEN_DOCUMENT resolves against the *full*
+            // EXTRA_MIME_TYPES set, and a backup file's resolved type is
+            // unreliable: depending on the device/provider a file written by us
+            // as "application/json" can come back typed "text/plain",
+            // "application/octet-stream", or even an unrelated guess — and on
+            // some devices an OPEN_DOCUMENT intent whose type set doesn't match
+            // any servable type throws ActivityNotFoundException, which this
+            // catch was silently turning into "Couldn't open the file picker."
+            // "*/*" always resolves; we validate the file's *contents* in
+            // BackupManager.readAndDecode regardless of its MIME label.
+            openLauncher.launch(arrayOf("*/*"))
         } catch (e: Exception) {
+            Log.e(TAG, "OpenDocument launch failed", e)
             errorMessage = "Couldn't open the file picker."
         }
     }
