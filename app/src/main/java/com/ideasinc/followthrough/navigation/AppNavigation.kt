@@ -132,6 +132,7 @@ fun AppNavigation(
         composable(ROUTE_LIST) {
             ListScreen(
                 viewModel = listViewModel,
+                container = container,
                 onGoalClick = { id -> navController.navigate("goal_detail/$id") },
                 onNewGoal = { navController.navigate(ROUTE_NEW_GOAL) },
                 onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },

@@ -26,4 +26,9 @@ interface GoalDao {
 
     @Query("DELETE FROM goals WHERE id = :id")
     suspend fun deleteById(id: String)
+
+    // Wipes every goal (and, via ON DELETE CASCADE, its check-ins). Used when a
+    // data import replaces all existing data.
+    @Query("DELETE FROM goals")
+    suspend fun deleteAll()
 }

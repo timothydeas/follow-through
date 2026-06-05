@@ -489,6 +489,54 @@ fun SettingsScreen(
 
             HorizontalDivider(color = AppColors.Border)
 
+            // Your data — fully-local backup & restore. No cloud, no account;
+            // the file never leaves the device unless the user moves it.
+            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                Text(
+                    text = "Your data",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontFamily = PoppinsFontFamily,
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .padding(bottom = 4.dp)
+                        .semantics { heading() }
+                )
+                Text(
+                    text = "Save everything to a file on your device, or restore from " +
+                        "one. Nothing is uploaded — your data has no other backup.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            ExportData(
+                container = container,
+                onResult = { _, message ->
+                    snackbarScope.launch {
+                        snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
+                    }
+                }
+            ) { launch ->
+                SettingsActionRow(label = "Export my data", onClick = launch)
+            }
+
+            HorizontalDivider(color = AppColors.Border)
+
+            ImportData(
+                container = container,
+                onImported = { message ->
+                    snackbarScope.launch {
+                        snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
+                    }
+                }
+            ) { launch ->
+                SettingsActionRow(label = "Import data", onClick = launch)
+            }
+
+            HorizontalDivider(color = AppColors.Border)
+
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                 Text(
                     text = "About",
@@ -591,6 +639,40 @@ fun SettingsScreen(
 
             HorizontalDivider(color = AppColors.Border)
         }
+    }
+}
+
+/**
+ * A tappable Settings row with a leading label and a trailing chevron, matching
+ * the "Customize questions" / "Send feedback" rows. Used for the export/import
+ * actions.
+ */
+@Composable
+private fun SettingsActionRow(label: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                onClickLabel = label,
+                role = Role.Button,
+                onClick = onClick
+            )
+            .heightIn(min = 48.dp)
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium.copy(fontFamily = PoppinsFontFamily),
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+        Icon(
+            painter = painterResource(id = R.drawable.ic_chevron_right),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
     }
 }
 
