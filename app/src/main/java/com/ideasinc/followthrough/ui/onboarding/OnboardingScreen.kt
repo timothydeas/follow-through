@@ -332,6 +332,12 @@ private fun SlideOneBody(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
         )
+        Text(
+            text = "No cloud backup — your data stays only on this device, so it " +
+                "won't transfer to a new phone or come back after uninstalling.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         if (biometricAvailable) {
             AppLockCard(checked = biometricEnabled, onCheckedChange = onBiometricChange)
         }
