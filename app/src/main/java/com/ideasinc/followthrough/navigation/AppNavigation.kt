@@ -54,7 +54,9 @@ internal const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
 // once for already-onboarded installs after this upgrade (no data is reset).
 // Bumped 95 → 96 for the coral/cream UI port (redesigned onboarding) so it
 // re-shows once for already-onboarded installs after this upgrade (no reset).
-internal const val CURRENT_ONBOARDING_VERSION = 96
+// Bumped 96 → 97 to re-show onboarding once for already-onboarded installs
+// after this upgrade (no data is reset).
+internal const val CURRENT_ONBOARDING_VERSION = 97
 
 @Composable
 fun AppNavigation(
