@@ -56,6 +56,7 @@ import com.ideasinc.followthrough.R
 import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
 import com.ideasinc.followthrough.notifications.GoalReminderScheduler
+import com.ideasinc.followthrough.ui.ConfidenceSlider
 import com.ideasinc.followthrough.ui.checkin.placeholderFor
 import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
@@ -248,6 +249,19 @@ private fun ColumnScope.CheckInStepContent(
         )
     }
     Spacer(modifier = Modifier.height(24.dp))
+
+    if (config.key == QuestionKeys.CONFIDENCE) {
+        // Confidence is a 0–100 slider, not a text field (ported prototype).
+        // The question's placeholder doubles as the slider's helper line.
+        Text(
+            text = placeholderFor(config),
+            style = MaterialTheme.typography.bodyMedium.copy(fontFamily = DmSansFontFamily),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        ConfidenceSlider(value = value, onValueChange = onValueChange)
+        return
+    }
 
     // The field stays unfocused on step entry — users tap to bring up the
     // keyboard, so the placeholder is visible when landing on the step.

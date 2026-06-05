@@ -47,6 +47,8 @@ import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.data.CheckIn
 import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
+import com.ideasinc.followthrough.ui.ConfidenceSlider
+import com.ideasinc.followthrough.ui.confidenceDisplay
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
 import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
@@ -221,7 +223,7 @@ private fun ReadView(
 
         ReadField(label = labelFor(QuestionKeys.GOAL_OR_CHANGE), content = checkIn.goalOrChange)
         ReadField(label = labelFor(QuestionKeys.AVOIDING), content = checkIn.avoiding ?: "")
-        ReadField(label = labelFor(QuestionKeys.CONFIDENCE), content = checkIn.confidence ?: "")
+        ReadField(label = labelFor(QuestionKeys.CONFIDENCE), content = confidenceDisplay(checkIn.confidence))
         ReadField(label = labelFor(QuestionKeys.MADE_PROGRESS), content = checkIn.madeProgress ?: "")
         ReadField(label = labelFor(QuestionKeys.COMPETING_PRIORITY), content = checkIn.competingPriority ?: "")
         ReadField(label = labelFor(QuestionKeys.IMPLEMENTATION_INTENTION), content = checkIn.implementationIntention ?: "")
@@ -263,12 +265,23 @@ private fun EditView(
             placeholder = placeholderFor(QuestionKeys.AVOIDING),
             onValueChange = viewModel::onEditAvoidingChange
         )
-        EditField(
-            label = labelFor(QuestionKeys.CONFIDENCE),
-            value = uiState.editConfidence,
-            placeholder = placeholderFor(QuestionKeys.CONFIDENCE),
-            onValueChange = viewModel::onEditConfidenceChange
-        )
+        // Confidence edits with the same 0–100 slider as the entry flows, not a
+        // text field. A legacy free-text answer is kept (and surfaced) until the
+        // user actually moves the slider — see ConfidenceSlider.
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = labelFor(QuestionKeys.CONFIDENCE).uppercase(),
+                style = MaterialTheme.typography.labelMedium.copy(
+                    letterSpacing = 1.0.sp,
+                    fontFamily = DmSansFontFamily
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            ConfidenceSlider(
+                value = uiState.editConfidence,
+                onValueChange = viewModel::onEditConfidenceChange
+            )
+        }
         EditField(
             label = labelFor(QuestionKeys.MADE_PROGRESS),
             value = uiState.editMadeProgress,

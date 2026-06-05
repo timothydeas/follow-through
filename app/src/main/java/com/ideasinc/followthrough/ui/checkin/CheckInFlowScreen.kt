@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
+import com.ideasinc.followthrough.ui.ConfidenceSlider
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
 import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
@@ -321,23 +322,34 @@ private fun QuestionField(
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.semantics { heading() }
         )
-        // Visible, persistent border + label so the field never reads as a
-        // bare line; the keyboard never covers it thanks to imePadding + scroll.
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            placeholder = { Text(placeholderFor(config)) },
-            textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = DmSansFontFamily),
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 120.dp)
-                .semantics { contentDescription = config.label }
-        )
+        if (config.key == QuestionKeys.CONFIDENCE) {
+            // Confidence is a 0–100 slider, not a text field (ported prototype).
+            // The question's placeholder doubles as the slider's helper line.
+            Text(
+                text = placeholderFor(config),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            ConfidenceSlider(value = value, onValueChange = onValueChange)
+        } else {
+            // Visible, persistent border + label so the field never reads as a
+            // bare line; the keyboard never covers it thanks to imePadding + scroll.
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                placeholder = { Text(placeholderFor(config)) },
+                textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = DmSansFontFamily),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 120.dp)
+                    .semantics { contentDescription = config.label }
+            )
+        }
     }
 }
 
