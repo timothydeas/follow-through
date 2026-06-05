@@ -1,14 +1,28 @@
-*.iml
+# Build output
+app/build/
+/build/
 .gradle/
-/local.properties
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+
+# IDE
+.idea/
+*.iml
+
+# Local config
+local.properties
+
+# Android artifacts
 *.apk
 *.aab
-# Build outputs (artifacts, not source)
+
+# OS / misc
+.DS_Store
+captures/
+
+# Extra build dirs
 build/
-app/build/
 .kotlin/
+.externalNativeBuild
+.cxx
+
+# Throwaway verification screenshots
+.verify-shots/
