@@ -539,7 +539,7 @@ fun SettingsScreen(
                 }
 
                 Text(
-                    text = "FollowThru stores everything only on your device and never uploads it to any cloud. If you uninstall, reset your phone, or switch devices, your data can't be recovered.",
+                    text = "Everything stays only on your device — never uploaded anywhere, and not even we can see it. If you uninstall, reset your phone, or switch devices, your data can't be recovered.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
