@@ -315,7 +315,7 @@ private fun SlideOneBody(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         Text(
-            text = "Following through is the hard part.",
+            text = "Made for the moment.",
             style = MaterialTheme.typography.displayMedium.copy(
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 30.sp,
@@ -326,15 +326,15 @@ private fun SlideOneBody(
         )
         Text(
             text = "We all set goals. FollowThru is for the moment you act on them — " +
-                "naming the situation where it gets hard, and deciding your move in " +
-                "advance. Everything stays on your device. No account, no cloud.",
+                "naming where it tends to slip, and deciding your move in advance, " +
+                "so you're ready when it counts.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
         )
         Text(
-            text = "No cloud backup — your data stays only on this device, so it " +
-                "won't transfer to a new phone or come back after uninstalling.",
+            text = "Everything stays on your device — no account, no cloud — so your " +
+                "data won't transfer to a new phone or come back after uninstalling.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

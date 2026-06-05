@@ -56,7 +56,9 @@ internal const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
 // re-shows once for already-onboarded installs after this upgrade (no reset).
 // Bumped 96 → 97 to re-show onboarding once for already-onboarded installs
 // after this upgrade (no data is reset).
-internal const val CURRENT_ONBOARDING_VERSION = 97
+// Bumped 97 → 98 for the reworded slide 1 ("Made for the moment.") so the
+// refreshed copy re-shows once for already-onboarded installs (no data reset).
+internal const val CURRENT_ONBOARDING_VERSION = 98
 
 @Composable
 fun AppNavigation(
