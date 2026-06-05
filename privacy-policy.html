@@ -4,44 +4,90 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Privacy Policy — FollowThru</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            max-width: 680px;
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 40px 20px;
+            color: #2A2622;
+            background: #FBF6EF;
+            line-height: 1.6;
+        }
+        .brand {
+            max-width: 720px;
+            margin: 0 auto 20px;
+            padding: 0 4px;
+        }
+        .brand-name {
+            color: #B5402C;
+            font-weight: 700;
+            font-size: 20px;
+            line-height: 1.2;
+        }
+        .brand-tag {
+            color: #6E645D;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .card {
+            max-width: 720px;
             margin: 0 auto;
-            padding: 40px 24px;
-            color: #2C2C28;
             background: #FFFFFF;
-            line-height: 1.7;
+            border: 1px solid #ECE3DA;
+            border-radius: 16px;
+            box-shadow: 0 8px 28px rgba(42, 38, 34, 0.07);
+            padding: 44px 48px;
         }
         h1 {
             font-size: 28px;
             font-weight: 700;
-            color: #9B3A2E;
+            color: #B5402C;
+            margin-top: 0;
             margin-bottom: 4px;
         }
         h2 {
             font-size: 18px;
             font-weight: 600;
+            color: #B5402C;
             margin-top: 32px;
             margin-bottom: 8px;
-            color: #2C2C28;
         }
         p, li {
             font-size: 16px;
-            color: #3C3C38;
+            color: #2A2622;
         }
         .updated {
             font-size: 14px;
-            color: #6A6A62;
+            color: #6E645D;
             margin-bottom: 32px;
         }
         a {
-            color: #9B3A2E;
+            color: #B5402C;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 24px 14px;
+            }
+            .card {
+                padding: 28px 22px;
+            }
         }
     </style>
 </head>
 <body>
+
+    <div class="brand">
+        <div class="brand-name">FollowThru</div>
+        <div class="brand-tag">in every moment</div>
+    </div>
+
+    <main class="card">
 
     <h1>Privacy Policy</h1>
     <p class="updated">Last updated: May 22, 2026</p>
@@ -77,6 +123,8 @@
 
     <h2>Contact</h2>
     <p>If you have questions about this privacy policy, contact us at ideas@insightsemerge.com</p>
+
+    </main>
 
 </body>
 </html>
