@@ -2,7 +2,6 @@
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,27 +10,21 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -50,18 +43,15 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
-import com.ideasinc.followthrough.ui.ConfidenceSlider
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
 import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
@@ -200,19 +190,13 @@ fun CheckInFlowScreen(
             // Read-only follow-through context: the goal + the user's own plan.
             CheckInContext(goalTitle = uiState.goalTitle, intention = uiState.goalIntention)
 
-            // One-line purpose cue so no one wonders where reflecting leads.
-            Text(
-                text = "A quick check-in. Note where you are — reflecting is how you spot what's working. Answer what resonates; skip the rest.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            // The single light lead prompt.
+            // The single light lead prompt — a compact field that grows as typed.
             leadConfig?.let { cfg ->
                 QuestionField(
                     config = cfg,
                     value = getFieldValue(uiState, cfg.key),
-                    onValueChange = { v -> setFieldValue(viewModel, cfg.key, v) }
+                    onValueChange = { v -> setFieldValue(viewModel, cfg.key, v) },
+                    compact = true
                 )
             }
 
@@ -273,82 +257,11 @@ private fun CheckInContext(goalTitle: String, intention: String?) {
                 Text(
                     text = intention,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun ReflectMoreToggle(expanded: Boolean, onToggle: () -> Unit) {
-    val label = if (expanded) "Show less" else "Reflect more"
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .clickable(role = Role.Button, onClickLabel = label, onClick = onToggle)
-            .heightIn(min = 48.dp)
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-            color = AppColors.BrandAccentText,
-            modifier = Modifier.weight(1f)
-        )
-        Icon(
-            imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-            contentDescription = null,
-            tint = AppColors.BrandAccentText
-        )
-    }
-}
-
-@Composable
-private fun QuestionField(
-    config: QuestionConfig,
-    value: String,
-    onValueChange: (String) -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = config.label,
-            style = MaterialTheme.typography.titleMedium.copy(fontFamily = DmSansFontFamily),
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.semantics { heading() }
-        )
-        if (config.key == QuestionKeys.CONFIDENCE) {
-            // Confidence is a 0–100 slider, not a text field (ported prototype).
-            // The question's placeholder doubles as the slider's helper line.
-            Text(
-                text = placeholderFor(config),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            ConfidenceSlider(value = value, onValueChange = onValueChange)
-        } else {
-            // Visible, persistent border + label so the field never reads as a
-            // bare line; the keyboard never covers it thanks to imePadding + scroll.
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                placeholder = { Text(placeholderFor(config)) },
-                textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = DmSansFontFamily),
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 120.dp)
-                    .semantics { contentDescription = config.label }
-            )
         }
     }
 }

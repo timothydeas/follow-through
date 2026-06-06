@@ -44,10 +44,10 @@ object QuestionKeys {
     // Default placeholder (example-answer) text per question. Mirrors the
     // values the check-in flow used before placeholders became customizable.
     val DEFAULT_PLACEHOLDERS = mapOf(
-        GOAL_OR_CHANGE to "What you want to move toward — e.g., \"be heard at work\" or \"take care of my health\"",
+        GOAL_OR_CHANGE to "e.g., take care of my health",
         AVOIDING to "Something you've been putting off looking at, even though part of you knows it matters",
         CONFIDENCE to "You don't need proof you can do this before you start. What does your gut say?",
-        MADE_PROGRESS to "Yes, No, or describe where you feel you are right now",
+        MADE_PROGRESS to "Yes, no, or a quick note.",
         COMPETING_PRIORITY to "Be honest — sometimes our perception or anticipation of a situation matters more than the situation itself. And if nothing is in your way right now, think ahead.",
         IMPLEMENTATION_INTENTION to "I will go for a walk when I finish my morning coffee.",
         ACCOUNTABILITY to "A person, a memory, a strategy — whatever keeps you going"

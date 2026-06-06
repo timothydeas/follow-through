@@ -55,7 +55,8 @@ val LAUNCH_INSIGHTS = listOf(
     "The moment you feel like quitting is usually the moment right before the breakthrough. Don't let the obvious insights of hindsight be the only time you recognize your own progress.",
     "Persist through the unknown until it becomes the obvious.",
     "To achieve your goals, remember how they feel. Draw on the genuine emotions of past experiences that make you feel strong and capable, and bring that genuine energy to the task.",
-    "What you practice becomes muscle memory. Every deliberate choice builds the reflex your future self will reach for."
+    "What you practice becomes muscle memory. Every deliberate choice builds the reflex your future self will reach for.",
+    "Off days are part of it, not the end of it. Begin again whenever you're ready."
 )
 
 /**

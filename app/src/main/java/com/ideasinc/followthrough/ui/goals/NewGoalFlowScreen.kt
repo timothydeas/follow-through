@@ -1,22 +1,17 @@
-﻿package com.ideasinc.followthrough.ui.goals
+package com.ideasinc.followthrough.ui.goals
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -24,8 +19,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,27 +33,43 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.R
 import com.ideasinc.followthrough.data.QuestionConfig
 import com.ideasinc.followthrough.data.QuestionKeys
 import com.ideasinc.followthrough.notifications.GoalReminderScheduler
-import com.ideasinc.followthrough.ui.ConfidenceSlider
+import com.ideasinc.followthrough.ui.checkin.QuestionField
+import com.ideasinc.followthrough.ui.checkin.ReflectMoreToggle
+import com.ideasinc.followthrough.ui.checkin.ReflectionTextField
 import com.ideasinc.followthrough.ui.checkin.placeholderFor
+import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
 import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
 
+// The reflection prompts offered behind "Strengthen your plan", in ALL_KEYS
+// order. Deliberately excludes madeProgress (a brand-new goal has no progress
+// to report) and the two structural fields handled above: the goal name and the
+// action plan.
+private val DEEPER_KEYS = listOf(
+    QuestionKeys.AVOIDING,
+    QuestionKeys.CONFIDENCE,
+    QuestionKeys.COMPETING_PRIORITY,
+    QuestionKeys.ACCOUNTABILITY
+)
+
+/**
+ * Creating a goal is a single lead-light screen, mirroring the check-in: name it
+ * and plan your first move (the only things that matter to start), with the
+ * reflection prompts invited — not imposed — behind "Strengthen your plan". The
+ * goal name is the one hard requirement; everything else can save blank.
+ */
 @Composable
 fun NewGoalFlowScreen(
     viewModel: NewGoalFlowViewModel,
@@ -71,6 +80,9 @@ fun NewGoalFlowScreen(
     val context = LocalContext.current
     val backFocus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+    val announce = rememberA11yAnnouncer()
+
+    var reflectMore by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
 
@@ -111,6 +123,14 @@ fun NewGoalFlowScreen(
         )
     }
 
+    // Goal name and action plan are structural to creation — always shown, even
+    // if a user disabled them as reflection prompts in Customize Questions.
+    val nameConfig = remember(uiState.questionConfigs) {
+        uiState.questionConfigs.firstOrNull { it.key == QuestionKeys.GOAL_OR_CHANGE }
+    }
+    val deeperConfigs = uiState.questionConfigs.filter { it.isEnabled && it.key in DEEPER_KEYS }
+    val canSave = uiState.goalOrChange.isNotBlank()
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -132,34 +152,17 @@ fun NewGoalFlowScreen(
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                Spacer(modifier = Modifier.weight(1f))
-                val enabled = uiState.questionConfigs.indices
-                    .filter { uiState.questionConfigs[it].isEnabled }
-                val phase = uiState.phase as NewGoalPhase.CheckIn
-                val stepLabel = "Step ${phase.stepIndex + 1} of ${enabled.size}"
                 Text(
-                    text = stepLabel,
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontFamily = DmSansFontFamily,
-                        letterSpacing = 0.5.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = "New goal",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
-                        .padding(end = 16.dp)
-                        .semantics {
-                            contentDescription = stepLabel
-                            liveRegion = LiveRegionMode.Polite
-                        }
+                        .padding(start = 4.dp)
+                        .semantics { heading() }
                 )
             }
         },
         bottomBar = {
-            val phase = uiState.phase as NewGoalPhase.CheckIn
-            val enabled = uiState.questionConfigs.indices
-                .filter { uiState.questionConfigs[it].isEnabled }
-            val isLast = phase.stepIndex == enabled.size - 1
-            // Step 1 captures the goal title — block advancing while it's blank.
-            val canProceed = phase.stepIndex != 0 || uiState.goalOrChange.isNotBlank()
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -172,18 +175,11 @@ fun NewGoalFlowScreen(
             ) {
                 Button(
                     onClick = {
-                        if (isLast) {
-                            viewModel.onSave()
-                        } else {
-                            // Drop focus before advancing so the next step
-                            // opens with the keyboard hidden and the
-                            // placeholder fully visible. The user can tap
-                            // the field to bring the IME back up.
-                            focusManager.clearFocus()
-                            viewModel.onNextCheckInStep()
-                        }
+                        focusManager.clearFocus()
+                        viewModel.onSave()
                     },
-                    enabled = canProceed,
+                    enabled = canSave,
+                    modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -192,7 +188,7 @@ fun NewGoalFlowScreen(
                     )
                 ) {
                     Text(
-                        if (isLast) "Save" else "Next",
+                        "Save goal",
                         style = MaterialTheme.typography.labelLarge.copy(fontFamily = DmSansFontFamily)
                     )
                 }
@@ -203,29 +199,51 @@ fun NewGoalFlowScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .imePadding()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
-                .padding(top = 32.dp, bottom = 24.dp)
+                .padding(top = 20.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            val phase = uiState.phase as NewGoalPhase.CheckIn
-            val enabled = uiState.questionConfigs.indices
-                .filter { uiState.questionConfigs[it].isEnabled }
-            if (phase.stepIndex < enabled.size) {
-                val config = uiState.questionConfigs[enabled[phase.stepIndex]]
-                if (config.key == QuestionKeys.IMPLEMENTATION_INTENTION) {
-                    // Implementation-intention step also offers an optional
-                    // per-goal reminder once a plan has been written.
-                    IntentionStepContent(
-                        config = config,
-                        value = uiState.implementationIntention,
-                        onValueChange = viewModel::onImplementationIntentionChange,
-                        goalId = viewModel.newGoalId
-                    )
-                } else {
-                    CheckInStepContent(
-                        config = config,
-                        value = getFieldValue(uiState, config.key),
-                        onValueChange = { v -> setFieldValue(viewModel, config.key, v) }
-                    )
+            // 1) The goal name — the only hard requirement.
+            GoalNameSection(
+                config = nameConfig,
+                value = uiState.goalOrChange,
+                onValueChange = viewModel::onGoalOrChangeChange,
+                showRequiredHint = !canSave
+            )
+
+            // 2) The action plan — the core lever, kept as the centerpiece.
+            ActionPlanSection(
+                value = uiState.implementationIntention,
+                onValueChange = viewModel::onImplementationIntentionChange,
+                goalId = viewModel.newGoalId
+            )
+
+            // 3) Optional depth — the reflection prompts, invited not imposed.
+            if (deeperConfigs.isNotEmpty()) {
+                ReflectMoreToggle(
+                    expanded = reflectMore,
+                    onToggle = {
+                        reflectMore = !reflectMore
+                        if (reflectMore) announce("Showing more prompts")
+                    },
+                    collapsedLabel = "Strengthen your plan",
+                    expandedLabel = "Show less"
+                )
+                Text(
+                    text = "Optional — a few prompts to spot what might get in the way, so you can plan around it.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (reflectMore) {
+                    deeperConfigs.forEach { cfg ->
+                        QuestionField(
+                            config = cfg,
+                            value = getFieldValue(uiState, cfg.key),
+                            onValueChange = { v -> setFieldValue(viewModel, cfg.key, v) }
+                        )
+                    }
                 }
             }
         }
@@ -233,72 +251,60 @@ fun NewGoalFlowScreen(
 }
 
 @Composable
-private fun ColumnScope.CheckInStepContent(
-    config: QuestionConfig,
+private fun GoalNameSection(
+    config: QuestionConfig?,
     value: String,
-    onValueChange: (String) -> Unit
+    onValueChange: (String) -> Unit,
+    showRequiredHint: Boolean
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+    // resolveConfigs always supplies goalOrChange, but guard defensively.
+    val label = config?.label ?: QuestionKeys.DEFAULT_LABELS[QuestionKeys.GOAL_OR_CHANGE].orEmpty()
+    val placeholder = config?.let { placeholderFor(it) }
+        ?: QuestionKeys.DEFAULT_PLACEHOLDERS[QuestionKeys.GOAL_OR_CHANGE].orEmpty()
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         Text(
-            text = config.label,
-            style = MaterialTheme.typography.headlineMedium.copy(fontFamily = DmSansFontFamily),
+            text = label,
+            style = MaterialTheme.typography.titleMedium.copy(fontFamily = DmSansFontFamily),
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier
-                .weight(1f)
-                .semantics { heading() }
+            modifier = Modifier.semantics { heading() }
         )
-    }
-    Spacer(modifier = Modifier.height(24.dp))
-
-    if (config.key == QuestionKeys.CONFIDENCE) {
-        // Confidence is a 0–100 slider, not a text field (ported prototype).
-        // The question's placeholder doubles as the slider's helper line.
-        Text(
-            text = placeholderFor(config),
-            style = MaterialTheme.typography.bodyMedium.copy(fontFamily = DmSansFontFamily),
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        ReflectionTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = placeholder,
+            description = label
         )
-        Spacer(modifier = Modifier.height(24.dp))
-        ConfidenceSlider(value = value, onValueChange = onValueChange)
-        return
+        if (showRequiredHint) {
+            // Visible + announced reason the Save button is disabled, so the
+            // gate is never a silent mystery (don't rely on the disabled button).
+            Text(
+                text = "Name your goal to save",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+            )
+        }
     }
-
-    // The field stays unfocused on step entry — users tap to bring up the
-    // keyboard, so the placeholder is visible when landing on the step.
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        placeholder = { Text(placeholderFor(config)) },
-        textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = DmSansFontFamily),
-        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = Color.Transparent,
-            unfocusedContainerColor = Color.Transparent,
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .weight(1f)
-    )
 }
 
 /**
- * The action-plan step. Two labelled inputs — "When …" (the moment) and "I will
- * …" (the action) — matching the prototype, but the result is stored as the
- * single `implementationIntention` free-text string (so the reminder
- * notification and check-in record read one sentence). Below, once a plan is
- * written, an optional "Remind me for this" reminder appears. The whole step
- * scrolls so the reminder controls stay reachable with the keyboard up.
+ * The action plan — the core step. Two labelled inputs ("When …" / "I will …")
+ * stored as the single [implementationIntention] string via [joinIntention], so
+ * the reminder notification and the check-in record read one sentence. Once a
+ * plan is written, the optional "Remind me for this" reminder appears. Rendered
+ * flat in the same field idiom as the rest of the screen — distinguished by its
+ * heading, not a popping bordered card.
  */
 @Composable
-private fun ColumnScope.IntentionStepContent(
-    config: QuestionConfig,
+private fun ActionPlanSection(
     value: String,
     onValueChange: (String) -> Unit,
     goalId: String
 ) {
-    val scrollState = rememberScrollState()
     // Seed the two fields from the stored sentence once on entry; thereafter the
     // fields are the source of truth and we push the concatenation up to the VM.
     val initial = remember(goalId) { splitIntention(value) }
@@ -308,41 +314,61 @@ private fun ColumnScope.IntentionStepContent(
     fun push() = onValueChange(joinIntention(whenText, actionText))
 
     Column(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxWidth()
-            .verticalScroll(scrollState)
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
             text = "Your action plan",
-            style = MaterialTheme.typography.headlineMedium.copy(fontFamily = DmSansFontFamily),
+            style = MaterialTheme.typography.titleMedium.copy(fontFamily = DmSansFontFamily),
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics { heading() }
+            modifier = Modifier.semantics { heading() }
         )
-        Spacer(modifier = Modifier.height(24.dp))
-        PlanField(
-            label = "When… (the moment or situation)",
+        LabeledPlanInput(
+            label = "When…",
             value = whenText,
             placeholder = "e.g., I pour my morning coffee",
             onValueChange = { whenText = it; push() }
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        PlanField(
-            label = "I will… (what you'll do)",
+        LabeledPlanInput(
+            label = "I will…",
             value = actionText,
             placeholder = "e.g., make a breakfast I look forward to",
             onValueChange = { actionText = it; push() }
         )
         if (value.isNotBlank()) {
-            Spacer(modifier = Modifier.height(24.dp))
             GoalReminderControls(
                 goalId = goalId,
                 reminderBody = value.trim(),
                 modifier = Modifier.fillMaxWidth()
             )
         }
+    }
+}
+
+/** A sub-label above one action-plan field, using the shared field so its
+ *  keyboard/scroll behaviour matches every other input on the screen. */
+@Composable
+private fun LabeledPlanInput(
+    label: String,
+    value: String,
+    placeholder: String,
+    onValueChange: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge.copy(fontFamily = DmSansFontFamily),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        ReflectionTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = placeholder,
+            description = label
+        )
     }
 }
 
@@ -367,4 +393,3 @@ private fun setFieldValue(vm: NewGoalFlowViewModel, key: String, value: String) 
     QuestionKeys.ACCOUNTABILITY -> vm.onAccountabilityChange(value)
     else -> {}
 }
-

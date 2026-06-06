@@ -1,4 +1,4 @@
-﻿package com.ideasinc.followthrough.ui.goals
+package com.ideasinc.followthrough.ui.goals
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -18,12 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-sealed class NewGoalPhase {
-    data class CheckIn(val stepIndex: Int) : NewGoalPhase()
-}
-
 data class NewGoalFlowUiState(
-    val phase: NewGoalPhase = NewGoalPhase.CheckIn(0),
     val goalOrChange: String = "",
     val avoiding: String = "",
     val confidence: String = "",
@@ -65,10 +60,6 @@ class NewGoalFlowViewModel(
         }
     }
 
-    private val enabledStepIndices: List<Int>
-        get() = _uiState.value.questionConfigs.indices
-            .filter { _uiState.value.questionConfigs[it].isEnabled }
-
     fun onGoalOrChangeChange(value: String) = _uiState.update { it.copy(goalOrChange = value) }
     fun onAvoidingChange(value: String) = _uiState.update { it.copy(avoiding = value) }
     fun onConfidenceChange(value: String) = _uiState.update { it.copy(confidence = value) }
@@ -77,36 +68,15 @@ class NewGoalFlowViewModel(
     fun onImplementationIntentionChange(value: String) = _uiState.update { it.copy(implementationIntention = value) }
     fun onAccountabilityChange(value: String) = _uiState.update { it.copy(accountability = value) }
 
-    fun onNextCheckInStep() {
-        val state = _uiState.value
-        val phase = state.phase as? NewGoalPhase.CheckIn ?: return
-        // The first step now plays the role the title used to play —
-        // it becomes the goal's name, so block advancing past it blank.
-        if (phase.stepIndex == 0 && state.goalOrChange.trim().isBlank()) return
-        val enabled = enabledStepIndices
-        val nextIndex = phase.stepIndex + 1
-        if (nextIndex < enabled.size) {
-            _uiState.update { it.copy(phase = NewGoalPhase.CheckIn(nextIndex)) }
-        } else {
-            save()
-        }
-    }
-
+    /**
+     * Top-bar back / system back are the only ways out now that the flow is a
+     * single screen. Confirm before discarding typed answers; otherwise exit.
+     */
     fun onBack() {
-        val state = _uiState.value
-        when (val phase = state.phase) {
-            is NewGoalPhase.CheckIn -> {
-                if (phase.stepIndex == 0) {
-                    // Backing out of the flow — confirm only if answers would be lost.
-                    if (state.hasAnswers()) {
-                        _uiState.update { it.copy(showDiscardDialog = true) }
-                    } else {
-                        _uiState.update { it.copy(shouldExit = true) }
-                    }
-                } else {
-                    _uiState.update { it.copy(phase = NewGoalPhase.CheckIn(phase.stepIndex - 1)) }
-                }
-            }
+        if (_uiState.value.hasAnswers()) {
+            _uiState.update { it.copy(showDiscardDialog = true) }
+        } else {
+            _uiState.update { it.copy(shouldExit = true) }
         }
     }
 
