@@ -1,6 +1,7 @@
 package com.ideasinc.followthrough.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,7 +11,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -44,11 +47,30 @@ fun ConfidenceSlider(
     val position = (parsed ?: 50).toFloat()
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = if (isSet) parsed.toString() else "—",
-            style = MaterialTheme.typography.headlineMedium.copy(fontFamily = DmSansFontFamily),
-            color = if (isSet) AppColors.BrandAccentText else MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        // Fixed-height readout so the row doesn't jump when the first value is
+        // set. Until then it reads as a clear prompt rather than a bare dash
+        // (which looked like a rendering glitch); the slider carries the value
+        // for TalkBack, so this is decorative.
+        Box(
+            modifier = Modifier
+                .height(36.dp)
+                .clearAndSetSemantics {},
+            contentAlignment = Alignment.CenterStart
+        ) {
+            if (isSet) {
+                Text(
+                    text = parsed.toString(),
+                    style = MaterialTheme.typography.headlineMedium.copy(fontFamily = DmSansFontFamily),
+                    color = AppColors.BrandAccentText
+                )
+            } else {
+                Text(
+                    text = "Not yet rated",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         Slider(
             value = position,
             onValueChange = { onValueChange(it.roundToInt().toString()) },

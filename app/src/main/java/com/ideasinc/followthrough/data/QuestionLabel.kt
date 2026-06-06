@@ -34,9 +34,9 @@ object QuestionKeys {
     val DEFAULT_LABELS = mapOf(
         GOAL_OR_CHANGE to "What goal or change are you working toward — or struggling with?",
         MADE_PROGRESS to "Do you feel you've made progress?",
-        AVOIDING to "Is there something you already know would help you here, but you've been avoiding finding out or facing?",
+        AVOIDING to "Is there something you've been avoiding facing — even though you know it would help?",
         CONFIDENCE to "How confident do you feel you'll figure this out?",
-        COMPETING_PRIORITY to "What's getting in your way — the situation itself, or how you're seeing it?",
+        COMPETING_PRIORITY to "What's getting in your way — the situation itself, or how you're perceiving it?",
         IMPLEMENTATION_INTENTION to "When [e.g., moment or situation], I will [e.g., what I'll do].",
         ACCOUNTABILITY to "Who holds you accountable?"
     )

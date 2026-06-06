@@ -182,7 +182,9 @@ class Migration26To27Test {
 
     private fun openMigratedDb(): GroundedDatabase =
         Room.databaseBuilder(context, GroundedDatabase::class.java, dbName)
-            .addMigrations(MIGRATION_26_27)
+            // Room targets the current @Database version, so supply every
+            // migration from 26 up to it — not just 26→27 — or it can't build.
+            .addMigrations(MIGRATION_26_27, MIGRATION_27_28)
             .build()
 
     private fun tableExists(db: SupportSQLiteDatabase, name: String): Boolean =

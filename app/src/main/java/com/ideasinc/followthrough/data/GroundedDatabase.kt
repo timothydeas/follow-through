@@ -677,13 +677,44 @@ internal val MIGRATION_26_27 = object : Migration(26, 27) {
     }
 }
 
+internal val MIGRATION_27_28 = object : Migration(27, 28) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // The "avoiding" and "competingPriority" default question labels were
+        // reworded. The check_ins schema is unchanged, so every stored answer is
+        // preserved. For question_labels rows that still hold a prior default
+        // (which happens when a user toggled the question without editing its
+        // text), rewrite them to the new wording. Rows with genuinely custom
+        // text are left untouched.
+        db.execSQL(
+            "UPDATE question_labels SET customLabel = " +
+                "'Is there something you''ve been avoiding facing — even though you know it would help?' " +
+                "WHERE questionKey = 'avoiding' AND customLabel = " +
+                "'Is there something you already know would help you here, " +
+                "but you''ve been avoiding finding out or facing?'"
+        )
+        // competingPriority's short default shipped without a migration, so an
+        // un-customized row may still hold either that short form or the older
+        // long form. Catch both.
+        db.execSQL(
+            "UPDATE question_labels SET customLabel = " +
+                "'What''s getting in your way — the situation itself, or how you''re perceiving it?' " +
+                "WHERE questionKey = 'competingPriority' AND customLabel IN (" +
+                "'What''s getting in your way — the situation itself, or how you''re seeing it?', " +
+                "'What''s getting in your way right now — is it the situation itself, " +
+                "or how you''re seeing it or expecting it to go? " +
+                "If nothing is, what might get in the way later?'" +
+                ")"
+        )
+    }
+}
+
 @Database(
     entities = [
         Goal::class,
         CheckIn::class,
         QuestionLabel::class
     ],
-    version = 27,
+    version = 28,
     exportSchema = true
 )
 abstract class GroundedDatabase : RoomDatabase() {
@@ -710,7 +741,7 @@ abstract class GroundedDatabase : RoomDatabase() {
                         MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19,
                         MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22,
                         MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25,
-                        MIGRATION_25_26, MIGRATION_26_27
+                        MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28
                     )
                     .build().also { INSTANCE = it }
             }
