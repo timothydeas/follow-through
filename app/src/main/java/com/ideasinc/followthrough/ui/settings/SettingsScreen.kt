@@ -1,9 +1,6 @@
 ﻿package com.ideasinc.followthrough.ui.settings
 
 import android.content.Context
-import android.util.Log
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,20 +24,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,17 +57,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ideasinc.followthrough.BuildConfig
 import com.ideasinc.followthrough.R
 import com.ideasinc.followthrough.di.AppContainer
 import com.ideasinc.followthrough.feedback.AppReview
-import com.ideasinc.followthrough.notifications.PREFS_REMINDERS
 import com.ideasinc.followthrough.notifications.ReminderScheduler
-import com.ideasinc.followthrough.notifications.canScheduleExactAlarmsCompat
 import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
 import com.ideasinc.followthrough.ui.theme.ThemeMode
@@ -82,8 +71,6 @@ import kotlinx.coroutines.launch
 import com.ideasinc.followthrough.navigation.KEY_BIOMETRIC_ENABLED
 import com.ideasinc.followthrough.navigation.PREFS_NAME
 
-private const val KEY_REMINDERS_PENDING_PERMISSION = "reminders_pending_permission"
-private const val TAG = "SettingsScreen"
 
 @Composable
 fun SettingsScreen(
@@ -98,98 +85,30 @@ fun SettingsScreen(
     val uiState by settingsVm.uiState.collectAsState()
 
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
-    val remindersPrefs = remember { context.getSharedPreferences(PREFS_REMINDERS, Context.MODE_PRIVATE) }
     var biometricEnabled by remember { mutableStateOf(prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false)) }
     val backFocus = remember { FocusRequester() }
     val snackbarHostState = remember { SnackbarHostState() }
-    val snackbarScope = rememberCoroutineScope()
-    val permissionDeniedMessage = "Permission required. Please enable in Settings."
     LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
 
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                val pending = remindersPrefs.getBoolean(KEY_REMINDERS_PENDING_PERMISSION, false)
-                val canSchedule = canScheduleExactAlarmsCompat(context)
-                Log.d(TAG, "ON_RESUME fired — pending=$pending canScheduleExactAlarms=$canSchedule")
-                if (pending && canSchedule) {
-                    val currentState = settingsVm.uiState.value
-                    Log.d(TAG, "Auto-enabling reminders after permission grant")
-                    settingsVm.setRemindersEnabled(true)
-                    try {
-                        ReminderScheduler.scheduleReminders(
-                            context.applicationContext,
-                            currentState.reminderHour,
-                            currentState.reminderMinute,
-                            currentState.reminderDays
-                        )
-                        Log.d(TAG, "Alarm scheduled after auto-enable")
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Scheduling failed after auto-enable", e)
-                    }
-                    remindersPrefs.edit().putBoolean(KEY_REMINDERS_PENDING_PERMISSION, false).apply()
-                    Log.d(TAG, "Pending flag cleared after auto-enable")
-                }
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
-    var showNotificationDeniedDialog by remember { mutableStateOf(false) }
-    var showExactAlarmDialog by remember { mutableStateOf(false) }
-
-    val notificationLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted && areNotificationsFullyEnabled(context)) {
-            if (canScheduleExactAlarmsCompat(context)) {
-                settingsVm.setRemindersEnabled(true)
-                try {
-                    ReminderScheduler.scheduleReminders(
-                        context.applicationContext,
-                        uiState.reminderHour,
-                        uiState.reminderMinute,
-                        uiState.reminderDays
-                    )
-                } catch (_: Exception) { /* scheduling failed — leave toggle off */ }
-                remindersPrefs.edit().putBoolean(KEY_REMINDERS_PENDING_PERMISSION, false).apply()
-            } else {
-                showExactAlarmDialog = true
-            }
-        } else {
-            remindersPrefs.edit().putBoolean(KEY_REMINDERS_PENDING_PERMISSION, false).apply()
-            showNotificationDeniedDialog = true
-            snackbarScope.launch {
-                snackbarHostState.showSnackbar(
-                    message = permissionDeniedMessage,
-                    duration = SnackbarDuration.Short
+    // Persists the "wants reminders on" intent and walks notifications + exact
+    // alarms in one flow; finalizes the toggle ON (and schedules) once every
+    // permission is in place — including automatically on return from Settings,
+    // so the user never has to toggle twice or take a surprise second trip.
+    val remindersFlow = rememberReminderPermissionFlow(
+        intentKey = "global",
+        onEnabled = {
+            val current = settingsVm.uiState.value
+            settingsVm.setRemindersEnabled(true)
+            try {
+                ReminderScheduler.scheduleReminders(
+                    context.applicationContext,
+                    current.reminderHour,
+                    current.reminderMinute,
+                    current.reminderDays
                 )
-            }
+            } catch (_: Exception) { /* scheduling failed — toggle on, no alarm */ }
         }
-    }
-
-    if (showNotificationDeniedDialog) {
-        NotificationDeniedDialog(
-            onDismiss = { showNotificationDeniedDialog = false },
-            onOpenSettings = {
-                showNotificationDeniedDialog = false
-                openAppNotificationSettings(context)
-            }
-        )
-    }
-
-    if (showExactAlarmDialog) {
-        ExactAlarmDialog(
-            onDismiss = { showExactAlarmDialog = false },
-            onConfirm = {
-                showExactAlarmDialog = false
-                remindersPrefs.edit().putBoolean(KEY_REMINDERS_PENDING_PERMISSION, true).apply()
-                openExactAlarmSettings(context)
-            }
-        )
-    }
+    )
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -368,48 +287,10 @@ fun SettingsScreen(
                         checked = uiState.remindersEnabled,
                         onCheckedChange = { enabled ->
                             if (enabled) {
-                                Log.d(TAG, "Reminders toggle tapped ON — setting pending flag")
-                                remindersPrefs.edit()
-                                    .putBoolean(KEY_REMINDERS_PENDING_PERMISSION, true)
-                                    .apply()
-                                runReminderPermissionGate(
-                                    context = context,
-                                    notificationLauncher = notificationLauncher,
-                                    onGranted = {
-                                        settingsVm.setRemindersEnabled(true)
-                                        try {
-                                            ReminderScheduler.scheduleReminders(
-                                                context.applicationContext,
-                                                uiState.reminderHour,
-                                                uiState.reminderMinute,
-                                                uiState.reminderDays
-                                            )
-                                        } catch (_: Exception) { /* scheduling failed — leave toggle on */ }
-                                        remindersPrefs.edit().putBoolean(KEY_REMINDERS_PENDING_PERMISSION, false).apply()
-                                    },
-                                    onNotificationDenied = {
-                                        showNotificationDeniedDialog = true
-                                        snackbarScope.launch {
-                                            snackbarHostState.showSnackbar(
-                                                message = permissionDeniedMessage,
-                                                duration = SnackbarDuration.Short
-                                            )
-                                        }
-                                    },
-                                    onExactAlarmDenied = {
-                                        showExactAlarmDialog = true
-                                        snackbarScope.launch {
-                                            snackbarHostState.showSnackbar(
-                                                message = permissionDeniedMessage,
-                                                duration = SnackbarDuration.Short
-                                            )
-                                        }
-                                    }
-                                )
+                                remindersFlow.start()
                             } else {
-                                Log.d(TAG, "Reminders toggle tapped OFF — clearing pending flag")
                                 settingsVm.setRemindersEnabled(false)
-                                remindersPrefs.edit().putBoolean(KEY_REMINDERS_PENDING_PERMISSION, false).apply()
+                                remindersFlow.cancel()
                                 try {
                                     ReminderScheduler.cancelReminders(context.applicationContext)
                                 } catch (_: Exception) { /* ignore */ }

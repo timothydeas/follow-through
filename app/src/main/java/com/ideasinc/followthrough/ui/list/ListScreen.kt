@@ -291,7 +291,7 @@ fun ListScreen(
                                 // can only be constructed here.
                                 DraggableGoalCard(
                                     row = row,
-                                    number = idx + 1,
+                                    rank = row.rank,
                                     isDragging = dragging,
                                     showA11yArrows = touchExplorationOn,
                                     canMoveUp = idx > 0,
@@ -352,7 +352,7 @@ private data class MoveDialogTarget(val goalId: String, val totalCount: Int)
 @Composable
 private fun DraggableGoalCard(
     row: GoalRowData,
-    number: Int,
+    rank: Int?,
     isDragging: Boolean,
     showA11yArrows: Boolean,
     canMoveUp: Boolean,
@@ -376,8 +376,9 @@ private fun DraggableGoalCard(
 
     // dragModifier carries the long-press handle from the ReorderableScope, so a
     // long-press anywhere on the card starts a drag. The card is a white surface
-    // with a hairline border on the cream page (prototype look); ordering is
-    // shown by the coral number badge inside.
+    // with a hairline border on the cream page (prototype look). Only the top
+    // three goals (rank 1–3) carry a coral number badge — the "top priorities";
+    // goals below sit in the same list, unnumbered.
     Surface(
         modifier = dragModifier
             .fillMaxWidth()
@@ -394,7 +395,7 @@ private fun DraggableGoalCard(
     ) {
         GoalCardContent(
             row = row,
-            number = number,
+            rank = rank,
             onClick = onClick,
             showA11yArrows = showA11yArrows,
             canMoveUp = canMoveUp,
@@ -409,7 +410,7 @@ private fun DraggableGoalCard(
 @Composable
 private fun GoalCardContent(
     row: GoalRowData,
-    number: Int,
+    rank: Int?,
     onClick: () -> Unit,
     showA11yArrows: Boolean,
     canMoveUp: Boolean,
@@ -437,22 +438,25 @@ private fun GoalCardContent(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Coral number badge — the goal's position in the list.
-            Box(
-                modifier = Modifier
-                    .size(26.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary)
-                    .clearAndSetSemantics {},
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "$number",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
+            // Coral number badge — only the top three goals (rank 1–3) are
+            // numbered; goals below carry no badge and start flush left.
+            if (rank != null) {
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .semantics { contentDescription = "Priority $rank" },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "$rank",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
             }
-            Spacer(Modifier.width(12.dp))
             Text(
                 text = row.goal.title,
                 style = MaterialTheme.typography.headlineSmall,
@@ -485,6 +489,9 @@ private fun GoalCardContent(
             DragHandleIcon()
         }
 
+        // Supporting line aligns under the title: indented past the badge for
+        // numbered (top-3) cards, flush left for the unnumbered ones below.
+        val supportingIndent = if (rank != null) 38.dp else 0.dp
         // The goal's implementation intention ("When …, I will …"). Falls back to
         // the check-in count when no plan is written yet.
         if (!row.intention.isNullOrBlank()) {
@@ -494,14 +501,14 @@ private fun GoalCardContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 38.dp)
+                modifier = Modifier.padding(start = supportingIndent)
             )
         } else {
             Text(
                 text = "${row.checkInCount} check-in${if (row.checkInCount == 1) "" else "s"}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 38.dp)
+                modifier = Modifier.padding(start = supportingIndent)
             )
         }
     }

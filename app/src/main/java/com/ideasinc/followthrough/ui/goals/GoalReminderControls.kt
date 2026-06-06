@@ -1,8 +1,5 @@
 package com.ideasinc.followthrough.ui.goals
 
-import android.content.Context
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,7 +10,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,24 +25,12 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.ideasinc.followthrough.notifications.GoalReminderScheduler
-import com.ideasinc.followthrough.notifications.PREFS_GOAL_REMINDERS
-import com.ideasinc.followthrough.notifications.canScheduleExactAlarmsCompat
-import com.ideasinc.followthrough.ui.settings.ExactAlarmDialog
-import com.ideasinc.followthrough.ui.settings.NotificationDeniedDialog
 import com.ideasinc.followthrough.ui.settings.ReminderDayChips
 import com.ideasinc.followthrough.ui.settings.ReminderTimePickerButton
-import com.ideasinc.followthrough.ui.settings.areNotificationsFullyEnabled
-import com.ideasinc.followthrough.ui.settings.openAppNotificationSettings
-import com.ideasinc.followthrough.ui.settings.openExactAlarmSettings
-import com.ideasinc.followthrough.ui.settings.runReminderPermissionGate
+import com.ideasinc.followthrough.ui.settings.rememberReminderPermissionFlow
 import com.ideasinc.followthrough.ui.theme.AppColors
 import java.util.Calendar
-
-private const val KEY_PENDING_PERMISSION = "goal_reminder_pending_goal_id"
 
 private val DEFAULT_DAYS: Set<Int> = setOf(
     Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY, Calendar.THURSDAY,
@@ -68,7 +52,6 @@ fun GoalReminderControls(
     toggleLabel: String = "Remind me for this"
 ) {
     val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences(PREFS_GOAL_REMINDERS, Context.MODE_PRIVATE) }
 
     val stored = remember(goalId) { GoalReminderScheduler.read(context, goalId) }
     var enabled by remember(goalId) { mutableStateOf(stored?.enabled == true) }
@@ -77,9 +60,6 @@ fun GoalReminderControls(
     var days by remember(goalId) {
         mutableStateOf(stored?.days?.takeIf { it.isNotEmpty() } ?: DEFAULT_DAYS)
     }
-
-    var showNotificationDeniedDialog by remember { mutableStateOf(false) }
-    var showExactAlarmDialog by remember { mutableStateOf(false) }
 
     // Keep the stored notification body in sync if the user later edits the
     // goal's implementation intention.
@@ -93,61 +73,16 @@ fun GoalReminderControls(
         GoalReminderScheduler.schedule(context, goalId, hour, minute, days, reminderBody)
     }
 
-    val notificationLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted && areNotificationsFullyEnabled(context)) {
-            if (canScheduleExactAlarmsCompat(context)) {
-                enabled = true
-                scheduleNow()
-                prefs.edit().remove(KEY_PENDING_PERMISSION).apply()
-            } else {
-                showExactAlarmDialog = true
-            }
-        } else {
-            prefs.edit().remove(KEY_PENDING_PERMISSION).apply()
-            showNotificationDeniedDialog = true
+    // Persists the "wants reminder on" intent and walks notifications + exact
+    // alarms in one flow; finalizes the toggle ON when every permission is in
+    // place (including automatically, on return from Settings).
+    val permissionFlow = rememberReminderPermissionFlow(
+        intentKey = goalId,
+        onEnabled = {
+            enabled = true
+            scheduleNow()
         }
-    }
-
-    // Returning from the system "Alarms & reminders" screen: if this goal's
-    // reminder was awaiting exact-alarm access and it's now granted, finish
-    // enabling and schedule it — mirrors the global reminder's resume handling.
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, goalId) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                val pending = prefs.getString(KEY_PENDING_PERMISSION, null)
-                if (pending == goalId && canScheduleExactAlarmsCompat(context)) {
-                    enabled = true
-                    scheduleNow()
-                    prefs.edit().remove(KEY_PENDING_PERMISSION).apply()
-                }
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
-    if (showNotificationDeniedDialog) {
-        NotificationDeniedDialog(
-            onDismiss = { showNotificationDeniedDialog = false },
-            onOpenSettings = {
-                showNotificationDeniedDialog = false
-                openAppNotificationSettings(context)
-            }
-        )
-    }
-    if (showExactAlarmDialog) {
-        ExactAlarmDialog(
-            onDismiss = { showExactAlarmDialog = false },
-            onConfirm = {
-                showExactAlarmDialog = false
-                prefs.edit().putString(KEY_PENDING_PERMISSION, goalId).apply()
-                openExactAlarmSettings(context)
-            }
-        )
-    }
+    )
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -164,25 +99,11 @@ fun GoalReminderControls(
                 checked = enabled,
                 onCheckedChange = { wantOn ->
                     if (wantOn) {
-                        prefs.edit().putString(KEY_PENDING_PERMISSION, goalId).apply()
-                        runReminderPermissionGate(
-                            context = context,
-                            notificationLauncher = notificationLauncher,
-                            onGranted = {
-                                enabled = true
-                                scheduleNow()
-                                prefs.edit().remove(KEY_PENDING_PERMISSION).apply()
-                            },
-                            onNotificationDenied = {
-                                prefs.edit().remove(KEY_PENDING_PERMISSION).apply()
-                                showNotificationDeniedDialog = true
-                            },
-                            onExactAlarmDenied = { showExactAlarmDialog = true }
-                        )
+                        permissionFlow.start()
                     } else {
                         enabled = false
                         GoalReminderScheduler.disable(context, goalId)
-                        prefs.edit().remove(KEY_PENDING_PERMISSION).apply()
+                        permissionFlow.cancel()
                     }
                 },
                 colors = SwitchDefaults.colors(
