@@ -438,25 +438,32 @@ private fun GoalCardContent(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Coral number badge — only the top three goals (rank 1–3) are
-            // numbered; goals below carry no badge and start flush left.
-            if (rank != null) {
-                Box(
-                    modifier = Modifier
-                        .size(26.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                        .semantics { contentDescription = "Priority $rank" },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "$rank",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
+            // Number-badge column, reserved on every card so all titles align
+            // on the same left edge. The top three goals (rank 1–3) fill it with
+            // their coral number badge; goals below leave the slot empty. The
+            // badge's presence remains the only ranking signal.
+            Box(
+                modifier = Modifier.size(26.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (rank != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(26.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                            .semantics { contentDescription = "Priority $rank" },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "$rank",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
                 }
-                Spacer(Modifier.width(12.dp))
             }
+            Spacer(Modifier.width(12.dp))
             Text(
                 text = row.goal.title,
                 style = MaterialTheme.typography.headlineSmall,
@@ -489,9 +496,9 @@ private fun GoalCardContent(
             DragHandleIcon()
         }
 
-        // Supporting line aligns under the title: indented past the badge for
-        // numbered (top-3) cards, flush left for the unnumbered ones below.
-        val supportingIndent = if (rank != null) 38.dp else 0.dp
+        // Supporting line aligns under the title — indented past the reserved
+        // badge column on every card so it sits flush under the title text.
+        val supportingIndent = 38.dp
         // The goal's implementation intention ("When …, I will …"). Falls back to
         // the check-in count when no plan is written yet.
         if (!row.intention.isNullOrBlank()) {
