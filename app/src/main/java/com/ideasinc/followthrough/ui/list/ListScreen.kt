@@ -16,9 +16,11 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -377,8 +379,9 @@ private fun DraggableGoalCard(
     // dragModifier carries the long-press handle from the ReorderableScope, so a
     // long-press anywhere on the card starts a drag. The card is a white surface
     // with a hairline border on the cream page (prototype look). Only the top
-    // three goals (rank 1–3) carry a coral number badge — the "top priorities";
-    // goals below sit in the same list, unnumbered.
+    // three goals (rank 1–3) carry a coral number badge — the "top priorities" —
+    // plus a coral accent strip down their left edge; goals below sit in the same
+    // list, unnumbered and unstriped.
     Surface(
         modifier = dragModifier
             .fillMaxWidth()
@@ -393,17 +396,38 @@ private fun DraggableGoalCard(
         tonalElevation = elevation,
         shadowElevation = elevation
     ) {
-        GoalCardContent(
-            row = row,
-            rank = rank,
-            onClick = onClick,
-            showA11yArrows = showA11yArrows,
-            canMoveUp = canMoveUp,
-            canMoveDown = canMoveDown,
-            onMoveUp = onMoveUp,
-            onMoveDown = onMoveDown,
-            onArrowLongPress = onArrowLongPress
-        )
+        // A 4dp accent-strip column is reserved on every card — placed as the
+        // first child, tight at the card's left edge, exactly like the original
+        // (pre-a3594a5) — so all content, and therefore all titles, stay aligned
+        // whether or not a card is ranked. It is colored coral only on the
+        // top-three (ranked) cards; the content's own 16dp padding sets the same
+        // strip-to-content spacing the original had. height(IntrinsicSize.Min)
+        // lets the strip fillMaxHeight edge-to-edge, clipped to the card's
+        // rounded corners by the Surface.
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .then(
+                        if (rank != null) Modifier.background(AppColors.PriorityContainer)
+                        else Modifier
+                    )
+            )
+            Box(modifier = Modifier.weight(1f)) {
+                GoalCardContent(
+                    row = row,
+                    rank = rank,
+                    onClick = onClick,
+                    showA11yArrows = showA11yArrows,
+                    canMoveUp = canMoveUp,
+                    canMoveDown = canMoveDown,
+                    onMoveUp = onMoveUp,
+                    onMoveDown = onMoveDown,
+                    onArrowLongPress = onArrowLongPress
+                )
+            }
+        }
     }
 }
 
