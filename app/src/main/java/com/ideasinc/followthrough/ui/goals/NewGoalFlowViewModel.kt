@@ -8,6 +8,7 @@ import com.ideasinc.followthrough.data.CheckInDao
 import com.ideasinc.followthrough.data.Goal
 import com.ideasinc.followthrough.data.GoalDao
 import com.ideasinc.followthrough.data.QuestionConfig
+import com.ideasinc.followthrough.data.QuestionKeys
 import com.ideasinc.followthrough.data.QuestionLabelDao
 import com.ideasinc.followthrough.data.resolveConfigs
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,10 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 data class NewGoalFlowUiState(
+    // Index into the current path (see pathStepKeys). The path is core-only until
+    // the user taps "Reflect more", after which the deeper steps join the path.
+    val currentStepIndex: Int = 0,
+    val reflectMore: Boolean = false,
     val goalOrChange: String = "",
     val avoiding: String = "",
     val confidence: String = "",
@@ -37,6 +42,37 @@ internal fun NewGoalFlowUiState.hasAnswers(): Boolean =
     goalOrChange.isNotBlank() || avoiding.isNotBlank() || confidence.isNotBlank() ||
         madeProgress.isNotBlank() || competingPriority.isNotBlank() ||
         implementationIntention.isNotBlank() || accountability.isNotBlank()
+
+// The deeper, optional reflection prompts offered behind "Reflect more", in the
+// order they appear. Deliberately excludes madeProgress (a brand-new goal has no
+// progress to report) and the two core steps (goal name, action plan).
+internal val NEW_GOAL_DEEPER_ORDER = listOf(
+    QuestionKeys.AVOIDING,
+    QuestionKeys.CONFIDENCE,
+    QuestionKeys.COMPETING_PRIORITY,
+    QuestionKeys.ACCOUNTABILITY
+)
+
+/**
+ * The core path, always shown: name the goal, then plan the first move. Both are
+ * structural to creation, so they appear even if disabled as reflection prompts.
+ */
+internal fun NewGoalFlowUiState.coreStepKeys(): List<String> =
+    listOf(QuestionKeys.GOAL_OR_CHANGE, QuestionKeys.IMPLEMENTATION_INTENTION)
+
+/** Deeper steps the user can opt into, filtered to those still enabled. */
+internal fun NewGoalFlowUiState.deeperStepKeys(): List<String> =
+    NEW_GOAL_DEEPER_ORDER.filter { key ->
+        questionConfigs.any { it.key == key && it.isEnabled }
+    }
+
+/**
+ * The steps actually on the user's path right now — core by default, expanding to
+ * include the deeper steps once "Reflect more" is tapped. Drives the progress
+ * count so it reflects the path the user is really on.
+ */
+internal fun NewGoalFlowUiState.pathStepKeys(): List<String> =
+    coreStepKeys() + if (reflectMore) deeperStepKeys() else emptyList()
 
 class NewGoalFlowViewModel(
     private val goalDao: GoalDao,
@@ -68,15 +104,41 @@ class NewGoalFlowViewModel(
     fun onImplementationIntentionChange(value: String) = _uiState.update { it.copy(implementationIntention = value) }
     fun onAccountabilityChange(value: String) = _uiState.update { it.copy(accountability = value) }
 
-    /**
-     * Top-bar back / system back are the only ways out now that the flow is a
-     * single screen. Confirm before discarding typed answers; otherwise exit.
-     */
-    fun onBack() {
-        if (_uiState.value.hasAnswers()) {
-            _uiState.update { it.copy(showDiscardDialog = true) }
+    /** Advance to the next step on the path; Save once there are none left. */
+    fun onNext() {
+        val state = _uiState.value
+        val path = state.pathStepKeys()
+        // The goal name is the one hard requirement — never advance past it blank.
+        if (path.getOrNull(state.currentStepIndex) == QuestionKeys.GOAL_OR_CHANGE &&
+            state.goalOrChange.trim().isBlank()
+        ) return
+        if (state.currentStepIndex < path.size - 1) {
+            _uiState.update { it.copy(currentStepIndex = state.currentStepIndex + 1) }
         } else {
-            _uiState.update { it.copy(shouldExit = true) }
+            save()
+        }
+    }
+
+    /** Opt into the deeper prompts: extend the path and jump to its first step. */
+    fun onReflectMore() {
+        val state = _uiState.value
+        if (state.deeperStepKeys().isEmpty()) return
+        _uiState.update {
+            it.copy(reflectMore = true, currentStepIndex = it.coreStepKeys().size)
+        }
+    }
+
+    fun onBack() {
+        val state = _uiState.value
+        if (state.currentStepIndex == 0) {
+            // Backing out of the flow — confirm only if answers would be lost.
+            if (state.hasAnswers()) {
+                _uiState.update { it.copy(showDiscardDialog = true) }
+            } else {
+                _uiState.update { it.copy(shouldExit = true) }
+            }
+        } else {
+            _uiState.update { it.copy(currentStepIndex = state.currentStepIndex - 1) }
         }
     }
 
@@ -118,6 +180,8 @@ class NewGoalFlowViewModel(
                 goalOrChange = title,
                 avoiding = state.avoiding.ifBlank { null },
                 confidence = state.confidence.ifBlank { null },
+                // madeProgress is never asked during goal creation — a new goal
+                // has no progress yet, so it is always stored blank here.
                 madeProgress = state.madeProgress.ifBlank { null },
                 competingPriority = state.competingPriority.ifBlank { null },
                 implementationIntention = state.implementationIntention.ifBlank { null },

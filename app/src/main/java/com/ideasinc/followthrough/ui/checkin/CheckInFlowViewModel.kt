@@ -1,4 +1,4 @@
-﻿package com.ideasinc.followthrough.ui.checkin
+package com.ideasinc.followthrough.ui.checkin
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -22,14 +22,15 @@ data class CheckInFlowUiState(
     val goalId: String = "",
     val checkInId: String = UUID.randomUUID().toString(),
     val questionConfigs: List<QuestionConfig> = emptyList(),
-    // Read-only context shown at the top of the check-in: the goal and the
-    // user's own implementation intention (carried from goal creation / prior
-    // check-ins). Never re-asked or stored as this check-in's answer.
+    // Read-only context: the goal and the user's own implementation intention
+    // (carried from goal creation / prior check-ins). Never re-asked or stored as
+    // this check-in's answer.
     val goalTitle: String = "",
     val goalIntention: String? = null,
-    // Index into the enabled-step list. After the last enabled step the
-    // flow is finished and save() runs.
+    // Index into the current path (see pathStepKeys). The path is the lead step
+    // only until the user taps "Reflect more", after which the deeper steps join.
     val currentStepIndex: Int = 0,
+    val reflectMore: Boolean = false,
     val goalOrChange: String = "",
     val avoiding: String = "",
     val confidence: String = "",
@@ -48,17 +49,43 @@ internal fun CheckInFlowUiState.hasAnswers(): Boolean =
         madeProgress.isNotBlank() || competingPriority.isNotBlank() ||
         implementationIntention.isNotBlank() || accountability.isNotBlank()
 
+// The deeper, optional prompts offered behind "Reflect more", in order. The
+// goalOrChange question is never part of a check-in (the goal already exists).
+internal val CHECKIN_DEEPER_ORDER = listOf(
+    QuestionKeys.AVOIDING,
+    QuestionKeys.CONFIDENCE,
+    QuestionKeys.COMPETING_PRIORITY,
+    QuestionKeys.IMPLEMENTATION_INTENTION,
+    QuestionKeys.ACCOUNTABILITY
+)
+
+private fun CheckInFlowUiState.isEnabled(key: String): Boolean =
+    questionConfigs.any { it.key == key && it.isEnabled }
+
 /**
- * Indices into [CheckInFlowUiState.questionConfigs] that should appear as
- * steps in this flow. The goalOrChange step is intentionally excluded —
- * a check-in is always added to an existing entry, so the goal/change
- * has already been captured at the entry level.
+ * The single lead prompt: progress is the natural lead, falling back to the first
+ * enabled deeper prompt if the user disabled progress in Customize Questions.
  */
-internal fun CheckInFlowUiState.activeStepIndices(): List<Int> =
-    questionConfigs.indices.filter {
-        val cfg = questionConfigs[it]
-        cfg.isEnabled && cfg.key != QuestionKeys.GOAL_OR_CHANGE
-    }
+internal fun CheckInFlowUiState.leadKey(): String? =
+    if (isEnabled(QuestionKeys.MADE_PROGRESS)) QuestionKeys.MADE_PROGRESS
+    else CHECKIN_DEEPER_ORDER.firstOrNull { isEnabled(it) }
+
+/** The lead step, always shown (when any question is enabled at all). */
+internal fun CheckInFlowUiState.coreStepKeys(): List<String> = listOfNotNull(leadKey())
+
+/** Deeper steps the user can opt into — enabled prompts other than the lead. */
+internal fun CheckInFlowUiState.deeperStepKeys(): List<String> {
+    val lead = leadKey()
+    return CHECKIN_DEEPER_ORDER.filter { it != lead && isEnabled(it) }
+}
+
+/**
+ * The steps actually on the user's path right now — the lead by default,
+ * expanding to include the deeper steps once "Reflect more" is tapped. Drives the
+ * progress count so it reflects the path the user is really on.
+ */
+internal fun CheckInFlowUiState.pathStepKeys(): List<String> =
+    coreStepKeys() + if (reflectMore) deeperStepKeys() else emptyList()
 
 class CheckInFlowViewModel(
     private val checkInDao: CheckInDao,
@@ -92,9 +119,6 @@ class CheckInFlowViewModel(
         }
     }
 
-    private val enabledStepIndices: List<Int>
-        get() = _uiState.value.activeStepIndices()
-
     fun onGoalOrChangeChange(value: String) = _uiState.update { it.copy(goalOrChange = value) }
     fun onAvoidingChange(value: String) = _uiState.update { it.copy(avoiding = value) }
     fun onConfidenceChange(value: String) = _uiState.update { it.copy(confidence = value) }
@@ -103,15 +127,23 @@ class CheckInFlowViewModel(
     fun onImplementationIntentionChange(value: String) = _uiState.update { it.copy(implementationIntention = value) }
     fun onAccountabilityChange(value: String) = _uiState.update { it.copy(accountability = value) }
 
+    /** Advance to the next step on the path; Save once there are none left. */
     fun onNext() {
         val state = _uiState.value
-        val enabled = enabledStepIndices
-        if (state.currentStepIndex >= enabled.size) return
-        val isLast = state.currentStepIndex == enabled.size - 1
-        if (isLast) {
-            save()
-        } else {
+        val path = state.pathStepKeys()
+        if (state.currentStepIndex < path.size - 1) {
             _uiState.update { it.copy(currentStepIndex = state.currentStepIndex + 1) }
+        } else {
+            save()
+        }
+    }
+
+    /** Opt into the deeper prompts: extend the path and jump to its first step. */
+    fun onReflectMore() {
+        val state = _uiState.value
+        if (state.deeperStepKeys().isEmpty()) return
+        _uiState.update {
+            it.copy(reflectMore = true, currentStepIndex = it.coreStepKeys().size)
         }
     }
 
@@ -146,6 +178,14 @@ class CheckInFlowViewModel(
         viewModelScope.launch {
             val state = _uiState.value
             val now = System.currentTimeMillis()
+            // The plan editor is pre-filled with the goal's current plan. Only
+            // record an intention on this check-in when the user actually changed
+            // it — an untouched (or reverted) plan stays null so the existing
+            // latest-intention carries forward unchanged.
+            val editedPlan = state.implementationIntention.trim()
+            val currentPlan = state.goalIntention?.trim().orEmpty()
+            val intentionToStore =
+                if (editedPlan.isNotBlank() && editedPlan != currentPlan) editedPlan else null
             val checkIn = CheckIn(
                 id = state.checkInId,
                 goalId = state.goalId,
@@ -154,7 +194,7 @@ class CheckInFlowViewModel(
                 confidence = state.confidence.ifBlank { null },
                 madeProgress = state.madeProgress.ifBlank { null },
                 competingPriority = state.competingPriority.ifBlank { null },
-                implementationIntention = state.implementationIntention.ifBlank { null },
+                implementationIntention = intentionToStore,
                 accountability = state.accountability.ifBlank { null },
                 createdAt = now,
                 updatedAt = now
@@ -175,4 +215,3 @@ class CheckInFlowViewModel(
             CheckInFlowViewModel(checkInDao, questionLabelDao, goalDao, goalId) as T
     }
 }
-
