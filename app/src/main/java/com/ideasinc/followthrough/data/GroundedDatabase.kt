@@ -708,13 +708,276 @@ internal val MIGRATION_27_28 = object : Migration(27, 28) {
     }
 }
 
+internal val MIGRATION_28_29 = object : Migration(28, 29) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // The implementation intention moves off check_ins and onto a goal-owned
+        // list. Create the new table, then back-fill each goal's newest non-blank
+        // check-in intention as a single starter row. The old
+        // check_ins.implementationIntention column is intentionally kept (read-only
+        // history in the Check-in Read screen); nothing is dropped.
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS implementation_intentions (
+                id TEXT NOT NULL PRIMARY KEY,
+                goalId TEXT NOT NULL,
+                text TEXT NOT NULL,
+                createdAt INTEGER NOT NULL,
+                FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_implementation_intentions_goalId " +
+                "ON implementation_intentions(goalId)"
+        )
+        // One row per goal: the most recent check-in that carries a non-blank
+        // intention. Simple back-fill — on-device data preservation isn't critical.
+        db.execSQL(
+            """
+            INSERT INTO implementation_intentions (id, goalId, text, createdAt)
+            SELECT 'ii_' || ci.id, ci.goalId, ci.implementationIntention, ci.createdAt
+            FROM check_ins ci
+            WHERE ci.implementationIntention IS NOT NULL
+              AND ci.implementationIntention != ''
+              AND ci.createdAt = (
+                  SELECT MAX(c2.createdAt) FROM check_ins c2
+                  WHERE c2.goalId = ci.goalId
+                    AND c2.implementationIntention IS NOT NULL
+                    AND c2.implementationIntention != ''
+              )
+            """.trimIndent()
+        )
+    }
+}
+
+internal val MIGRATION_29_30 = object : Migration(29, 30) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // A goal now owns two new free-text lists, both mirroring
+        // implementation_intentions: barriers ("what's getting in the way",
+        // captured by the recurring entry that replaces the check-in flow) and
+        // progress_notes (gentle "what went well" — never counted or scored).
+        // No backfill — these start empty; nothing is dropped.
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS barriers (
+                id TEXT NOT NULL PRIMARY KEY,
+                goalId TEXT NOT NULL,
+                text TEXT NOT NULL,
+                createdAt INTEGER NOT NULL,
+                FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_barriers_goalId ON barriers(goalId)"
+        )
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS progress_notes (
+                id TEXT NOT NULL PRIMARY KEY,
+                goalId TEXT NOT NULL,
+                text TEXT NOT NULL,
+                createdAt INTEGER NOT NULL,
+                FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_progress_notes_goalId ON progress_notes(goalId)"
+        )
+    }
+}
+
+internal val MIGRATION_30_31 = object : Migration(30, 31) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // The model consolidates back onto check-ins: a check-in now carries its
+        // own type (barrier/progress), note, and implementation intention, and a
+        // goal's "current plan" is derived as its most recent check-in's
+        // intention. The three short-lived v29/v30 helper tables are therefore
+        // redundant and dropped.
+        db.execSQL("DROP TABLE IF EXISTS implementation_intentions")
+        db.execSQL("DROP TABLE IF EXISTS barriers")
+        db.execSQL("DROP TABLE IF EXISTS progress_notes")
+
+        // check_ins is reshaped from the old reflection schema (goalOrChange,
+        // madeProgress, avoiding, confidence, competingPriority,
+        // implementationIntention, accountability) to the new typed schema
+        // (type, note, intention). The new `type` column is NOT NULL with no
+        // sensible value for legacy untyped reflection rows, and the model
+        // changed fundamentally, so legacy check-in rows are not carried over —
+        // the table is recreated empty. Goals and their follow-through state are
+        // untouched (follow-through lives on `goals`). Pre-release; acceptable.
+        db.execSQL("DROP TABLE IF EXISTS check_ins")
+        db.execSQL(
+            """
+            CREATE TABLE check_ins (
+                id TEXT NOT NULL PRIMARY KEY,
+                goalId TEXT NOT NULL,
+                type TEXT NOT NULL,
+                note TEXT NOT NULL,
+                intention TEXT NOT NULL,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL,
+                FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_check_ins_goalId ON check_ins(goalId)")
+    }
+}
+
+internal val MIGRATION_31_32 = object : Migration(31, 32) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // A goal gains an optional, local-only "distinctive cue" for its reminder:
+        // an emoji, a short vivid label, a copied-local image path, and a
+        // notification-sound URI. All nullable — existing goals get NULLs and keep
+        // the default reminder presentation. No data is dropped.
+        db.execSQL("ALTER TABLE goals ADD COLUMN cueEmoji TEXT")
+        db.execSQL("ALTER TABLE goals ADD COLUMN cueLabel TEXT")
+        db.execSQL("ALTER TABLE goals ADD COLUMN cueImagePath TEXT")
+        db.execSQL("ALTER TABLE goals ADD COLUMN cueSound TEXT")
+    }
+}
+
+internal val MIGRATION_32_33 = object : Migration(32, 33) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // The intended model: a goal holds MANY plans that coexist. Each plan is an
+        // implementation intention + its own cue (emoji/label/image/sound) + its
+        // own reminder. The per-goal cue columns and the per-check-in intention
+        // move DOWN to the new per-plan `plans` table.
+
+        // 1) New plans table.
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS plans (
+                id TEXT NOT NULL PRIMARY KEY,
+                goalId TEXT NOT NULL,
+                intention TEXT NOT NULL,
+                cueEmoji TEXT,
+                cueLabel TEXT,
+                cueImagePath TEXT,
+                cueSound TEXT,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL,
+                FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_plans_goalId ON plans(goalId)")
+
+        // 2) Back-fill: each existing goal becomes one "first plan" with a
+        //    deterministic id (plan_<goalId>) so the reminder prefs can be re-keyed
+        //    in code. Its intention = the goal's most recent non-blank check-in
+        //    intention; its cue = the goal's cue columns. Done BEFORE those columns
+        //    are dropped below.
+        db.execSQL(
+            """
+            INSERT INTO plans (id, goalId, intention, cueEmoji, cueLabel, cueImagePath, cueSound, createdAt, updatedAt)
+            SELECT
+                'plan_' || g.id,
+                g.id,
+                COALESCE((
+                    SELECT c.intention FROM check_ins c
+                    WHERE c.goalId = g.id AND c.intention != ''
+                    ORDER BY c.createdAt DESC LIMIT 1
+                ), ''),
+                g.cueEmoji, g.cueLabel, g.cueImagePath, g.cueSound,
+                g.createdAt, g.updatedAt
+            FROM goals g
+            """.trimIndent()
+        )
+
+        // 3) Recreate goals without the cue columns (they're per-plan now). Foreign
+        //    keys are disabled during Room migrations, so recreating this parent
+        //    table is safe; check_ins / plans FKs re-target the renamed table.
+        db.execSQL(
+            """
+            CREATE TABLE goals_new (
+                id TEXT NOT NULL PRIMARY KEY,
+                title TEXT NOT NULL,
+                accountableTo TEXT,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL,
+                priority INTEGER,
+                followedThrough INTEGER NOT NULL DEFAULT 0,
+                followedThroughAt INTEGER
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            INSERT INTO goals_new (id, title, accountableTo, createdAt, updatedAt, priority, followedThrough, followedThroughAt)
+            SELECT id, title, accountableTo, createdAt, updatedAt, priority, followedThrough, followedThroughAt FROM goals
+            """.trimIndent()
+        )
+        db.execSQL("DROP TABLE goals")
+        db.execSQL("ALTER TABLE goals_new RENAME TO goals")
+
+        // 4) Recreate check_ins without the intention column (intentions are on
+        //    plans now). Goal-scoped reflection only: type + note.
+        db.execSQL(
+            """
+            CREATE TABLE check_ins_new (
+                id TEXT NOT NULL PRIMARY KEY,
+                goalId TEXT NOT NULL,
+                type TEXT NOT NULL,
+                note TEXT NOT NULL,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL,
+                FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            INSERT INTO check_ins_new (id, goalId, type, note, createdAt, updatedAt)
+            SELECT id, goalId, type, note, createdAt, updatedAt FROM check_ins
+            """.trimIndent()
+        )
+        db.execSQL("DROP TABLE check_ins")
+        db.execSQL("ALTER TABLE check_ins_new RENAME TO check_ins")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_check_ins_goalId ON check_ins(goalId)")
+    }
+}
+
+internal val MIGRATION_33_34 = object : Migration(33, 34) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Reverting the v33 split: the implementation intention belongs ON the
+        // check-in, not in a separate `plans` table. Each check-in now carries its
+        // own intention + cue (emoji/label/image/sound); reminders re-key to the
+        // check-in. There is no data to preserve (pre-release, fresh testing), so
+        // drop `plans` and recreate `check_ins` empty with the restored shape.
+        db.execSQL("DROP TABLE IF EXISTS plans")
+        db.execSQL("DROP TABLE IF EXISTS check_ins")
+        db.execSQL(
+            """
+            CREATE TABLE check_ins (
+                id TEXT NOT NULL PRIMARY KEY,
+                goalId TEXT NOT NULL,
+                type TEXT NOT NULL,
+                note TEXT NOT NULL,
+                intention TEXT NOT NULL,
+                cueEmoji TEXT,
+                cueLabel TEXT,
+                cueImagePath TEXT,
+                cueSound TEXT,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL,
+                FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_check_ins_goalId ON check_ins(goalId)")
+    }
+}
+
 @Database(
     entities = [
         Goal::class,
         CheckIn::class,
         QuestionLabel::class
     ],
-    version = 28,
+    version = 34,
     exportSchema = true
 )
 abstract class GroundedDatabase : RoomDatabase() {
@@ -741,7 +1004,9 @@ abstract class GroundedDatabase : RoomDatabase() {
                         MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19,
                         MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22,
                         MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25,
-                        MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28
+                        MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28,
+                        MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31,
+                        MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34
                     )
                     .build().also { INSTANCE = it }
             }

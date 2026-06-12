@@ -39,7 +39,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
@@ -129,11 +128,20 @@ fun ListScreen(
             }
     }
 
+    // The "focus on fewer goals" message. It appears at most twice — the first
+    // time the user has more than three active goals (adding or reordering into
+    // that state, whichever happens first), then once more ~6 days later while
+    // still over three. Driving it off the observed goal count keeps a single
+    // trigger, so it never double-fires. The timing decision lives in the
+    // unit-tested pure [decideFocusReminder].
     LaunchedEffect(viewModel) {
-        viewModel.priorityLimitWarning.collect {
-            val prefs = context.getSharedPreferences("grounded_prefs", Context.MODE_PRIVATE)
-            if (!prefs.getBoolean("priority_warning_shown", false)) {
-                prefs.edit().putBoolean("priority_warning_shown", true).apply()
+        val prefs = context.getSharedPreferences(FOCUS_PREFS_NAME, Context.MODE_PRIVATE)
+        migrateLegacyFocusPref(prefs)
+        snapshotFlow { uiState.goals.size }.collect { count ->
+            val state = readFocusReminderState(prefs)
+            val decision = decideFocusReminder(count, state, System.currentTimeMillis())
+            if (decision.newState != state) writeFocusReminderState(prefs, decision.newState)
+            if (decision.show) {
                 snackbarHostState.showSnackbar(
                     message = "The more goals you try to focus on at once, the harder it gets to make real progress on any of them. Other goals will pull you in different directions. Pick the ones that matter most right now.",
                     duration = SnackbarDuration.Long
@@ -217,7 +225,9 @@ fun ListScreen(
                 }
             }
 
-            if (uiState.streakDays > 0 || uiState.totalFollowThroughs > 0) {
+                // Streak + follow-throughs summary — tap to open the full Stats
+                // screen (which also reaches "Your FollowThrus").
+                if (uiState.streakDays > 0 || uiState.totalFollowThroughs > 0) {
                     val statsRowA11y = "Check-In Streak ${uiState.streakDays}, " +
                         "FollowThrus ${uiState.totalFollowThroughs}. " +
                         "Double tap to view full stats."
@@ -444,7 +454,7 @@ private fun GoalCardContent(
     onArrowLongPress: () -> Unit
 ) {
     val context = LocalContext.current
-    val hasReminder = remember(row.goal.id, row.intention) {
+    val hasReminder = remember(row.goal.id, row.currentPlan) {
         GoalReminderScheduler.read(context, row.goal.id)?.enabled == true
     }
     Column(
@@ -465,15 +475,16 @@ private fun GoalCardContent(
             // Number-badge column, reserved on every card so all titles align
             // on the same left edge. The top three goals (rank 1–3) fill it with
             // their coral number badge; goals below leave the slot empty. The
-            // badge's presence remains the only ranking signal.
+            // badge's presence remains the only ranking signal. Sized and weighted
+            // to feel deliberate alongside the Stats screen (coral kept).
             Box(
-                modifier = Modifier.size(26.dp),
+                modifier = Modifier.size(30.dp),
                 contentAlignment = Alignment.Center
             ) {
                 if (rank != null) {
                     Box(
                         modifier = Modifier
-                            .size(26.dp)
+                            .size(30.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primary)
                             .semantics { contentDescription = "Priority $rank" },
@@ -481,7 +492,7 @@ private fun GoalCardContent(
                     ) {
                         Text(
                             text = "$rank",
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                     }
@@ -503,7 +514,7 @@ private fun GoalCardContent(
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .padding(start = 8.dp)
-                        .size(18.dp)
+                        .size(22.dp)
                         .clearAndSetSemantics {}
                 )
             }
@@ -521,13 +532,14 @@ private fun GoalCardContent(
         }
 
         // Supporting line aligns under the title — indented past the reserved
-        // badge column on every card so it sits flush under the title text.
-        val supportingIndent = 38.dp
-        // The goal's implementation intention ("When …, I will …"). Falls back to
-        // the check-in count when no plan is written yet.
-        if (!row.intention.isNullOrBlank()) {
+        // badge column (30dp) plus its 12dp spacer so it sits flush under the title.
+        val supportingIndent = 42.dp
+        // Subtitle: the goal's current plan — the intention from its most recent
+        // check-in. A gentle prompt when there's no plan yet.
+        val subtitle = row.currentPlan?.takeIf { it.isNotBlank() }
+        if (subtitle != null) {
             Text(
-                text = row.intention,
+                text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
@@ -536,7 +548,7 @@ private fun GoalCardContent(
             )
         } else {
             Text(
-                text = "${row.checkInCount} check-in${if (row.checkInCount == 1) "" else "s"}",
+                text = "No plan yet",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = supportingIndent)
@@ -549,19 +561,43 @@ private fun GoalCardContent(
 private fun DragHandleIcon() {
     // Decorative only — the whole card is the long-press drag handle, and a11y
     // users get the explicit A11yReorderArrows. clearAndSetSemantics removes
-    // this Box from the TalkBack tree so it isn't announced as actionable.
+    // this Box from the TalkBack tree so it isn't announced as actionable. The
+    // 48dp box keeps a comfortable target footprint; the grip itself is the
+    // modern six-dot pattern (two columns of three).
     Box(
         modifier = Modifier
-            .size(36.dp)
+            .size(48.dp)
             .clearAndSetSemantics {},
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = Icons.Filled.DragHandle,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp)
+        SixDotGrip(
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            dotSize = 4.dp,
+            gap = 5.dp
         )
+    }
+}
+
+/** A six-dot drag grip — two columns of three dots, intentional not frail. */
+@Composable
+private fun SixDotGrip(
+    color: androidx.compose.ui.graphics.Color,
+    dotSize: androidx.compose.ui.unit.Dp,
+    gap: androidx.compose.ui.unit.Dp
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+        repeat(2) {
+            Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+                repeat(3) {
+                    Box(
+                        modifier = Modifier
+                            .size(dotSize)
+                            .clip(CircleShape)
+                            .background(color)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -762,3 +798,43 @@ private fun EmptyState(hasQuery: Boolean) {
 
 private val dateFormatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
 private fun formatDate(epochMs: Long): String = dateFormatter.format(Date(epochMs))
+
+// SharedPreferences backing for the focus message's two-show tracking.
+private const val FOCUS_PREFS_NAME = "grounded_prefs"
+private const val KEY_FOCUS_FIRST_SHOWN_AT = "priority_warning_first_shown_at"
+private const val KEY_FOCUS_SECOND_SHOWN = "priority_warning_second_shown"
+private const val KEY_FOCUS_LEGACY_SHOWN = "priority_warning_shown"
+
+private fun readFocusReminderState(prefs: android.content.SharedPreferences): FocusReminderState {
+    val firstAt = prefs.getLong(KEY_FOCUS_FIRST_SHOWN_AT, 0L)
+    return FocusReminderState(
+        firstShownAt = if (firstAt == 0L) null else firstAt,
+        secondShown = prefs.getBoolean(KEY_FOCUS_SECOND_SHOWN, false)
+    )
+}
+
+private fun writeFocusReminderState(
+    prefs: android.content.SharedPreferences,
+    state: FocusReminderState
+) {
+    prefs.edit()
+        .putLong(KEY_FOCUS_FIRST_SHOWN_AT, state.firstShownAt ?: 0L)
+        .putBoolean(KEY_FOCUS_SECOND_SHOWN, state.secondShown)
+        .apply()
+}
+
+/**
+ * Folds the old single "shown once" boolean into the new two-show tracking: a
+ * user who already saw the message under the drag-only trigger is marked fully
+ * done (both showings consumed) so it never reappears for them.
+ */
+private fun migrateLegacyFocusPref(prefs: android.content.SharedPreferences) {
+    if (prefs.contains(KEY_FOCUS_FIRST_SHOWN_AT)) return
+    if (prefs.getBoolean(KEY_FOCUS_LEGACY_SHOWN, false)) {
+        prefs.edit()
+            .putLong(KEY_FOCUS_FIRST_SHOWN_AT, System.currentTimeMillis())
+            .putBoolean(KEY_FOCUS_SECOND_SHOWN, true)
+            .remove(KEY_FOCUS_LEGACY_SHOWN)
+            .apply()
+    }
+}

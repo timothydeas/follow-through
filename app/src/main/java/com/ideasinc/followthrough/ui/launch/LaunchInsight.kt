@@ -42,6 +42,17 @@ import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
 
 const val KEY_LAST_INSIGHT_INDEX = "last_insight_index"
 
+/**
+ * One-shot signal that the current cold start originated from a reminder-tap
+ * deep-link, so the launch-insight start destination should render nothing and
+ * let the deep-link open Goal Detail directly — no insight flash first. Set by
+ * MainActivity in onCreate and consumed once by [LaunchInsightScreen].
+ */
+object LaunchInsightGate {
+    @Volatile
+    var skipForNotificationOpen: Boolean = false
+}
+
 val LAUNCH_INSIGHTS = listOf(
     "You're a work in progress — always learning and improving.",
     "It's human to look away from things that might hurt to see. But the things we avoid tend to cost us more than the things we face.",
@@ -56,7 +67,13 @@ val LAUNCH_INSIGHTS = listOf(
     "Persist through the unknown until it becomes the obvious.",
     "To achieve your goals, remember how they feel. Draw on the genuine emotions of past experiences that make you feel strong and capable, and bring that genuine energy to the task.",
     "What you practice becomes muscle memory. Every deliberate choice builds the reflex your future self will reach for.",
-    "Off days are part of it, not the end of it. Begin again whenever you're ready."
+    "Off days are part of it, not the end of it. Begin again whenever you're ready.",
+    // Themes carried over from the retired reflection questions, now surfaced as
+    // rotating launch insights: progress, avoiding, confidence, appraisal.
+    "Notice what's moved, even a little — progress counts before it's finished.",
+    "What are you avoiding? Naming it is the first step out of the sand.",
+    "Confidence grows from doing, not before it.",
+    "What's in the way — the situation itself, or how you're seeing it?"
 )
 
 /**
@@ -87,6 +104,17 @@ internal fun insightDisplayDurationMs(text: String): Long {
 
 @Composable
 fun LaunchInsightScreen(text: String, onDismiss: () -> Unit) {
+    // If this launch came from a reminder tap, render nothing: the deep-link in the
+    // navigation layer pops this start destination and routes straight to Goal
+    // Detail, so the insight never flashes. Decided once and remembered so a
+    // recomposition before the pop doesn't suddenly reveal the insight.
+    val skip = remember {
+        LaunchInsightGate.skipForNotificationOpen.also {
+            if (it) LaunchInsightGate.skipForNotificationOpen = false
+        }
+    }
+    if (skip) return
+
     val forgeBg = AppColors.ForgeBackground
     val forgeOn = AppColors.OnForgeBackground
     // Capture the insight once so the timer keys off a stable value.

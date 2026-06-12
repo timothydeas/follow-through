@@ -1,9 +1,10 @@
-﻿package com.ideasinc.followthrough.ui.stats
+package com.ideasinc.followthrough.ui.stats
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.ideasinc.followthrough.data.CheckInDao
+import com.ideasinc.followthrough.data.CheckInType
 import com.ideasinc.followthrough.data.GoalDao
 import com.ideasinc.followthrough.ui.list.computeStreakWithFlex
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,6 +18,8 @@ data class StatsUiState(
     val checkInCurrentStreakFlexUsed: Boolean = false,
     val checkInLongestStreak: Int = 0,
     val checkInTotal: Int = 0,
+    val checkInBarrierTotal: Int = 0,
+    val checkInProgressTotal: Int = 0,
     val followThroughCurrentStreak: Int = 0,
     val followThroughCurrentStreakFlexUsed: Boolean = false,
     val followThroughTotal: Int = 0,
@@ -39,7 +42,6 @@ class StatsViewModel(
             .mapNotNull { it.followedThroughAt }
 
         val now = System.currentTimeMillis()
-
         val checkInStreak = computeStreakWithFlex(checkInTimes)
         val followThroughStreak = computeStreakWithFlex(followThroughTimes)
 
@@ -48,6 +50,8 @@ class StatsViewModel(
             checkInCurrentStreakFlexUsed = checkInStreak.flexDayUsed,
             checkInLongestStreak = longestStreak(checkInTimes),
             checkInTotal = checkIns.size,
+            checkInBarrierTotal = checkIns.count { it.type == CheckInType.BARRIER },
+            checkInProgressTotal = checkIns.count { it.type == CheckInType.PROGRESS },
             followThroughCurrentStreak = followThroughStreak.days,
             followThroughCurrentStreakFlexUsed = followThroughStreak.flexDayUsed,
             followThroughTotal = goals.count { it.followedThrough },

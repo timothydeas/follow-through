@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /**
  * One past follow-through, as the user's own record: the moment (the goal),
@@ -28,28 +29,48 @@ data class FollowThrusUiState(
 )
 
 class FollowThrusViewModel(
-    goalDao: GoalDao,
+    private val goalDao: GoalDao,
     checkInDao: CheckInDao
 ) : ViewModel() {
+
+    /**
+     * Undo a logged follow-through (relocated here from Goal Detail). Reverts the
+     * goal to active; the record then drops out of this list automatically.
+     */
+    fun undoFollowThrough(goalId: String) {
+        viewModelScope.launch {
+            val goal = goalDao.getGoalById(goalId) ?: return@launch
+            if (!goal.followedThrough) return@launch
+            val now = System.currentTimeMillis()
+            goalDao.updateGoal(
+                goal.copy(
+                    followedThrough = false,
+                    followedThroughAt = null,
+                    updatedAt = now
+                )
+            )
+        }
+    }
 
     val uiState: StateFlow<FollowThrusUiState> = combine(
         goalDao.getAllGoals(),
         checkInDao.getAllCheckIns()
     ) { goals, checkIns ->
-        val byGoal = checkIns.groupBy { it.goalId }
+        val checkInsByGoal = checkIns.groupBy { it.goalId }
         val records = goals
             .filter { it.followedThrough }
             .sortedByDescending { it.followedThroughAt ?: it.updatedAt }
             .map { goal ->
-                val cis = byGoal[goal.id].orEmpty().sortedByDescending { it.createdAt }
+                val cis = checkInsByGoal[goal.id].orEmpty().sortedByDescending { it.createdAt }
                 FollowThruRecord(
                     goalId = goal.id,
                     title = goal.title,
+                    // The moment's plan: the most recent check-in intention.
                     intention = cis.firstNotNullOfOrNull { c ->
-                        c.implementationIntention?.takeIf { it.isNotBlank() }
+                        c.intention.takeIf { it.isNotBlank() }
                     },
                     whatYouDid = cis.firstNotNullOfOrNull { c ->
-                        c.madeProgress?.takeIf { it.isNotBlank() }
+                        c.note.takeIf { it.isNotBlank() }
                     },
                     completedAt = goal.followedThroughAt
                 )

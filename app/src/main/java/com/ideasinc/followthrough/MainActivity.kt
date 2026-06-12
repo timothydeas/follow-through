@@ -9,14 +9,14 @@ import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import com.ideasinc.followthrough.navigation.AppNavigation
@@ -24,18 +24,20 @@ import com.ideasinc.followthrough.navigation.CURRENT_ONBOARDING_VERSION
 import com.ideasinc.followthrough.navigation.KEY_BIOMETRIC_ENABLED
 import com.ideasinc.followthrough.navigation.KEY_ONBOARDING_VERSION
 import com.ideasinc.followthrough.navigation.PREFS_NAME
-import com.ideasinc.followthrough.notifications.EXTRA_GOAL_ID
+import com.ideasinc.followthrough.notifications.EXTRA_CHECKIN_ID
+import com.ideasinc.followthrough.ui.launch.LaunchInsightGate
 import com.ideasinc.followthrough.ui.theme.GroundedTheme
 
 class MainActivity : FragmentActivity() {
 
     private var authCleared by mutableStateOf(false)
 
-    // A per-goal reminder tap arrives as an EXTRA_GOAL_ID on the launch intent
+    // A check-in reminder tap arrives as an EXTRA_CHECKIN_ID on the launch intent
     // (cold start) or the new intent (already running). AppNavigation observes
-    // this and deep-links to that goal's detail, synthesising Home underneath.
-    private var pendingGoalId by mutableStateOf<String?>(null)
+    // this and deep-links to that specific check-in, synthesising Home underneath.
+    private var pendingCheckInId by mutableStateOf<String?>(null)
 
+    @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -54,33 +56,35 @@ class MainActivity : FragmentActivity() {
         val needsBiometric = onboardingComplete && biometricEnabled && !alreadyAuthenticated
         authCleared = !needsBiometric
 
-        pendingGoalId = goalIdOf(intent)
+        pendingCheckInId = checkInIdOf(intent)
+        // A cold start from a reminder tap skips the launch-insight screen so the
+        // deep-link opens the check-in directly. Only set on this cold-start path;
+        // a warm open (onNewIntent) isn't showing the insight, so it leaves it
+        // alone and a later normal launch still sees the insight.
+        LaunchInsightGate.skipForNotificationOpen = pendingCheckInId != null
 
         setContent {
             GroundedTheme {
-                // Adaptive: phone and tablet render the identical single-column
-                // design. On wide screens we only cap the content at a
-                // comfortable max width and centre it against the cream page —
-                // no tablet-specific layout, no two-pane. On phones (< 600dp)
-                // widthIn is a no-op, so the design is unchanged.
+                // Adaptive layout. On EXPANDED widths (≥840dp — most tablets in
+                // landscape, large foldables) Home becomes a two-pane goals-list +
+                // goal-detail layout; every other screen, and the whole phone
+                // experience, stays single-column, capped and centred against the
+                // cream page (the cap is applied per-destination in AppNavigation).
+                val windowSizeClass = calculateWindowSizeClass(this)
+                val isExpandedWidth =
+                    windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
-                    contentAlignment = Alignment.TopCenter
+                        .background(MaterialTheme.colorScheme.background)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .widthIn(max = 600.dp)
-                            .fillMaxSize()
-                    ) {
-                        if (authCleared) {
-                            AppNavigation(
-                                container = container,
-                                pendingGoalId = pendingGoalId,
-                                onGoalConsumed = { pendingGoalId = null }
-                            )
-                        }
+                    if (authCleared) {
+                        AppNavigation(
+                            container = container,
+                            pendingCheckInId = pendingCheckInId,
+                            onCheckInConsumed = { pendingCheckInId = null },
+                            isExpandedWidth = isExpandedWidth
+                        )
                     }
                 }
             }
@@ -96,7 +100,7 @@ class MainActivity : FragmentActivity() {
         // Adopt the new intent as the activity's current intent, then surface any
         // per-goal deep link to the navigation layer.
         setIntent(intent)
-        goalIdOf(intent)?.let { pendingGoalId = it }
+        checkInIdOf(intent)?.let { pendingCheckInId = it }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -104,8 +108,8 @@ class MainActivity : FragmentActivity() {
         outState.putBoolean(KEY_AUTH_DONE, authCleared)
     }
 
-    private fun goalIdOf(intent: Intent?): String? =
-        intent?.getStringExtra(EXTRA_GOAL_ID)?.takeIf { it.isNotBlank() }
+    private fun checkInIdOf(intent: Intent?): String? =
+        intent?.getStringExtra(EXTRA_CHECKIN_ID)?.takeIf { it.isNotBlank() }
 
     private fun showBiometricPrompt() {
         val executor = ContextCompat.getMainExecutor(this)

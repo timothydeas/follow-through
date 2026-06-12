@@ -13,8 +13,27 @@ android {
         applicationId = "com.ideasinc.followthrough"
         minSdk = 31
         targetSdk = 35
-        // Bumped for the in-place update to existing closed-testing users.
-        versionCode = 17
+        // Bumped 19 → 20 for the per-goal barriers/intentions/progress restructure
+        // (barriers capture replaces check-ins; Stats & Customize Questions removed).
+        // Bumped 20 → 21 for the read-only "science behind FollowThru" Settings screen.
+        // Bumped 21 → 22 for the check-in–centered rework (typed check-ins, DB v31,
+        // Stats restored, Home-card polish).
+        // Bumped 22 → 23 for distinctive reminder cues (emoji/label/image/sound per
+        // goal; DB v32).
+        // Bumped 23 → 24 for the per-plan model: many plans per goal, each with its
+        // own intention + cue + reminder (DB v33).
+        // Bumped 24 → 25 reverting that: intention + cue + reminder live ON the
+        // check-in again (DB v34).
+        // Bumped 25 → 26: reminder+cue step in the check-in flow; check-in streak
+        // is now the Stats headline.
+        // Bumped 26 → 27: single-select cue (one trigger), fixed cue controls
+        // (phrase cursor, photo/sound pickers), reminder deep-links to its check-in.
+        // Bumped 27 → 28: streak-card reassurance copy fix (no logic change).
+        // Bumped 28 → 29: removed the "Make it distinctive" cue authoring; reminders
+        // now show only the check-in's implementation intention.
+        // Bumped 29 → 30: adaptive tablet layout — two-pane goals-list + goal-detail
+        // Home on expanded widths; single-column screens capped/centred per-screen.
+        versionCode = 30
         versionName = "1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

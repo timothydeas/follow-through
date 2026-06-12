@@ -10,7 +10,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,12 +19,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.ideasinc.followthrough.notifications.GoalReminderScheduler
+import com.ideasinc.followthrough.notifications.ensureReminderChannel
+import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
 import com.ideasinc.followthrough.ui.settings.ReminderDayChips
 import com.ideasinc.followthrough.ui.settings.ReminderTimePickerButton
 import com.ideasinc.followthrough.ui.settings.rememberReminderPermissionFlow
@@ -38,55 +38,49 @@ private val DEFAULT_DAYS: Set<Int> = setOf(
 )
 
 /**
- * "Remind me for this" — an optional, per-goal implementation-intention reminder.
- * Reuses the global reminder's exact-alarm scheduler, the shared permission gate
- * (notifications + exact alarms) and the shared time/day controls; nothing new is
- * added to the alarm or permission infrastructure. The notification surfaces this
- * goal's implementation intention ([reminderBody]).
+ * A single plan's reminder — its own enabled flag, time and days. Keyed by
+ * [checkInId] (each plan reminds independently). The notification's title, intention
+ * text, and cue are read live from the plan at fire time, so this control only
+ * owns the schedule. Uses the shared exact-alarm scheduler, permission gate, and
+ * time/day controls.
  */
 @Composable
 fun GoalReminderControls(
-    goalId: String,
-    reminderBody: String,
+    checkInId: String,
     modifier: Modifier = Modifier,
-    toggleLabel: String = "Remind me for this"
+    toggleLabel: String = "Remind me about this check-in",
+    onToggleTap: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val announce = rememberA11yAnnouncer()
 
-    val stored = remember(goalId) { GoalReminderScheduler.read(context, goalId) }
-    var enabled by remember(goalId) { mutableStateOf(stored?.enabled == true) }
-    var hour by remember(goalId) { mutableStateOf(stored?.hour ?: 9) }
-    var minute by remember(goalId) { mutableStateOf(stored?.minute ?: 0) }
-    var days by remember(goalId) {
+    val stored = remember(checkInId) { GoalReminderScheduler.read(context, checkInId) }
+    var enabled by remember(checkInId) { mutableStateOf(stored?.enabled == true) }
+    var hour by remember(checkInId) { mutableStateOf(stored?.hour ?: 9) }
+    var minute by remember(checkInId) { mutableStateOf(stored?.minute ?: 0) }
+    var days by remember(checkInId) {
         mutableStateOf(stored?.days?.takeIf { it.isNotEmpty() } ?: DEFAULT_DAYS)
     }
 
-    // Keep the stored notification body in sync if the user later edits the
-    // goal's implementation intention.
-    LaunchedEffect(goalId, reminderBody, enabled) {
-        if (enabled && reminderBody.isNotBlank()) {
-            GoalReminderScheduler.updateBody(context, goalId, reminderBody)
-        }
-    }
-
     fun scheduleNow() {
-        GoalReminderScheduler.schedule(context, goalId, hour, minute, days, reminderBody)
+        GoalReminderScheduler.schedule(context, checkInId, hour, minute, days)
     }
 
-    // Persists the "wants reminder on" intent and walks notifications + exact
-    // alarms in one flow; finalizes the toggle ON when every permission is in
-    // place (including automatically, on return from Settings).
     val permissionFlow = rememberReminderPermissionFlow(
-        intentKey = goalId,
+        intentKey = checkInId,
         onEnabled = {
             enabled = true
+            ensureReminderChannel(context)
             scheduleNow()
+            announce("Reminder on. Time and days controls are now available below.")
         }
     )
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics(mergeDescendants = true) {},
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -98,11 +92,12 @@ fun GoalReminderControls(
             Switch(
                 checked = enabled,
                 onCheckedChange = { wantOn ->
+                    onToggleTap()
                     if (wantOn) {
                         permissionFlow.start()
                     } else {
                         enabled = false
-                        GoalReminderScheduler.disable(context, goalId)
+                        GoalReminderScheduler.disable(context, checkInId)
                         permissionFlow.cancel()
                     }
                 },
@@ -114,7 +109,6 @@ fun GoalReminderControls(
                     uncheckedBorderColor = Color.Transparent
                 ),
                 modifier = Modifier.semantics {
-                    contentDescription = "Remind me for this goal"
                     stateDescription = if (enabled) "On" else "Off"
                     role = Role.Switch
                 }
@@ -122,7 +116,7 @@ fun GoalReminderControls(
         }
 
         Text(
-            text = "A local notification with this goal's plan — no internet, no data leaves your device.",
+            text = "A local nudge with this check-in's cue — no internet, no data leaves your device.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 2.dp)

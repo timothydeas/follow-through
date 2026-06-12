@@ -1,0 +1,130 @@
+{
+  "schema_version": "1.0.0",
+  "storage": "local_only",
+  "profile": {
+    "id": "profile_local_001",
+    "created_at": "2026-06-08T18:22:00-07:00",
+    "passions_interests": [
+      { "id": "pi_001", "label": "Trail running on the Sacagawea river path", "emoji": "🏃‍♀️" },
+      { "id": "pi_002", "label": "My golden retriever, Biscuit", "emoji": "🐕" },
+      { "id": "pi_003", "label": "Specialty coffee — the orange Chemex on my counter", "emoji": "☕" },
+      { "id": "pi_004", "label": "Sci-fi audiobooks on the commute", "emoji": "🎧" }
+    ],
+    "learnings": [
+      { "id": "ln_001", "text": "I follow through when the thing is staged by the door the night before." },
+      { "id": "ln_002", "text": "Morning me keeps promises; 9pm me negotiates them away." },
+      { "id": "ln_003", "text": "Pairing a chore with a podcast makes me actually start it." }
+    ],
+    "settings": {
+      "theme": "system",
+      "text_scale": 1.0,
+      "reduce_motion": false,
+      "notification_sound_enabled": true,
+      "onboarding_completed": true
+    }
+  },
+  "goals": [
+    {
+      "id": "goal_001",
+      "title": "Run a 5K without stopping by August",
+      "why_it_matters": "Energy back, and Biscuit needs a running buddy.",
+      "status": "active",
+      "created_at": "2026-06-08T18:31:00-07:00",
+      "barriers": [
+        { "id": "br_001", "text": "After-work slump — I sit down and never get back up." },
+        { "id": "br_002", "text": "Forget to pack running shoes when I leave for work." }
+      ],
+      "progress_notes": [
+        { "id": "pr_001", "date": "2026-06-09", "text": "Ran 1.5 miles, walked the rest. Knees fine." },
+        { "id": "pr_002", "date": "2026-06-11", "text": "Skipped Tuesday — barrier #1 exactly as predicted." }
+      ]
+    },
+    {
+      "id": "goal_002",
+      "title": "Take blood-pressure meds every morning",
+      "why_it_matters": "Doctor flagged it in May. Non-negotiable.",
+      "status": "active",
+      "created_at": "2026-06-09T07:05:00-07:00",
+      "barriers": [
+        { "id": "br_003", "text": "Mornings are chaotic; the bottle lives in a drawer I never open." }
+      ],
+      "progress_notes": [
+        { "id": "pr_003", "date": "2026-06-10", "text": "Moved the bottle next to the coffee scale. Took it both days since." }
+      ]
+    },
+    {
+      "id": "goal_003",
+      "title": "Call Mom every Sunday",
+      "why_it_matters": "She mentioned twice that I only text now.",
+      "status": "active",
+      "created_at": "2026-06-10T20:14:00-07:00",
+      "barriers": [
+        { "id": "br_004", "text": "Sundays blur; by the time I remember it's 9pm her time." }
+      ],
+      "progress_notes": []
+    }
+  ],
+  "reminders": [
+    {
+      "id": "rem_001",
+      "goal_id": "goal_001",
+      "intention": { "when_moment": "I change out of work clothes on Mon/Wed/Fri", "i_will": "put on running shoes and take Biscuit out the door — even for 10 minutes" },
+      "cue": {
+        "type": "phrase",
+        "value": "Biscuit's leash is the starting line",
+        "source_palette_id": "pi_002",
+        "is_palette_drawn": true
+      },
+      "schedule": { "mode": "weekly", "days": ["MON", "WED", "FRI"], "time_local": "17:30", "timezone": "America/Los_Angeles" },
+      "full_text_always_shown": true,
+      "status": "active",
+      "created_at": "2026-06-08T18:40:00-07:00"
+    },
+    {
+      "id": "rem_002",
+      "goal_id": "goal_002",
+      "intention": { "when_moment": "I start the morning coffee", "i_will": "take the BP pill sitting next to the orange Chemex" },
+      "cue": {
+        "type": "emoji",
+        "value": "☕",
+        "source_palette_id": "pi_003",
+        "is_palette_drawn": true
+      },
+      "schedule": { "mode": "daily", "days": ["MON","TUE","WED","THU","FRI","SAT","SUN"], "time_local": "06:45", "timezone": "America/Los_Angeles" },
+      "full_text_always_shown": true,
+      "status": "active",
+      "created_at": "2026-06-09T07:12:00-07:00"
+    },
+    {
+      "id": "rem_003",
+      "goal_id": "goal_003",
+      "intention": { "when_moment": "the Sunday audiobook hour ends", "i_will": "call Mom before doing anything else" },
+      "cue": {
+        "type": "photo",
+        "value": "content://com.ideasinc.followthrough/media/mom_garden_photo.jpg",
+        "alt_text": "Mom in her garden holding tomatoes",
+        "source_palette_id": null,
+        "is_palette_drawn": false
+      },
+      "schedule": { "mode": "weekly", "days": ["SUN"], "time_local": "16:00", "timezone": "America/Los_Angeles" },
+      "full_text_always_shown": true,
+      "status": "active",
+      "created_at": "2026-06-10T20:20:00-07:00"
+    }
+  ],
+  "reminder_events": [
+    { "id": "ev_001", "reminder_id": "rem_002", "delivered_at": "2026-06-10T06:45:02-07:00", "action": "done", "acted_at": "2026-06-10T06:47:11-07:00", "undone": false, "reflection_text": null },
+    { "id": "ev_002", "reminder_id": "rem_001", "delivered_at": "2026-06-10T17:30:01-07:00", "action": "not_today", "acted_at": "2026-06-10T17:31:40-07:00", "undone": false, "reflection_text": "Long meeting ran over. Tomorrow." },
+    { "id": "ev_003", "reminder_id": "rem_002", "delivered_at": "2026-06-11T06:45:00-07:00", "action": "done", "acted_at": "2026-06-11T06:45:58-07:00", "undone": false, "reflection_text": null },
+    { "id": "ev_004", "reminder_id": "rem_001", "delivered_at": "2026-06-11T17:30:00-07:00", "action": "done", "acted_at": "2026-06-11T17:36:05-07:00", "undone": true, "undo_reason": "accidental_tap", "reflection_text": null }
+  ],
+  "local_metrics": {
+    "description": "On-device counters only. Never transmitted. Powers the user's own insight screen and validates leading indicators at survey re-run.",
+    "first_reminder_created_seconds_after_install": 142,
+    "reminders_created_total": 3,
+    "reminders_with_palette_cue": 2,
+    "delivered_total": 4,
+    "done_total": 3,
+    "follow_through_rate": 0.75
+  }
+}

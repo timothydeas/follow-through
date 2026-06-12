@@ -16,16 +16,21 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,6 +73,35 @@ fun FollowThrusScreen(
     val state by vm.uiState.collectAsState()
     val backFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
+
+    // Which record (if any) is pending an undo confirmation.
+    var undoTarget by remember { mutableStateOf<FollowThruRecord?>(null) }
+    undoTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { undoTarget = null },
+            text = {
+                Text(
+                    "Undo this follow-through? It will return to your active goals.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        vm.undoFollowThrough(target.goalId)
+                        undoTarget = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = AppColors.BrandAccentText)
+                ) { Text("Undo") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { undoTarget = null },
+                    colors = ButtonDefaults.textButtonColors(contentColor = AppColors.BrandAccentText)
+                ) { Text("Cancel") }
+            }
+        )
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -146,7 +180,14 @@ fun FollowThrusScreen(
                 )
             }
             items(state.records, key = { it.goalId }) { record ->
-                FollowThruCard(record = record, onClick = { onGoalClick(record.goalId) })
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    FollowThruCard(record = record, onClick = { onGoalClick(record.goalId) })
+                    TextButton(
+                        onClick = { undoTarget = record },
+                        modifier = Modifier.align(Alignment.End),
+                        colors = ButtonDefaults.textButtonColors(contentColor = AppColors.BrandAccentText)
+                    ) { Text("Undo follow-through") }
+                }
             }
         }
     }

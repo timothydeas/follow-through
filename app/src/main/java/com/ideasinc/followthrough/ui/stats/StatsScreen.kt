@@ -141,7 +141,7 @@ fun StatsScreen(
                 modifier = Modifier.padding(top = 4.dp)
             )
 
-            FollowThroughStreakCard(streak = state.followThroughCurrentStreak)
+            CheckInStreakCard(streak = state.checkInCurrentStreak)
 
             SectionLabel("CHECK-INS")
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -149,6 +149,12 @@ fun StatsScreen(
                 StatTile("${state.checkInLongestStreak}", "Longest", Modifier.weight(1f))
                 StatTile("${state.checkInTotal}", "Total", Modifier.weight(1f))
             }
+            // Split of the total by check-in type.
+            Text(
+                text = "Barriers ${state.checkInBarrierTotal}  ·  Progress ${state.checkInProgressTotal}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             if (state.checkInCurrentStreakFlexUsed) {
                 Text(
                     text = "Missed a day or two? Your streak is protected — up to two missed days won't reset your progress.",
@@ -209,11 +215,14 @@ fun StatsScreen(
 }
 
 /**
- * The Follow-Through Streak card — the one gold surface in the app. Gold flame +
- * a large dark number (14:1 on the pale-gold surface), with a reassurance line.
+ * The Check-in Streak card — the one gold surface in the app. Check-ins are the
+ * consistent, frequent behavior worth surfacing as the headline streak (follow-
+ * throughs are slow and infrequent, so they stay as their own count below, not as
+ * the streak). Gold flame + a large dark number (14:1 on the pale-gold surface),
+ * with a reassurance line that reflects the two-day flex buffer.
  */
 @Composable
-private fun FollowThroughStreakCard(streak: Int) {
+private fun CheckInStreakCard(streak: Int) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -221,13 +230,13 @@ private fun FollowThroughStreakCard(streak: Int) {
             .background(AppColors.GoldSurface)
             .padding(20.dp)
             .semantics(mergeDescendants = true) {
-                contentDescription = "Follow-Through Streak. $streak ${if (streak == 1) "day" else "days"} in a row. " +
-                    "One miss won't break it. You've got a built-in reserve."
+                contentDescription = "Check-in Streak. $streak ${if (streak == 1) "day" else "days"} in a row. " +
+                    "An occasional miss won't reset it."
             },
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
-            text = "Follow-Through Streak",
+            text = "Check-in Streak",
             style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp),
             color = AppColors.OnGoldSurface
         )
@@ -252,7 +261,7 @@ private fun FollowThroughStreakCard(streak: Int) {
             )
         }
         Text(
-            text = "One miss won't break it. You've got a built-in reserve.",
+            text = "An occasional miss won't reset it.",
             style = MaterialTheme.typography.bodyMedium,
             color = AppColors.OnGoldSurface
         )

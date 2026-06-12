@@ -62,7 +62,7 @@ Branch: `mvp-launch-fixes` (off `main` @ bb41831). One commit per phase.
 - **#3 Launch Insight curated.** Dropped the overlong "firefighter" message (a tightened version is already in the set). Auto-dismiss + tap-to-continue unchanged.
 - **#7 Lead-light check-in (the most-cited friction fix).** `CheckInFlowScreen` rebuilt from a 6-step wall into a single calm page: read-only **goal + your plan (implementation intention)** context at top, a one-line purpose cue, **one** light lead prompt (progress), and the rest (avoiding, confidence, what's-in-the-way, edit-intention, accountability) behind an inviting **"Reflect more"**. Save is always available, so a progress-only (or single-line) check-in works. Form starts blank; only answered questions are stored (`ifBlank{null}`). `CheckInFlowViewModel` now loads the goal title + latest intention for the read-only context.
 - **#4 Frictionless, visible-input.** Reflection fields use a **visible, persistent outline border**; `imePadding()` on the scroll container + bottom Save bar keeps the keyboard from covering the active field; check-in is reachable in ≤ 4 taps (Home → goal → + → field).
-- **#6 Goal framing (Fischbach).** Goal-creation placeholder reframed to an aspirational/approach example ("What you want to move toward — e.g., 'be heard at work'"), a soft hint only — no blocker/lint, Q1 wording unchanged.
+- **#6 Goal framing (Fishbach).** Goal-creation placeholder reframed to an aspirational/approach example ("What you want to move toward — e.g., 'be heard at work'"), a soft hint only — no blocker/lint, Q1 wording unchanged.
 - **#7 q5 refined** to one clean clause: "What's getting in your way — the situation itself, or how you're seeing it?"
 - Verified: `:app:compileDebugKotlin` passes.
 

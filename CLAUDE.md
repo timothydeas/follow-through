@@ -10,3 +10,4 @@
 ## Versioning
 - **Onboarding re-show:** Whenever onboarding content or copy changes, OR when Tim asks to re-see the onboarding flow, bump `CURRENT_ONBOARDING_VERSION` (in `AppNavigation.kt`) by 1 so onboarding shows again on the next launch. No user data is reset by this — it only advances the onboarding-seen gate.
 - **App version:** After a batch of substantive changes intended for an on-device test build or a release, increment `versionCode` (in `app/build.gradle.kts`); also bump `versionName` for user-facing releases. Don't bump on trivial commits.
+- **Test build → re-show full first-run:** When preparing a substantive batch for an on-device test build, bump `CURRENT_ONBOARDING_VERSION` along with `versionCode` so the full first-run experience re-shows for retesting. (For a production release, only bump `CURRENT_ONBOARDING_VERSION` if onboarding content actually changed — don't re-onboard existing users on every update.)

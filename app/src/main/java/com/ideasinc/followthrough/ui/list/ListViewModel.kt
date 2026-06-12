@@ -1,4 +1,4 @@
-﻿package com.ideasinc.followthrough.ui.list
+package com.ideasinc.followthrough.ui.list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -8,12 +8,9 @@ import com.ideasinc.followthrough.data.CheckInDao
 import com.ideasinc.followthrough.data.Goal
 import com.ideasinc.followthrough.data.GoalDao
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -21,39 +18,60 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 
 // Number of leading positions in the unified list that are treated as
-// "priority" — highlighted and rank-numbered. Position 0 → rank 1, position
-// 1 → rank 2, position 2 → rank 3.
+// "priority" — highlighted and rank-numbered. Position 0 → rank 1, etc.
 private const val PRIORITY_SLOT_COUNT = 3
+
+// ~6 days between the first and second (and final) showing of the focus message.
+internal const val FOCUS_REMINDER_REPEAT_DELAY_MS = 6L * 24 * 60 * 60 * 1000
+
+/**
+ * Persisted tracking for the "focus on fewer goals" message: when it was first
+ * shown (null = never), and whether the single follow-up showing has happened.
+ */
+internal data class FocusReminderState(
+    val firstShownAt: Long?,
+    val secondShown: Boolean
+)
+
+/** Whether to show the message now, plus the state to persist afterward. */
+internal data class FocusReminderDecision(
+    val show: Boolean,
+    val newState: FocusReminderState
+)
+
+/**
+ * Decides whether the top-3 focus message should appear, given how many active
+ * goals exist, what has been shown before, and the current time. Pure, so the
+ * 6-day re-fire is unit-testable.
+ */
+internal fun decideFocusReminder(
+    activeGoalCount: Int,
+    state: FocusReminderState,
+    now: Long
+): FocusReminderDecision = when {
+    activeGoalCount <= PRIORITY_SLOT_COUNT -> FocusReminderDecision(false, state)
+    state.firstShownAt == null -> FocusReminderDecision(true, state.copy(firstShownAt = now))
+    !state.secondShown && now - state.firstShownAt >= FOCUS_REMINDER_REPEAT_DELAY_MS ->
+        FocusReminderDecision(true, state.copy(secondShown = true))
+    else -> FocusReminderDecision(false, state)
+}
 
 data class GoalRowData(
     val goal: Goal,
-    val checkInCount: Int,
-    val latestCheckInDate: Long?,
-    val rank: Int?,  // 1, 2, or 3 for the top three positions; null for everything below
-    // The goal's implementation intention ("When …, I will …"), taken from the
-    // most recent check-in that recorded one. Null when no plan is written yet.
-    val intention: String?
+    val rank: Int?,  // 1, 2, or 3 for the top three positions; null below
+    // A subtitle for the card: the goal's most recent plan's intention (a goal
+    // holds many plans). Null when the goal has no plan with an intention yet.
+    val currentPlan: String?
 )
 
 data class ListUiState(
     val goals: List<GoalRowData> = emptyList(),
-    val completedGoals: List<GoalRowData> = emptyList(),
     val query: String = "",
     val streakDays: Int = 0,
-    val streakFlexDayUsed: Boolean = false,
     val totalFollowThroughs: Int = 0
 )
 
-/**
- * Transient state held during a drag gesture. [orderedIds] is the in-flight
- * unified ordering; [originalOrderedIds] is the snapshot from when the drag
- * started, used at drop time to detect whether a goal was promoted from
- * below the priority cutoff into the top two slots.
- */
-private data class DragState(
-    val orderedIds: List<String>,
-    val originalOrderedIds: List<String>
-)
+private data class DragState(val orderedIds: List<String>)
 
 class ListViewModel(
     private val goalDao: GoalDao,
@@ -62,9 +80,6 @@ class ListViewModel(
 
     private val _query = MutableStateFlow("")
     private val _dragState = MutableStateFlow<DragState?>(null)
-
-    private val _priorityLimitWarning = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val priorityLimitWarning: SharedFlow<Unit> = _priorityLimitWarning.asSharedFlow()
 
     val uiState: StateFlow<ListUiState> = combine(
         goalDao.getAllGoals(),
@@ -76,14 +91,6 @@ class ListViewModel(
         val total = goals.count { it.followedThrough }
         val streak = computeStreakWithFlex(allCheckIns.map { it.createdAt })
 
-        // Completed goals get their own showcase, newest completion first.
-        val completedRows = goals
-            .filter { it.followedThrough }
-            .sortedByDescending { it.followedThroughAt ?: it.updatedAt }
-            .map { goal -> rowFor(goal, null, checkInsByGoal) }
-
-        // The active list (priority ranks, drag-and-drop, search) only holds
-        // goals that have not been followed through yet.
         val activeGoals = goals.filter { !it.followedThrough }
         val filtered = if (query.isBlank()) activeGoals
         else activeGoals.filter { it.title.lowercase().contains(query.lowercase()) }
@@ -93,10 +100,7 @@ class ListViewModel(
             val byId = filtered.associateBy { it.id }
             val knownIds = dragState.orderedIds.toSet()
             val draggedOrder = dragState.orderedIds.mapNotNull { byId[it] }
-            // Goals that became visible mid-drag (e.g. query change) get
-            // appended to the bottom rather than dropped.
-            val extras = filtered.filter { it.id !in knownIds }
-                .sortedWith(unifiedComparator)
+            val extras = filtered.filter { it.id !in knownIds }.sortedWith(unifiedComparator)
             draggedOrder + extras
         } else {
             filtered.sortedWith(unifiedComparator)
@@ -109,10 +113,8 @@ class ListViewModel(
 
         ListUiState(
             goals = rows,
-            completedGoals = completedRows,
             query = query,
             streakDays = streak.days,
-            streakFlexDayUsed = streak.flexDayUsed,
             totalFollowThroughs = total
         )
     }.stateIn(
@@ -123,11 +125,6 @@ class ListViewModel(
 
     fun onQueryChange(value: String) { _query.value = value }
 
-    /**
-     * Accessibility up/down arrow handler. Swaps the target goal with its
-     * neighbour in the unified ordering and rewrites priority values 1..N
-     * across the full list so position is durable.
-     */
     fun moveGoal(goalId: String, delta: Int) {
         if (delta != -1 && delta != +1) return
         viewModelScope.launch(Dispatchers.IO) {
@@ -137,19 +134,12 @@ class ListViewModel(
             if (from < 0) return@launch
             val to = from + delta
             if (to < 0 || to >= sorted.size) return@launch
-
-            val warn = from >= PRIORITY_SLOT_COUNT && to < PRIORITY_SLOT_COUNT
             val item = sorted.removeAt(from)
             sorted.add(to, item)
             persistOrder(sorted, all)
-            if (warn) _priorityLimitWarning.tryEmit(Unit)
         }
     }
 
-    /**
-     * "Move to position" accessibility dialog. 1-indexed position into the
-     * unified list.
-     */
     fun moveGoalToPosition(goalId: String, targetPosition: Int) {
         if (targetPosition < 1) return
         viewModelScope.launch(Dispatchers.IO) {
@@ -159,53 +149,30 @@ class ListViewModel(
             if (from < 0) return@launch
             val to = (targetPosition - 1).coerceIn(0, sorted.size - 1)
             if (from == to) return@launch
-
-            val warn = from >= PRIORITY_SLOT_COUNT && to < PRIORITY_SLOT_COUNT
             val item = sorted.removeAt(from)
             sorted.add(to, item)
             persistOrder(sorted, all)
-            if (warn) _priorityLimitWarning.tryEmit(Unit)
         }
     }
 
-    /**
-     * Called by the reorderable drag library on every drag delta. Both
-     * indices are positions in the unified flat list. The first call seeds
-     * the transient drag state from the current uiState ordering.
-     */
     fun onDragMove(fromIdx: Int, toIdx: Int) {
         val state = _dragState.value ?: seedDragState() ?: return
         if (fromIdx < 0 || fromIdx >= state.orderedIds.size) return
         if (toIdx < 0 || toIdx >= state.orderedIds.size) return
         if (fromIdx == toIdx) return
-
         val list = state.orderedIds.toMutableList()
         val item = list.removeAt(fromIdx)
         list.add(toIdx, item)
-
         _dragState.value = state.copy(orderedIds = list)
     }
 
-    /**
-     * Called when the drag gesture ends. Persists priorities 1..N across the
-     * full ordered list so the on-screen order is durable. Fires the warning
-     * if any goal was moved from position >= 2 into the top two slots.
-     */
     fun onDragEnd() {
         val state = _dragState.value ?: return
         viewModelScope.launch(Dispatchers.IO) {
             val allGoals = goalDao.getAllGoals().first()
             val byId = allGoals.associateBy { it.id }
-            val origIndexById = state.originalOrderedIds.withIndex()
-                .associate { (i, id) -> id to i }
-
             val newOrdered = state.orderedIds
-            val movedFromBelowToTop = newOrdered.take(PRIORITY_SLOT_COUNT).any { id ->
-                (origIndexById[id] ?: 0) >= PRIORITY_SLOT_COUNT
-            }
-
-            val expectedPriorities = newOrdered.withIndex()
-                .associate { (idx, id) -> id to (idx + 1) }
+            val expectedPriorities = newOrdered.withIndex().associate { (idx, id) -> id to (idx + 1) }
 
             var anyUpdate = false
             newOrdered.forEachIndexed { idx, id ->
@@ -216,10 +183,6 @@ class ListViewModel(
                     anyUpdate = true
                 }
             }
-            // Wait for Room's flow to reflect the new priorities before
-            // clearing dragState; otherwise the combine briefly recomputes
-            // with stale priorities and the items snap back to their old
-            // positions before settling.
             if (anyUpdate) {
                 goalDao.getAllGoals().first { goals ->
                     val freshById = goals.associateBy { it.id }
@@ -230,22 +193,17 @@ class ListViewModel(
                 }
             }
             _dragState.value = null
-            if (movedFromBelowToTop) {
-                _priorityLimitWarning.tryEmit(Unit)
-            }
         }
     }
 
     fun deleteGoal(goalId: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            goalDao.deleteById(goalId)
-        }
+        viewModelScope.launch(Dispatchers.IO) { goalDao.deleteById(goalId) }
     }
 
     private fun seedDragState(): DragState? {
         val ids = uiState.value.goals.map { it.goal.id }
         if (ids.isEmpty()) return null
-        val seeded = DragState(orderedIds = ids, originalOrderedIds = ids)
+        val seeded = DragState(orderedIds = ids)
         _dragState.value = seeded
         return seeded
     }
@@ -261,20 +219,18 @@ class ListViewModel(
         }
     }
 
-    private fun rowFor(goal: Goal, rank: Int?, checkInsByGoal: Map<String, List<CheckIn>>): GoalRowData {
-        val cis = checkInsByGoal[goal.id] ?: emptyList()
-        val intention = cis
-            .filter { !it.implementationIntention.isNullOrBlank() }
-            .maxByOrNull { it.createdAt }
-            ?.implementationIntention
+    private fun rowFor(
+        goal: Goal,
+        rank: Int?,
+        checkInsByGoal: Map<String, List<CheckIn>>
+    ): GoalRowData {
+        // getAllCheckIns is newest-first, so the first non-blank intention is the
+        // goal's most recent implementation intention.
+        val currentPlan = checkInsByGoal[goal.id]
+            ?.firstOrNull { it.intention.isNotBlank() }
+            ?.intention
             ?.trim()
-        return GoalRowData(
-            goal = goal,
-            checkInCount = cis.size,
-            latestCheckInDate = cis.maxOfOrNull { it.createdAt },
-            rank = rank,
-            intention = intention
-        )
+        return GoalRowData(goal = goal, rank = rank, currentPlan = currentPlan)
     }
 
     class Factory(
@@ -287,15 +243,9 @@ class ListViewModel(
     }
 }
 
-// Only positive integers count as a real ranked priority. Null, 0, and any
-// other unexpected value are treated as unranked, so legacy rows behave
-// exactly like fresh ones in the drag-and-drop and arrow flows.
+// Only positive integers count as a real ranked priority.
 private fun isValidPriority(priority: Int?): Boolean = priority != null && priority > 0
 
-// Sort goals into a single unified order: goals with explicit priority come
-// first (lowest priority value = highest rank), goals without an explicit
-// priority follow, sorted by createdAt so newly-created goals land at the
-// bottom of the list.
 private val unifiedComparator: Comparator<Goal> = Comparator { a, b ->
     val aPri = if (isValidPriority(a.priority)) a.priority!! else Int.MAX_VALUE
     val bPri = if (isValidPriority(b.priority)) b.priority!! else Int.MAX_VALUE
@@ -318,16 +268,14 @@ private fun startOfDay(ts: Long): Long {
 data class StreakResult(val days: Int, val flexDayUsed: Boolean)
 
 /**
- * Streak counts consecutive days ending today (or yesterday, if nothing
- * happened today yet) on which the user did the activity. Up to two
- * consecutive missed days in the window are allowed (the "flex" buffer) —
- * the streak only resets when three or more consecutive missed days are
- * encountered. The buffer resets after each hit. flexDayUsed is true when
- * the flex actually bridged a miss back to a hit (extending the streak).
+ * Streak counts consecutive days ending today (or yesterday, if nothing happened
+ * today yet) on which the user did the activity. Up to two consecutive missed
+ * days in the window are allowed (the "flex" buffer) — the streak only resets when
+ * three or more consecutive missed days are encountered. The buffer resets after
+ * each hit. flexDayUsed is true when the flex actually bridged a miss back to a hit.
  */
 internal fun computeStreakWithFlex(timestamps: List<Long>): StreakResult {
     val dayMs = 24L * 60 * 60 * 1000
-
     val activityDays = timestamps.map { startOfDay(it) }.toHashSet()
     if (activityDays.isEmpty()) return StreakResult(0, false)
 

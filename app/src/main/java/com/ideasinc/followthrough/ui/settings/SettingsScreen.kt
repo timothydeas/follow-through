@@ -3,7 +3,6 @@
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -62,7 +61,6 @@ import com.ideasinc.followthrough.BuildConfig
 import com.ideasinc.followthrough.R
 import com.ideasinc.followthrough.di.AppContainer
 import com.ideasinc.followthrough.feedback.AppReview
-import com.ideasinc.followthrough.notifications.ReminderScheduler
 import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
 import com.ideasinc.followthrough.ui.theme.ThemeMode
@@ -76,39 +74,15 @@ import com.ideasinc.followthrough.navigation.PREFS_NAME
 fun SettingsScreen(
     container: AppContainer,
     onBack: () -> Unit,
-    onCustomizeQuestions: () -> Unit
+    onScience: () -> Unit
 ) {
     val context = LocalContext.current
-    val settingsVm: SettingsViewModel = viewModel(
-        factory = SettingsViewModel.Factory(container.questionLabelDao, context)
-    )
-    val uiState by settingsVm.uiState.collectAsState()
 
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
     var biometricEnabled by remember { mutableStateOf(prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false)) }
     val backFocus = remember { FocusRequester() }
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
-
-    // Persists the "wants reminders on" intent and walks notifications + exact
-    // alarms in one flow; finalizes the toggle ON (and schedules) once every
-    // permission is in place — including automatically on return from Settings,
-    // so the user never has to toggle twice or take a surprise second trip.
-    val remindersFlow = rememberReminderPermissionFlow(
-        intentKey = "global",
-        onEnabled = {
-            val current = settingsVm.uiState.value
-            settingsVm.setRemindersEnabled(true)
-            try {
-                ReminderScheduler.scheduleReminders(
-                    context.applicationContext,
-                    current.reminderHour,
-                    current.reminderMinute,
-                    current.reminderDays
-                )
-            } catch (_: Exception) { /* scheduling failed — toggle on, no alarm */ }
-        }
-    )
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -197,34 +171,6 @@ fun SettingsScreen(
 
             HorizontalDivider(color = AppColors.Border)
 
-            // Customize questions row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(
-                        onClickLabel = "Open Customize Questions",
-                        role = Role.Button,
-                        onClick = onCustomizeQuestions
-                    )
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Customize questions",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontFamily = PoppinsFontFamily),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f)
-                )
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_chevron_right),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            HorizontalDivider(color = AppColors.Border)
-
             // Appearance section
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                 Text(
@@ -254,122 +200,6 @@ fun SettingsScreen(
 
             HorizontalDivider(color = AppColors.Border)
 
-            // Reminders section
-            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-                ) {
-                    Text(
-                        text = "Reminders",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontFamily = PoppinsFontFamily,
-                            fontWeight = FontWeight.SemiBold
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier
-                            .weight(1f)
-                            .semantics { heading() }
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Enable reminders",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Switch(
-                        checked = uiState.remindersEnabled,
-                        onCheckedChange = { enabled ->
-                            if (enabled) {
-                                remindersFlow.start()
-                            } else {
-                                settingsVm.setRemindersEnabled(false)
-                                remindersFlow.cancel()
-                                try {
-                                    ReminderScheduler.cancelReminders(context.applicationContext)
-                                } catch (_: Exception) { /* ignore */ }
-                            }
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            uncheckedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                            uncheckedTrackColor = AppColors.SwitchUncheckedTrack,
-                            uncheckedBorderColor = Color.Transparent
-                        ),
-                        modifier = Modifier.semantics {
-                            contentDescription = "Enable reminders"
-                            stateDescription = if (uiState.remindersEnabled) "On" else "Off"
-                            role = Role.Switch
-                        }
-                    )
-                }
-
-                if (uiState.remindersEnabled) {
-                    Column(
-                        modifier = Modifier.padding(top = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        // Time picker
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Remind me at",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.weight(1f)
-                            )
-                            ReminderTimePickerButton(
-                                hour = uiState.reminderHour,
-                                minute = uiState.reminderMinute,
-                                onTimeSelected = { h, m ->
-                                    settingsVm.setReminderTime(h, m)
-                                    if (uiState.remindersEnabled) {
-                                        try {
-                                            ReminderScheduler.scheduleReminders(
-                                                context.applicationContext, h, m, uiState.reminderDays
-                                            )
-                                        } catch (_: Exception) { /* ignore */ }
-                                    }
-                                }
-                            )
-                        }
-
-                        // Day selector
-                        Text(
-                            text = "Days",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        ReminderDayChips(selectedDays = uiState.reminderDays) { day, selected ->
-                            settingsVm.toggleDay(day)
-                            if (uiState.remindersEnabled) {
-                                val newDays = uiState.reminderDays.toMutableSet()
-                                if (selected) newDays.remove(day) else newDays.add(day)
-                                try {
-                                    ReminderScheduler.scheduleReminders(
-                                        context.applicationContext,
-                                        uiState.reminderHour,
-                                        uiState.reminderMinute,
-                                        newDays
-                                    )
-                                } catch (_: Exception) { /* ignore */ }
-                            }
-                        }
-                    }
-                }
-            }
-
-            HorizontalDivider(color = AppColors.Border)
-
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                 Text(
                     text = "About",
@@ -382,6 +212,34 @@ fun SettingsScreen(
                         .padding(bottom = 12.dp)
                         .semantics { heading() }
                 )
+
+                // The science behind FollowThru — read-only sources screen, placed
+                // directly above the version line.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            onClickLabel = "Open The science behind FollowThru",
+                            role = Role.Button,
+                            onClick = onScience
+                        )
+                        .heightIn(min = 48.dp)
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "The science behind FollowThru",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_chevron_right),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
 
                 Row(
                     modifier = Modifier

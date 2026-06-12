@@ -54,8 +54,8 @@ import java.util.Calendar
 import java.util.Locale
 
 // Shared reminder controls and the exact-alarm/notification permission gate.
-// Both the global reminder (SettingsScreen) and per-goal reminders reuse these
-// so the permission flow and day/time UI exist in exactly one place.
+// Per-goal reminders (GoalReminderControls) use these so the permission flow and
+// day/time UI exist in exactly one place.
 
 /**
  * The reminder permissions that are currently missing. A reminder needs BOTH
@@ -189,8 +189,8 @@ internal fun ExactAlarmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
 }
 
 // ─── Permission flow ──────────────────────────────────────────────────────
-// One coherent "enable a reminder" flow shared by the global reminder
-// (SettingsScreen) and per-goal reminders (GoalReminderControls). It persists
+// One coherent "enable a reminder" flow used by per-goal reminders
+// (GoalReminderControls). It persists
 // the user's "wants reminder on" intent, gathers EVERY missing permission up
 // front, and drives notifications → exact alarms in a single sequence. On every
 // return to the app it re-checks all permissions and either advances to the next
@@ -219,7 +219,7 @@ internal class ReminderPermissionFlow internal constructor(
 
 /**
  * Creates the reminder-permission flow for one target, identified by [intentKey]
- * (a goalId for per-goal reminders, or a fixed string like "global"). [onEnabled]
+ * (the goalId of the per-goal reminder being enabled). [onEnabled]
  * is invoked exactly once when every required permission is in place — it should
  * flip the caller's toggle ON and schedule the alarm. The flow renders its own
  * dialogs, registers the POST_NOTIFICATIONS launcher, and observes ON_RESUME, so

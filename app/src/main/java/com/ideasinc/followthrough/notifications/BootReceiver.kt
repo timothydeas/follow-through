@@ -14,7 +14,6 @@ class BootReceiver : BroadcastReceiver() {
         ) return
 
         val appContext = context.applicationContext
-        ReminderScheduler.rescheduleAllFromPrefs(appContext)
         GoalReminderScheduler.rescheduleAllFromPrefs(appContext)
     }
 }

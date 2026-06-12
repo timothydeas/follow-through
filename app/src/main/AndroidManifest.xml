@@ -5,6 +5,25 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- targetSdk 35 enforces package visibility: declare the cue pickers we
+         launch so they resolve. The system photo picker (ACTION_PICK_IMAGES) is
+         always visible; these cover its GET_CONTENT/OPEN_DOCUMENT fallback on
+         devices without it, plus the system notification-sound chooser. All local
+         — no network. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+            <data android:mimeType="image/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.OPEN_DOCUMENT" />
+            <data android:mimeType="image/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.RINGTONE_PICKER" />
+        </intent>
+    </queries>
+
     <application
         android:name=".GroundedApplication"
         android:allowBackup="false"
@@ -28,7 +47,6 @@
             android:name=".notifications.ReminderReceiver"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.ideasinc.followthrough.action.REMINDER" />
                 <action android:name="com.ideasinc.followthrough.action.GOAL_REMINDER" />
             </intent-filter>
         </receiver>

@@ -19,7 +19,10 @@ object QuestionKeys {
     const val MADE_PROGRESS = "madeProgress"
     const val COMPETING_PRIORITY = "competingPriority"
     const val IMPLEMENTATION_INTENTION = "implementationIntention"
-    const val ACCOUNTABILITY = "accountability"
+
+    // Accountability has been removed from the product: it is no longer asked at
+    // creation, has no settings, and did not become a launch insight. The dormant
+    // check_ins.accountability column is left untouched for historical data.
 
     val ALL_KEYS = listOf(
         GOAL_OR_CHANGE,
@@ -27,8 +30,7 @@ object QuestionKeys {
         CONFIDENCE,
         MADE_PROGRESS,
         COMPETING_PRIORITY,
-        IMPLEMENTATION_INTENTION,
-        ACCOUNTABILITY
+        IMPLEMENTATION_INTENTION
     )
 
     val DEFAULT_LABELS = mapOf(
@@ -37,8 +39,7 @@ object QuestionKeys {
         AVOIDING to "Is there something you've been avoiding facing — even though you know it would help?",
         CONFIDENCE to "How confident do you feel you'll figure this out?",
         COMPETING_PRIORITY to "What's getting in your way — the situation itself, or how you're perceiving it?",
-        IMPLEMENTATION_INTENTION to "When [e.g., moment or situation], I will [e.g., what I'll do].",
-        ACCOUNTABILITY to "Who holds you accountable?"
+        IMPLEMENTATION_INTENTION to "Implementation Intention"
     )
 
     // Default placeholder (example-answer) text per question. Mirrors the
@@ -49,8 +50,7 @@ object QuestionKeys {
         CONFIDENCE to "You don't need proof you can do this before you start. What does your gut say?",
         MADE_PROGRESS to "Yes, no, or a quick note.",
         COMPETING_PRIORITY to "Be honest — sometimes our perception or anticipation of a situation matters more than the situation itself. And if nothing is in your way right now, think ahead.",
-        IMPLEMENTATION_INTENTION to "I will go for a walk when I finish my morning coffee.",
-        ACCOUNTABILITY to "A person, a memory, a strategy — whatever keeps you going"
+        IMPLEMENTATION_INTENTION to "When I finish my morning coffee, I will go for a walk."
     )
 }
 

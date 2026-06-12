@@ -326,8 +326,8 @@ private fun SlideOneBody(
         )
         Text(
             text = "We all set goals. FollowThru is for the moment you act on them — " +
-                "naming where it tends to slip, and deciding your move in advance, " +
-                "so you're ready when it counts.",
+                "checking in on what helps or gets in the way, setting your " +
+                "implementation intention, and following through when it counts.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
@@ -408,18 +408,19 @@ private fun HowItWorksBody() {
         )
         HowItWorksStep(
             iconRes = R.drawable.ic_target,
-            title = "Name the moment",
-            description = "The situation where following through gets hard."
+            title = "Name your goal",
+            description = "What you're working toward — or struggling with."
         )
         HowItWorksStep(
             iconRes = R.drawable.ic_edit_3,
-            title = "Decide your move",
-            description = "When [cue], I will [action] — your plan for that moment."
+            title = "Check in",
+            description = "Note a barrier or some progress, and set your implementation " +
+                "intention: when [cue], I will [action]."
         )
         HowItWorksStep(
             iconRes = R.drawable.ic_check_circle,
             title = "Follow through",
-            description = "Act on your plan, then mark it."
+            description = "Act on your intention, then mark it."
         )
 
         // Optional worked example — kept off the required path behind a toggle so
@@ -448,35 +449,53 @@ private fun HowItWorksBody() {
                     .padding(16.dp)
                     .semantics(mergeDescendants = true) {
                         contentDescription =
-                            "Example. Goal: take care of my health. " +
-                                "When I pour my morning coffee, I will make a breakfast I actually look forward to. " +
-                                "Your goal is what you're moving toward. Your plan is the exact move for the moment. " +
-                                "You'll write your own."
+                            "Example. Goal: stay close to the people I care about. " +
+                                "Check-in, a barrier: weeks slip by and I don't reach out. " +
+                                "Implementation intention: when I pour my morning coffee, I'll text one person. " +
+                                "Followed through. You'll write your own."
                     },
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(
-                    text = "GOAL",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                ExampleRow(
+                    label = "GOAL",
+                    text = "Stay close to the people I care about",
+                    emphasize = true
                 )
-                Text(
-                    text = "Take care of my health",
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurface
+                ExampleRow(
+                    label = "CHECK-IN · BARRIER",
+                    text = "Weeks slip by and I don't reach out"
                 )
-                Text(
-                    text = "When I pour my morning coffee, I will make a breakfast I actually look forward to.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                ExampleRow(
+                    label = "IMPLEMENTATION INTENTION",
+                    text = "When I pour my morning coffee, I'll text one person"
                 )
-                Text(
-                    text = "Your goal is what you're moving toward. Your plan is the exact move for the moment — you'll write your own.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                ExampleRow(
+                    label = "FOLLOWED THROUGH",
+                    text = "Texted my brother — first time in a month."
                 )
             }
         }
+    }
+}
+
+/** One labelled line in the worked example (goal → check-in → intention → done). */
+@Composable
+private fun ExampleRow(label: String, text: String, emphasize: Boolean = false) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+        Text(
+            text = text,
+            style = if (emphasize) {
+                MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+            } else {
+                MaterialTheme.typography.bodyLarge
+            },
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 

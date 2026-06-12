@@ -183,8 +183,14 @@ class Migration26To27Test {
     private fun openMigratedDb(): GroundedDatabase =
         Room.databaseBuilder(context, GroundedDatabase::class.java, dbName)
             // Room targets the current @Database version, so supply every
-            // migration from 26 up to it — not just 26→27 — or it can't build.
-            .addMigrations(MIGRATION_26_27, MIGRATION_27_28)
+            // migration from 26 up to it — this also exercises the whole chain,
+            // where short-lived helper tables (and the v33 `plans` table) are
+            // created and then dropped, on its way to the current endpoint.
+            .addMigrations(
+                MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29,
+                MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33,
+                MIGRATION_33_34
+            )
             .build()
 
     private fun tableExists(db: SupportSQLiteDatabase, name: String): Boolean =
@@ -195,37 +201,41 @@ class Migration26To27Test {
         db.query("SELECT COUNT(*) FROM $table").use { it.moveToFirst(); it.getInt(0) }
 
     @Test
-    fun migrate26To27_preservesCoreData_andDropsLegacyTables() {
+    fun migrate26To31_preservesGoalsAndLabels_andDropsAllRetiredTables() {
         buildPopulatedV26()
 
         val room = openMigratedDb()
-        val db = room.openHelper.writableDatabase // triggers the 26→27 migration + Room validation
+        val db = room.openHelper.writableDatabase // runs the full 26→31 chain + Room validation
 
-        // Core tables: data intact.
+        // Goals survive the whole chain (untouched by the v31 consolidation).
         assertEquals("goals row count", 2, rowCount(db, "goals"))
-        assertEquals("check_ins row count", 2, rowCount(db, "check_ins"))
         assertEquals("question_labels row count", 1, rowCount(db, "question_labels"))
 
-        // The followed-through goal and the intention text survived.
+        // The followed-through goal's state survived (follow-through lives on goals).
         db.query("SELECT title, followedThrough, followedThroughAt FROM goals WHERE id = 'g2'").use {
             assertTrue(it.moveToFirst())
             assertEquals("Be heard at work", it.getString(0))
             assertEquals(1, it.getInt(1))
             assertEquals(2400L, it.getLong(2))
         }
-        db.query("SELECT implementationIntention FROM check_ins WHERE id = 'c1'").use {
-            assertTrue(it.moveToFirst())
-            assertEquals("When I finish my morning coffee, I will walk for 15 minutes.", it.getString(0))
-        }
         db.query("SELECT customLabel FROM question_labels WHERE id = 'q1'").use {
             assertTrue(it.moveToFirst())
             assertEquals("Who has your back?", it.getString(0))
         }
 
-        // Removed tables are gone.
+        // check_ins is reshaped to the v31 typed schema and recreated empty
+        // (legacy reflection rows are intentionally not carried over).
+        assertEquals("check_ins recreated empty", 0, rowCount(db, "check_ins"))
+
+        // Every retired table is gone: the v26 legacy tables and the short-lived
+        // v29/v30 helper tables.
         assertFalse("steps dropped", tableExists(db, "steps"))
         assertFalse("notes dropped", tableExists(db, "notes"))
         assertFalse("follow_throughs dropped", tableExists(db, "follow_throughs"))
+        assertFalse("implementation_intentions dropped", tableExists(db, "implementation_intentions"))
+        assertFalse("barriers dropped", tableExists(db, "barriers"))
+        assertFalse("progress_notes dropped", tableExists(db, "progress_notes"))
+        assertFalse("plans dropped", tableExists(db, "plans"))
 
         room.close()
     }
