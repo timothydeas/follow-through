@@ -128,8 +128,7 @@ internal fun ReassuranceOverlay(message: String, onDismiss: () -> Unit) {
             }
     ) {
         // Portrait floats the message to the visual center with weight spacers;
-        // landscape is too short for that, so the column scrolls with fixed
-        // spacers — mirroring LaunchInsightScreen.
+        // landscape is too short for that, so the column scrolls with fixed spacers.
         Column(
             modifier = Modifier
                 .fillMaxSize()

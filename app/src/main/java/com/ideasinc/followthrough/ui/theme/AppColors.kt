@@ -82,8 +82,8 @@ object AppColors {
         @ReadOnlyComposable
         get() = MaterialTheme.colorScheme.error
 
-    // Full-screen brand background (LaunchInsight). Coral in both modes — it's a
-    // brand moment, not a surface. Label uses OnForgeBackground.
+    // Full-screen brand background (the celebratory ReassuranceOverlay). Coral in
+    // both modes — it's a brand moment, not a surface. Label uses OnForgeBackground.
     val ForgeBackground: Color
         @Composable
         @ReadOnlyComposable
