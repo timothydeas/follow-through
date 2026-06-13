@@ -101,7 +101,10 @@ internal const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
 // Bumped 110 → 111 for the prototype-alignment navigation spine (four primary
 // destinations Today · Goals · About You · Settings with an adaptive bottom bar /
 // nav rail), so the full first-run re-shows on the next test build (no data reset).
-internal const val CURRENT_ONBOARDING_VERSION = 111
+// Bumped 111 → 112 for the rewritten 3-pane Welcome (handoff §8 verbatim copy,
+// "Progress, not perfection." → "Create my first reminder"), so the refreshed
+// onboarding re-shows once (no data reset).
+internal const val CURRENT_ONBOARDING_VERSION = 112
 
 /** A primary spine destination, rendered in both the bottom bar and the nav rail. */
 private data class PrimaryDestination(
@@ -248,14 +251,18 @@ private fun AppNavHost(
         composable(ROUTE_ONBOARDING) {
             CenteredPane {
                 OnboardingScreen(
-                    onBiometricPersist = { biometricEnabled ->
-                        prefs.edit().putBoolean(KEY_BIOMETRIC_ENABLED, biometricEnabled).apply()
-                    },
                     onComplete = {
                         prefs.edit().putInt(KEY_ONBOARDING_VERSION, CURRENT_ONBOARDING_VERSION).apply()
                         navController.navigate(ROUTE_LAUNCH_INSIGHT) {
                             popUpTo(ROUTE_ONBOARDING) { inclusive = true }
                         }
+                    },
+                    onCreateFirstReminder = {
+                        prefs.edit().putInt(KEY_ONBOARDING_VERSION, CURRENT_ONBOARDING_VERSION).apply()
+                        navController.navigate(ROUTE_TODAY) {
+                            popUpTo(ROUTE_ONBOARDING) { inclusive = true }
+                        }
+                        navController.navigate(ROUTE_BUILDER)
                     }
                 )
             }
