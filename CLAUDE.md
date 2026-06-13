@@ -13,6 +13,7 @@ FollowThru is an existing, live Android app (Kotlin / Jetpack Compose / Material
 
 ## Current-state truth
 - `BRAND_STYLE_GUIDE.md` — color/type source of truth; raw hex lives ONLY in `ui/theme/Color.kt`; screens consume `MaterialTheme.colorScheme` / `AppColors`
+- `docs/references/DESIGN_DECISIONS.md` — append-only log of locked visual/design/copy decisions. Read it before proposing visual changes; it is the running record so decisions don't get re-litigated.
 - If reference docs conflict: the style guide wins on brand/color, the PRD wins on scope, and `ANDROID_HANDOFF.md` is the tiebreaker on flows, copy, IA, and components — it is the latest canonized target. `executive-summary.md` and `loveable-prompt-combined.md` are upstream/context and may lag; see ANDROID_HANDOFF.md §10 for the recorded reconciliation decisions.
 
 ## Working rules
@@ -24,6 +25,7 @@ FollowThru is an existing, live Android app (Kotlin / Jetpack Compose / Material
 6. Exclusions are hard: no AI features, no accounts/cloud/social, no analytics SDKs at launch. `local_metrics` stays on-device, never transmitted automatically. Measurement is consent-tiered (Play aggregates + on-device counters + a voluntary, payload-visible "share my stats" path as fast-follow); see measurement-options.md. "No automatic tracking" is the promise — voluntary user-initiated share is allowed, an analytics SDK is not without an explicit privacy-policy decision.
 7. Delivery reliability is the top engineering priority: `AlarmManager.setExactAndAllowWhileIdle`, reschedule after fire, re-register on `BOOT_COMPLETED`, survive Doze and OEM battery optimization. A reminders app whose notifications don't fire is untestable.
 8. Emoji are user content (cue values, palette items) — never interface decoration. UI icons: Material Symbols Rounded per the handoff icon mapping table.
+9. Whenever Tim directs a visual, design, or copy change, record it as a one-line dated entry in `docs/references/DESIGN_DECISIONS.md` **in the same commit** as the change. If it replaces an earlier decision, mark the superseded entry (`~~superseded~~ → see <date>`) so the log never contradicts itself.
 
 ## Release gate (from lean-prd.md)
 Ship when all pass: (1) reminders fire across Doze/battery-optimization/reboot on real devices; (2) cold user states the purpose in 30s; (3) first reminder < 3 min unaided; (4) beta bugs dead (keyboard occlusion, invisible typing, overlap); (5) TalkBack pass on the full spine; (6) light/dark parity incl. store assets; (7) landscape + 200% text; (8) crash-free cue picker; (9) undo + all streak states correct; (10) tablet pass — adaptive layout (rail, two-column, list-detail), not a stretched phone UI, both orientations and themes.
