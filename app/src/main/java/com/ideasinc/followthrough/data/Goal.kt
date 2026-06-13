@@ -17,5 +17,7 @@ data class Goal(
     val updatedAt: Long,
     val priority: Int? = null,
     val followedThrough: Boolean = false,
-    val followedThroughAt: Long? = null
+    val followedThroughAt: Long? = null,
+    /** "Why this matters" — the reason the goal exists. Shown on goal detail. */
+    val whyItMatters: String = ""
 )

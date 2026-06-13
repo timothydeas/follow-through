@@ -971,13 +971,127 @@ internal val MIGRATION_33_34 = object : Migration(33, 34) {
     }
 }
 
+internal val MIGRATION_34_35 = object : Migration(34, 35) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Prototype-alignment foundation (slice 3). Purely ADDITIVE: nothing is
+        // dropped. CheckIn, QuestionLabel, and the rest of `goals` are untouched
+        // beyond one new nullable-defaulted column, so all existing user data
+        // (goals, check-ins, follow-through state, question customizations)
+        // survives the upgrade intact. The CheckIn-era model coexists with the new
+        // Reminder model until CheckIn is retired in a later slice.
+
+        // 1) Goal gains "why it matters".
+        db.execSQL("ALTER TABLE goals ADD COLUMN whyItMatters TEXT NOT NULL DEFAULT ''")
+
+        // 2) Reminder — intention + one cue + schedule, first-class and goal-owned.
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS reminders (
+                id TEXT NOT NULL PRIMARY KEY,
+                goalId TEXT NOT NULL,
+                whenMoment TEXT NOT NULL,
+                iWill TEXT NOT NULL,
+                cueType TEXT NOT NULL,
+                cueValue TEXT NOT NULL,
+                cueAltText TEXT,
+                cueSourcePaletteId TEXT,
+                cueIsPaletteDrawn INTEGER NOT NULL,
+                scheduleMode TEXT NOT NULL,
+                scheduleDays TEXT NOT NULL,
+                scheduleTimeLocal TEXT NOT NULL,
+                scheduleTimezone TEXT NOT NULL,
+                fullTextAlwaysShown INTEGER NOT NULL,
+                status TEXT NOT NULL,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL,
+                FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_reminders_goalId ON reminders(goalId)")
+
+        // 3) ReminderEvent — the delivery + response log (done/snoozed/not_today).
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS reminder_events (
+                id TEXT NOT NULL PRIMARY KEY,
+                reminderId TEXT NOT NULL,
+                deliveredAt INTEGER NOT NULL,
+                action TEXT NOT NULL,
+                actedAt INTEGER NOT NULL,
+                undone INTEGER NOT NULL,
+                undoReason TEXT,
+                reflectionText TEXT,
+                FOREIGN KEY (reminderId) REFERENCES reminders(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_reminder_events_reminderId ON reminder_events(reminderId)"
+        )
+
+        // 4) Self-knowledge palette (person-level).
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS passions_interests (
+                id TEXT NOT NULL PRIMARY KEY,
+                label TEXT NOT NULL,
+                emoji TEXT NOT NULL,
+                createdAt INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS learnings (
+                id TEXT NOT NULL PRIMARY KEY,
+                text TEXT NOT NULL,
+                createdAt INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+
+        // 5) Goal-scoped barriers + progress notes (re-introduced; were dropped at v31).
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS barriers (
+                id TEXT NOT NULL PRIMARY KEY,
+                goalId TEXT NOT NULL,
+                text TEXT NOT NULL,
+                createdAt INTEGER NOT NULL,
+                FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_barriers_goalId ON barriers(goalId)")
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS progress_notes (
+                id TEXT NOT NULL PRIMARY KEY,
+                goalId TEXT NOT NULL,
+                text TEXT NOT NULL,
+                createdAt INTEGER NOT NULL,
+                FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_progress_notes_goalId ON progress_notes(goalId)")
+    }
+}
+
 @Database(
     entities = [
         Goal::class,
         CheckIn::class,
-        QuestionLabel::class
+        QuestionLabel::class,
+        Reminder::class,
+        ReminderEvent::class,
+        PassionInterest::class,
+        Learning::class,
+        Barrier::class,
+        ProgressNote::class
     ],
-    version = 34,
+    version = 35,
     exportSchema = true
 )
 abstract class GroundedDatabase : RoomDatabase() {
@@ -985,6 +1099,10 @@ abstract class GroundedDatabase : RoomDatabase() {
     abstract fun goalDao(): GoalDao
     abstract fun checkInDao(): CheckInDao
     abstract fun questionLabelDao(): QuestionLabelDao
+    abstract fun reminderDao(): ReminderDao
+    abstract fun reminderEventDao(): ReminderEventDao
+    abstract fun paletteDao(): PaletteDao
+    abstract fun goalContentDao(): GoalContentDao
 
     companion object {
         @Volatile private var INSTANCE: GroundedDatabase? = null
@@ -1006,7 +1124,8 @@ abstract class GroundedDatabase : RoomDatabase() {
                         MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25,
                         MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28,
                         MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31,
-                        MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34
+                        MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34,
+                        MIGRATION_34_35
                     )
                     .build().also { INSTANCE = it }
             }
