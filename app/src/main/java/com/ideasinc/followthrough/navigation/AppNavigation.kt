@@ -9,7 +9,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -22,18 +33,22 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ideasinc.followthrough.di.AppContainer
+import com.ideasinc.followthrough.ui.aboutyou.AboutYouScreen
 import com.ideasinc.followthrough.ui.checkin.CheckInEditorScreen
 import com.ideasinc.followthrough.ui.checkin.CheckInEditorViewModel
 import com.ideasinc.followthrough.ui.checkin.CheckInFlowScreen
@@ -52,69 +67,67 @@ import com.ideasinc.followthrough.ui.settings.ScienceScreen
 import com.ideasinc.followthrough.ui.settings.SettingsScreen
 import com.ideasinc.followthrough.ui.stats.StatsScreen
 import com.ideasinc.followthrough.ui.theme.AppColors
+import com.ideasinc.followthrough.ui.today.TodayScreen
 
-private const val ROUTE_LIST = "list"
+// Pre-spine full-screen routes (outside the bottom-bar / rail chrome).
+private const val ROUTE_ONBOARDING = "onboarding"
 private const val ROUTE_LAUNCH_INSIGHT = "launch_insight"
+
+// Primary destinations — the four spine tabs (Today · Goals · About You · Settings).
+private const val ROUTE_TODAY = "today"
+private const val ROUTE_GOALS = "goals"
+private const val ROUTE_ABOUT_YOU = "about_you"
+private const val ROUTE_SETTINGS = "settings"
+
+// Full-screen routes reached from a tab (no bar/rail chrome).
 private const val ROUTE_NEW_GOAL = "new_goal"
 private const val ROUTE_GOAL_DETAIL = "goal_detail/{goalId}"
 private const val ROUTE_CHECKIN_FLOW = "checkin_flow/{goalId}"
 private const val ROUTE_CHECKIN_EDITOR = "checkin_editor/{checkInId}"
-private const val ARG_GOAL_ID = "goalId"
-private const val ARG_CHECKIN_ID = "checkInId"
-private const val ROUTE_ONBOARDING = "onboarding"
-private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_SCIENCE = "science"
 private const val ROUTE_STATS = "stats"
 private const val ROUTE_FOLLOWTHRUS = "followthrus"
+private const val ARG_GOAL_ID = "goalId"
+private const val ARG_CHECKIN_ID = "checkInId"
 
 internal const val PREFS_NAME = "grounded_prefs"
 internal const val KEY_ONBOARDING_VERSION = "onboarding_version"
 internal const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
-// Bumped 93 → 94 for the MVP onboarding redesign so existing closed-testing
-// users re-see onboarding once after upgrading in place (no data is reset).
-// Bumped 94 → 95 so the refreshed "See an example" (health example) re-shows
-// once for already-onboarded installs after this upgrade (no data is reset).
-// Bumped 95 → 96 for the coral/cream UI port (redesigned onboarding) so it
-// re-shows once for already-onboarded installs after this upgrade (no reset).
-// Bumped 96 → 97 to re-show onboarding once for already-onboarded installs
-// after this upgrade (no data is reset).
-// Bumped 97 → 98 for the reworded slide 1 ("Made for the moment.") so the
-// refreshed copy re-shows once for already-onboarded installs (no data reset).
-// Bumped 99 → 100 to re-show onboarding once for a demo (no data reset).
-// Bumped 100 → 101 to re-show onboarding once (no data reset).
-// Bumped 101 → 102 to re-show onboarding once for onboarding screenshots (no data reset).
-// Bumped 102 → 103 to re-show the full first-run for retesting the barriers/intentions/
-// progress restructure on-device (no data reset).
-// Bumped 103 → 104 to re-show the full first-run for retesting the check-in–centered
-// rework (creation → first check-in, typed check-ins, Stats restored) (no data reset).
-// Bumped 104 → 105 to re-show the full first-run for retesting distinctive reminder
-// cues (emoji/label/image/sound per goal) (no data reset).
-// Bumped 105 → 106 to re-show the full first-run for retesting per-plan model
-// (multiple plans per goal, each with its own cue + reminder) (no data reset).
-// Bumped 106 → 107 for the reverted per-check-in model + rewritten "How it works"
-// cards / example, so the refreshed onboarding re-shows (no data reset).
-// Bumped 107 → 108 for the test build adding the reminder+cue step to the check-in
-// flow and the check-in streak headline (no data reset).
-// Bumped 108 → 109 for the single-select cue rework + fixed cue controls and
-// reminder deep-link (no data reset).
-// Bumped 109 → 110 for the test build that removes cue authoring; reminders now
-// show only the implementation intention (no data reset).
-internal const val CURRENT_ONBOARDING_VERSION = 110
+// Bumped 110 → 111 for the prototype-alignment navigation spine (four primary
+// destinations Today · Goals · About You · Settings with an adaptive bottom bar /
+// nav rail), so the full first-run re-shows on the next test build (no data reset).
+internal const val CURRENT_ONBOARDING_VERSION = 111
+
+/** A primary spine destination, rendered in both the bottom bar and the nav rail. */
+private data class PrimaryDestination(
+    val route: String,
+    val label: String,
+    val icon: ImageVector
+)
+
+private val PRIMARY_DESTINATIONS = listOf(
+    PrimaryDestination(ROUTE_TODAY, "Today", Icons.Outlined.Home),
+    PrimaryDestination(ROUTE_GOALS, "Goals", Icons.Outlined.Flag),
+    PrimaryDestination(ROUTE_ABOUT_YOU, "About You", Icons.Outlined.Person),
+    PrimaryDestination(ROUTE_SETTINGS, "Settings", Icons.Outlined.Settings)
+)
+
+private val PRIMARY_ROUTES = PRIMARY_DESTINATIONS.map { it.route }.toSet()
 
 @Composable
 fun AppNavigation(
     container: AppContainer,
     pendingCheckInId: String? = null,
     onCheckInConsumed: () -> Unit = {},
-    isExpandedWidth: Boolean = false
+    isExpandedWidth: Boolean = false,
+    useNavRail: Boolean = false
 ) {
     val context = LocalContext.current
     val navController = rememberNavController()
 
-    // The goal selected in the two-pane (expanded-width) Home. Hoisted here so it
-    // survives while modal flows (new goal, check-in) cover the NavHost and is
-    // restored after process death. Ignored on compact widths, where Home is a
-    // single pane and the goal opens as its own full-screen destination.
+    // The goal selected in the two-pane (expanded-width) Goals tab. Hoisted here so
+    // it survives while modal flows cover the NavHost and is restored after process
+    // death. Ignored on compact widths, where a goal opens as its own destination.
     var selectedGoalId by rememberSaveable { mutableStateOf<String?>(null) }
 
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
@@ -125,15 +138,13 @@ fun AppNavigation(
         factory = ListViewModel.Factory(container.goalDao, container.checkInDao)
     )
 
-    // A tapped reminder deep-links to THAT specific check-in's editor (showing its
-    // implementation intention), not a new check-in. Reset the back stack to Home
-    // and push the editor on top, so Back returns to Home rather than dropping out
-    // of the app. If the check-in was deleted, just land on Home. (The launch-
-    // insight flash is suppressed by LaunchInsightGate.)
+    // A tapped reminder deep-links to THAT specific check-in's editor. Reset the back
+    // stack to Today and push the editor on top, so Back returns to Today rather than
+    // dropping out of the app. If the check-in was deleted, just land on Today.
     LaunchedEffect(pendingCheckInId) {
         val checkInId = pendingCheckInId ?: return@LaunchedEffect
         val exists = container.checkInDao.getCheckInById(checkInId) != null
-        navController.navigate(ROUTE_LIST) {
+        navController.navigate(ROUTE_TODAY) {
             popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
             launchSingleTop = true
         }
@@ -143,19 +154,100 @@ fun AppNavigation(
         onCheckInConsumed()
     }
 
-    NavHost(navController = navController, startDestination = startDestination) {
+    // Chrome (bottom bar / rail) shows only on the four primary destinations; every
+    // full-screen route (onboarding, launch, builder, goal detail, check-in) hides it.
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    val showChrome = currentRoute in PRIMARY_ROUTES
+
+    Row(modifier = Modifier.fillMaxSize()) {
+        if (useNavRail && showChrome) {
+            AppNavigationRail(currentRoute = currentRoute, onSelect = { navController.navigateToTab(it) })
+            VerticalDivider(color = AppColors.Border)
+        }
+        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+            Scaffold(
+                bottomBar = {
+                    if (!useNavRail && showChrome) {
+                        AppBottomBar(currentRoute = currentRoute, onSelect = { navController.navigateToTab(it) })
+                    }
+                }
+            ) { padding ->
+                AppNavHost(
+                    navController = navController,
+                    startDestination = startDestination,
+                    container = container,
+                    listViewModel = listViewModel,
+                    prefs = prefs,
+                    isExpandedWidth = isExpandedWidth,
+                    selectedGoalId = selectedGoalId,
+                    onSelectGoal = { selectedGoalId = it },
+                    modifier = Modifier.padding(padding)
+                )
+            }
+        }
+    }
+}
+
+private fun NavHostController.navigateToTab(route: String) {
+    navigate(route) {
+        // Standard bottom-nav behavior: pop to start saving state, single instance,
+        // restore the tab's prior state when returning.
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
+@Composable
+private fun AppBottomBar(currentRoute: String?, onSelect: (String) -> Unit) {
+    NavigationBar {
+        PRIMARY_DESTINATIONS.forEach { dest ->
+            NavigationBarItem(
+                selected = currentRoute == dest.route,
+                onClick = { if (currentRoute != dest.route) onSelect(dest.route) },
+                icon = { Icon(dest.icon, contentDescription = dest.label) },
+                label = { Text(dest.label) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AppNavigationRail(currentRoute: String?, onSelect: (String) -> Unit) {
+    NavigationRail {
+        PRIMARY_DESTINATIONS.forEach { dest ->
+            NavigationRailItem(
+                selected = currentRoute == dest.route,
+                onClick = { if (currentRoute != dest.route) onSelect(dest.route) },
+                icon = { Icon(dest.icon, contentDescription = dest.label) },
+                label = { Text(dest.label) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AppNavHost(
+    navController: NavHostController,
+    startDestination: String,
+    container: AppContainer,
+    listViewModel: ListViewModel,
+    prefs: android.content.SharedPreferences,
+    isExpandedWidth: Boolean,
+    selectedGoalId: String?,
+    onSelectGoal: (String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
         composable(ROUTE_ONBOARDING) {
             CenteredPane {
                 OnboardingScreen(
                     onBiometricPersist = { biometricEnabled ->
-                        prefs.edit()
-                            .putBoolean(KEY_BIOMETRIC_ENABLED, biometricEnabled)
-                            .apply()
+                        prefs.edit().putBoolean(KEY_BIOMETRIC_ENABLED, biometricEnabled).apply()
                     },
                     onComplete = {
-                        prefs.edit()
-                            .putInt(KEY_ONBOARDING_VERSION, CURRENT_ONBOARDING_VERSION)
-                            .apply()
+                        prefs.edit().putInt(KEY_ONBOARDING_VERSION, CURRENT_ONBOARDING_VERSION).apply()
                         navController.navigate(ROUTE_LAUNCH_INSIGHT) {
                             popUpTo(ROUTE_ONBOARDING) { inclusive = true }
                         }
@@ -165,14 +257,12 @@ fun AppNavigation(
         }
 
         composable(ROUTE_LAUNCH_INSIGHT) {
-            // Picked once per destination instance; pickLaunchInsight also
-            // persists the chosen index so the next launch avoids it.
             val insight = remember { pickLaunchInsight(prefs) }
             CenteredPane {
                 LaunchInsightScreen(
                     text = insight,
                     onDismiss = {
-                        navController.navigate(ROUTE_LIST) {
+                        navController.navigate(ROUTE_TODAY) {
                             popUpTo(ROUTE_LAUNCH_INSIGHT) { inclusive = true }
                         }
                     }
@@ -180,15 +270,19 @@ fun AppNavigation(
             }
         }
 
-        composable(ROUTE_LIST) {
+        composable(ROUTE_TODAY) {
+            CenteredPane { TodayScreen() }
+        }
+
+        composable(ROUTE_GOALS) {
             if (isExpandedWidth) {
-                TwoPaneHome(
+                TwoPaneGoals(
                     container = container,
                     listViewModel = listViewModel,
                     selectedGoalId = selectedGoalId,
-                    onSelectGoal = { selectedGoalId = it },
+                    onSelectGoal = onSelectGoal,
                     onNewGoal = { navController.navigate(ROUTE_NEW_GOAL) },
-                    onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
+                    onSettingsClick = { navController.navigateToTab(ROUTE_SETTINGS) },
                     onStatsClick = { navController.navigate(ROUTE_STATS) },
                     onAddCheckIn = { id -> navController.navigate("checkin_flow/$id") },
                     onOpenCheckIn = { checkInId -> navController.navigate("checkin_editor/$checkInId") }
@@ -199,10 +293,24 @@ fun AppNavigation(
                         viewModel = listViewModel,
                         onGoalClick = { id -> navController.navigate("goal_detail/$id") },
                         onNewGoal = { navController.navigate(ROUTE_NEW_GOAL) },
-                        onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
+                        onSettingsClick = { navController.navigateToTab(ROUTE_SETTINGS) },
                         onStatsClick = { navController.navigate(ROUTE_STATS) }
                     )
                 }
+            }
+        }
+
+        composable(ROUTE_ABOUT_YOU) {
+            CenteredPane { AboutYouScreen(container = container) }
+        }
+
+        composable(ROUTE_SETTINGS) {
+            CenteredPane {
+                SettingsScreen(
+                    container = container,
+                    onBack = { navController.navigateToTab(ROUTE_TODAY) },
+                    onScience = { navController.navigate(ROUTE_SCIENCE) }
+                )
             }
         }
 
@@ -211,28 +319,14 @@ fun AppNavigation(
                 StatsScreen(
                     container = container,
                     onBack = { navController.popBackStack() },
-                    onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
+                    onSettingsClick = { navController.navigateToTab(ROUTE_SETTINGS) },
                     onOpenFollowThrus = { navController.navigate(ROUTE_FOLLOWTHRUS) }
                 )
             }
         }
 
-        composable(ROUTE_SETTINGS) {
-            CenteredPane {
-                SettingsScreen(
-                    container = container,
-                    onBack = { navController.popBackStack() },
-                    onScience = { navController.navigate(ROUTE_SCIENCE) }
-                )
-            }
-        }
-
         composable(ROUTE_SCIENCE) {
-            CenteredPane {
-                ScienceScreen(
-                    onBack = { navController.popBackStack() }
-                )
-            }
+            CenteredPane { ScienceScreen(onBack = { navController.popBackStack() }) }
         }
 
         composable(ROUTE_FOLLOWTHRUS) {
@@ -240,7 +334,7 @@ fun AppNavigation(
                 FollowThrusScreen(
                     container = container,
                     onBack = { navController.popBackStack() },
-                    onSettingsClick = { navController.navigate(ROUTE_SETTINGS) },
+                    onSettingsClick = { navController.navigateToTab(ROUTE_SETTINGS) },
                     onGoalClick = { id -> navController.navigate("goal_detail/$id") }
                 )
             }
@@ -255,9 +349,6 @@ fun AppNavigation(
                     viewModel = vm,
                     onNavigateBack = { navController.popBackStack() },
                     onGoalCreated = { goalId ->
-                        // Creation flows straight into the new goal's first check-in.
-                        // popUpTo(new_goal, inclusive) drops the name screen so Back
-                        // from the check-in returns to Home.
                         navController.navigate("checkin_flow/$goalId") {
                             popUpTo(ROUTE_NEW_GOAL) { inclusive = true }
                         }
@@ -272,19 +363,15 @@ fun AppNavigation(
         ) { backStackEntry ->
             val goalId = backStackEntry.arguments?.getString(ARG_GOAL_ID) ?: return@composable
             val vm: GoalDetailViewModel = viewModel(
-                factory = GoalDetailViewModel.Factory(
-                    container.goalDao,
-                    container.checkInDao,
-                    goalId
-                )
+                factory = GoalDetailViewModel.Factory(container.goalDao, container.checkInDao, goalId)
             )
             CenteredPane {
                 GoalDetailScreen(
                     viewModel = vm,
                     onBack = { navController.popBackStack() },
                     onNavigateToList = {
-                        navController.navigate(ROUTE_LIST) {
-                            popUpTo(ROUTE_LIST) { inclusive = true }
+                        navController.navigate(ROUTE_GOALS) {
+                            popUpTo(ROUTE_GOALS) { inclusive = true }
                         }
                     },
                     onAddCheckIn = { navController.navigate("checkin_flow/$goalId") },
@@ -312,11 +399,7 @@ fun AppNavigation(
         ) { backStackEntry ->
             val goalId = backStackEntry.arguments?.getString(ARG_GOAL_ID) ?: return@composable
             val vm: CheckInFlowViewModel = viewModel(
-                factory = CheckInFlowViewModel.Factory(
-                    container.checkInDao,
-                    container.goalDao,
-                    goalId
-                )
+                factory = CheckInFlowViewModel.Factory(container.checkInDao, container.goalDao, goalId)
             )
             CenteredPane {
                 CheckInFlowScreen(
@@ -324,20 +407,12 @@ fun AppNavigation(
                     onNavigateBack = { navController.popBackStack() },
                     onSaved = { id ->
                         if (isExpandedWidth) {
-                            // Two-pane Home: drop the flow and return to Home with
-                            // this goal selected, so its refreshed detail shows in
-                            // the right pane.
-                            selectedGoalId = id
-                            navController.navigate(ROUTE_LIST) {
+                            onSelectGoal(id)
+                            navController.navigate(ROUTE_GOALS) {
                                 popUpTo(ROUTE_CHECKIN_FLOW) { inclusive = true }
                                 launchSingleTop = true
                             }
                         } else {
-                            // Land on the goal's detail. popUpTo(checkin_flow,
-                            // inclusive) drops the flow; launchSingleTop reuses an
-                            // existing detail underneath rather than stacking a
-                            // second one. From creation or the reminder deep-link
-                            // there is none, so a fresh detail is pushed over Home.
                             navController.navigate("goal_detail/$id") {
                                 popUpTo(ROUTE_CHECKIN_FLOW) { inclusive = true }
                                 launchSingleTop = true
@@ -352,8 +427,8 @@ fun AppNavigation(
 
 /**
  * Caps single-column content at a comfortable reading width and centres it against
- * the cream page. On phones (< 600dp) the cap is a no-op, so the design is
- * unchanged; on tablets it keeps forms and lists from stretching edge-to-edge.
+ * the cream page. On phones (< 600dp) the cap is a no-op; on tablets it keeps forms
+ * and lists from stretching edge-to-edge.
  */
 @Composable
 private fun CenteredPane(
@@ -368,14 +443,13 @@ private fun CenteredPane(
 }
 
 /**
- * Expanded-width (tablet/landscape) Home: a fixed goals-list pane on the left and
- * the selected goal's detail on the right, so the list stays visible while a goal
- * is open. Tapping a goal updates [selectedGoalId] instead of pushing a new
- * destination; the right pane shows a placeholder until one is chosen. The whole
- * pair is capped and centred so it doesn't sprawl on very wide displays.
+ * Expanded-width (tablet/landscape) Goals tab: a fixed goals-list pane on the left
+ * and the selected goal's detail on the right, so the list stays visible while a
+ * goal is open. Tapping a goal updates [selectedGoalId] instead of pushing a new
+ * destination; the right pane shows a placeholder until one is chosen.
  */
 @Composable
-private fun TwoPaneHome(
+private fun TwoPaneGoals(
     container: AppContainer,
     listViewModel: ListViewModel,
     selectedGoalId: String?,
@@ -400,8 +474,6 @@ private fun TwoPaneHome(
             VerticalDivider(color = AppColors.Border)
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 if (selectedGoalId != null) {
-                    // key() so switching goals builds a fresh detail subtree (and
-                    // view-model), resetting its dialogs/scroll/focus per goal.
                     key(selectedGoalId) {
                         val vm: GoalDetailViewModel = viewModel(
                             key = "detail_$selectedGoalId",
@@ -427,7 +499,7 @@ private fun TwoPaneHome(
     }
 }
 
-/** Right-pane resting state in two-pane Home, before a goal is selected. */
+/** Right-pane resting state in the two-pane Goals tab, before a goal is selected. */
 @Composable
 private fun DetailPlaceholder() {
     Box(
@@ -437,7 +509,7 @@ private fun DetailPlaceholder() {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "Select a goal to see its check-ins and reminders.",
+            text = "Select a goal to see its reminders and progress.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

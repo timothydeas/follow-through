@@ -71,8 +71,13 @@ class MainActivity : FragmentActivity() {
                 // experience, stays single-column, capped and centred against the
                 // cream page (the cap is applied per-destination in AppNavigation).
                 val windowSizeClass = calculateWindowSizeClass(this)
-                val isExpandedWidth =
-                    windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded
+                // Compact (< 600dp) = phone → bottom NavigationBar, single column.
+                // Medium / Expanded (≥ 600dp) = tablet → left NavigationRail.
+                // Expanded (≥ 840dp) additionally promotes the Goals tab to the
+                // two-pane list-detail layout.
+                val widthClass = windowSizeClass.widthSizeClass
+                val useNavRail = widthClass != WindowWidthSizeClass.Compact
+                val isExpandedWidth = widthClass == WindowWidthSizeClass.Expanded
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -83,7 +88,8 @@ class MainActivity : FragmentActivity() {
                             container = container,
                             pendingCheckInId = pendingCheckInId,
                             onCheckInConsumed = { pendingCheckInId = null },
-                            isExpandedWidth = isExpandedWidth
+                            isExpandedWidth = isExpandedWidth,
+                            useNavRail = useNavRail
                         )
                     }
                 }
