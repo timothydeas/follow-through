@@ -51,7 +51,7 @@ import com.ideasinc.followthrough.ui.theme.DmSansFontFamily
 
 /**
  * Naming the goal — the only creation step. On save, the screen flows straight
- * into the goal's first check-in via [onGoalCreated].
+ * into the Reminder Builder for this goal via [onGoalCreated].
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -147,7 +147,7 @@ fun NewGoalFlowScreen(
                     )
                 ) {
                     Text(
-                        "Save & check in",
+                        "Save & add a reminder",
                         style = MaterialTheme.typography.labelLarge.copy(fontFamily = DmSansFontFamily)
                     )
                 }

@@ -50,11 +50,6 @@ import androidx.navigation.navArgument
 import com.ideasinc.followthrough.di.AppContainer
 import com.ideasinc.followthrough.ui.aboutyou.AboutYouScreen
 import com.ideasinc.followthrough.ui.builder.ReminderBuilderScreen
-import com.ideasinc.followthrough.ui.checkin.CheckInEditorScreen
-import com.ideasinc.followthrough.ui.checkin.CheckInEditorViewModel
-import com.ideasinc.followthrough.ui.checkin.CheckInFlowScreen
-import com.ideasinc.followthrough.ui.checkin.CheckInFlowViewModel
-import com.ideasinc.followthrough.ui.followthrough.FollowThrusScreen
 import com.ideasinc.followthrough.ui.goals.GoalDetailScreen
 import com.ideasinc.followthrough.ui.goals.GoalDetailViewModel
 import com.ideasinc.followthrough.ui.goals.NewGoalFlowScreen
@@ -68,7 +63,6 @@ import com.ideasinc.followthrough.ui.list.ListViewModel
 import com.ideasinc.followthrough.ui.onboarding.OnboardingScreen
 import com.ideasinc.followthrough.ui.settings.ScienceScreen
 import com.ideasinc.followthrough.ui.settings.SettingsScreen
-import com.ideasinc.followthrough.ui.stats.StatsScreen
 import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.today.TodayScreen
 
@@ -85,16 +79,11 @@ private const val ROUTE_SETTINGS = "settings"
 // Full-screen routes reached from a tab (no bar/rail chrome).
 private const val ROUTE_NEW_GOAL = "new_goal"
 private const val ROUTE_GOAL_DETAIL = "goal_detail/{goalId}"
-private const val ROUTE_CHECKIN_FLOW = "checkin_flow/{goalId}"
-private const val ROUTE_CHECKIN_EDITOR = "checkin_editor/{checkInId}"
 private const val ROUTE_BUILDER = "builder"
 private const val ROUTE_BUILDER_NEW = "builder_new/{goalId}"
 private const val ROUTE_BUILDER_EDIT = "builder_edit/{reminderId}"
 private const val ROUTE_SCIENCE = "science"
-private const val ROUTE_STATS = "stats"
-private const val ROUTE_FOLLOWTHRUS = "followthrus"
 private const val ARG_GOAL_ID = "goalId"
-private const val ARG_CHECKIN_ID = "checkInId"
 private const val ARG_REMINDER_ID = "reminderId"
 
 internal const val PREFS_NAME = "grounded_prefs"
@@ -106,7 +95,10 @@ internal const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
 // Bumped 111 → 112 for the rewritten 3-pane Welcome (handoff §8 verbatim copy,
 // "Progress, not perfection." → "Create my first reminder"), so the refreshed
 // onboarding re-shows once (no data reset).
-internal const val CURRENT_ONBOARDING_VERSION = 112
+// Bumped 112 → 113 for the full CheckIn retirement: goal creation now flows into
+// the Reminder Builder (no legacy check-in flow), Stats/FollowThrus folded away,
+// DB v36. Re-show the full first-run on the next test build (no data reset).
+internal const val CURRENT_ONBOARDING_VERSION = 113
 
 /** A primary spine destination, rendered in both the bottom bar and the nav rail. */
 private data class PrimaryDestination(
@@ -127,8 +119,6 @@ private val PRIMARY_ROUTES = PRIMARY_DESTINATIONS.map { it.route }.toSet()
 @Composable
 fun AppNavigation(
     container: AppContainer,
-    pendingCheckInId: String? = null,
-    onCheckInConsumed: () -> Unit = {},
     isExpandedWidth: Boolean = false,
     useNavRail: Boolean = false
 ) {
@@ -150,27 +140,11 @@ fun AppNavigation(
     }
 
     val listViewModel: ListViewModel = viewModel(
-        factory = ListViewModel.Factory(container.goalDao, container.checkInDao)
+        factory = ListViewModel.Factory(container.goalDao, container.reminderDao)
     )
 
-    // A tapped reminder deep-links to THAT specific check-in's editor. Reset the back
-    // stack to Today and push the editor on top, so Back returns to Today rather than
-    // dropping out of the app. If the check-in was deleted, just land on Today.
-    LaunchedEffect(pendingCheckInId) {
-        val checkInId = pendingCheckInId ?: return@LaunchedEffect
-        val exists = container.checkInDao.getCheckInById(checkInId) != null
-        navController.navigate(ROUTE_TODAY) {
-            popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
-            launchSingleTop = true
-        }
-        if (exists) {
-            navController.navigate("checkin_editor/$checkInId")
-        }
-        onCheckInConsumed()
-    }
-
     // Chrome (bottom bar / rail) shows only on the four primary destinations; every
-    // full-screen route (onboarding, launch, builder, goal detail, check-in) hides it.
+    // full-screen route (onboarding, launch, builder, goal detail) hides it.
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val showChrome = currentRoute in PRIMARY_ROUTES
@@ -326,7 +300,6 @@ private fun AppNavHost(
                     onSelectGoal = onSelectGoal,
                     onNewGoal = { navController.navigate(ROUTE_NEW_GOAL) },
                     onSettingsClick = { navController.navigateToTab(ROUTE_SETTINGS) },
-                    onStatsClick = { navController.navigate(ROUTE_STATS) },
                     onAddReminder = { id -> navController.navigate("builder_new/$id") },
                     onOpenReminder = { reminderId -> navController.navigate("builder_edit/$reminderId") }
                 )
@@ -336,8 +309,7 @@ private fun AppNavHost(
                         viewModel = listViewModel,
                         onGoalClick = { id -> navController.navigate("goal_detail/$id") },
                         onNewGoal = { navController.navigate(ROUTE_NEW_GOAL) },
-                        onSettingsClick = { navController.navigateToTab(ROUTE_SETTINGS) },
-                        onStatsClick = { navController.navigate(ROUTE_STATS) }
+                        onSettingsClick = { navController.navigateToTab(ROUTE_SETTINGS) }
                     )
                 }
             }
@@ -366,30 +338,8 @@ private fun AppNavHost(
             }
         }
 
-        composable(ROUTE_STATS) {
-            CenteredPane {
-                StatsScreen(
-                    container = container,
-                    onBack = { navController.popBackStack() },
-                    onSettingsClick = { navController.navigateToTab(ROUTE_SETTINGS) },
-                    onOpenFollowThrus = { navController.navigate(ROUTE_FOLLOWTHRUS) }
-                )
-            }
-        }
-
         composable(ROUTE_SCIENCE) {
             CenteredPane { ScienceScreen(onBack = { navController.popBackStack() }) }
-        }
-
-        composable(ROUTE_FOLLOWTHRUS) {
-            CenteredPane {
-                FollowThrusScreen(
-                    container = container,
-                    onBack = { navController.popBackStack() },
-                    onSettingsClick = { navController.navigateToTab(ROUTE_SETTINGS) },
-                    onGoalClick = { id -> navController.navigate("goal_detail/$id") }
-                )
-            }
         }
 
         composable(ROUTE_NEW_GOAL) {
@@ -401,7 +351,9 @@ private fun AppNavHost(
                     viewModel = vm,
                     onNavigateBack = { navController.popBackStack() },
                     onGoalCreated = { goalId ->
-                        navController.navigate("checkin_flow/$goalId") {
+                        // Creation flows straight into the new reminder builder for
+                        // this goal.
+                        navController.navigate("builder_new/$goalId") {
                             popUpTo(ROUTE_NEW_GOAL) { inclusive = true }
                         }
                     }
@@ -416,7 +368,7 @@ private fun AppNavHost(
             val goalId = backStackEntry.arguments?.getString(ARG_GOAL_ID) ?: return@composable
             val vm: GoalDetailViewModel = viewModel(
                 factory = GoalDetailViewModel.Factory(
-                    container.goalDao, container.checkInDao, container.goalContentDao, container.reminderDao, goalId
+                    container.goalDao, container.goalContentDao, container.reminderDao, goalId
                 )
             )
             CenteredPane {
@@ -476,48 +428,6 @@ private fun AppNavHost(
             }
         }
 
-        composable(
-            route = ROUTE_CHECKIN_EDITOR,
-            arguments = listOf(navArgument(ARG_CHECKIN_ID) { type = NavType.StringType })
-        ) { backStackEntry ->
-            val checkInId = backStackEntry.arguments?.getString(ARG_CHECKIN_ID) ?: return@composable
-            val vm: CheckInEditorViewModel = viewModel(
-                factory = CheckInEditorViewModel.Factory(container.checkInDao, container.goalDao, checkInId)
-            )
-            CenteredPane {
-                CheckInEditorScreen(viewModel = vm, onBack = { navController.popBackStack() })
-            }
-        }
-
-        composable(
-            route = ROUTE_CHECKIN_FLOW,
-            arguments = listOf(navArgument(ARG_GOAL_ID) { type = NavType.StringType })
-        ) { backStackEntry ->
-            val goalId = backStackEntry.arguments?.getString(ARG_GOAL_ID) ?: return@composable
-            val vm: CheckInFlowViewModel = viewModel(
-                factory = CheckInFlowViewModel.Factory(container.checkInDao, container.goalDao, goalId)
-            )
-            CenteredPane {
-                CheckInFlowScreen(
-                    viewModel = vm,
-                    onNavigateBack = { navController.popBackStack() },
-                    onSaved = { id ->
-                        if (isExpandedWidth) {
-                            onSelectGoal(id)
-                            navController.navigate(ROUTE_GOALS) {
-                                popUpTo(ROUTE_CHECKIN_FLOW) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        } else {
-                            navController.navigate("goal_detail/$id") {
-                                popUpTo(ROUTE_CHECKIN_FLOW) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        }
-                    }
-                )
-            }
-        }
     }
 }
 
@@ -552,7 +462,6 @@ private fun TwoPaneGoals(
     onSelectGoal: (String?) -> Unit,
     onNewGoal: () -> Unit,
     onSettingsClick: () -> Unit,
-    onStatsClick: () -> Unit,
     onAddReminder: (String) -> Unit,
     onOpenReminder: (String) -> Unit
 ) {
@@ -563,8 +472,7 @@ private fun TwoPaneGoals(
                     viewModel = listViewModel,
                     onGoalClick = { onSelectGoal(it) },
                     onNewGoal = onNewGoal,
-                    onSettingsClick = onSettingsClick,
-                    onStatsClick = onStatsClick
+                    onSettingsClick = onSettingsClick
                 )
             }
             VerticalDivider(color = AppColors.Border)
@@ -575,7 +483,6 @@ private fun TwoPaneGoals(
                             key = "detail_$selectedGoalId",
                             factory = GoalDetailViewModel.Factory(
                                 container.goalDao,
-                                container.checkInDao,
                                 container.goalContentDao,
                                 container.reminderDao,
                                 selectedGoalId

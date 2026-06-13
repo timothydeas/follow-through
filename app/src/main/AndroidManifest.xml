@@ -43,15 +43,7 @@
             </intent-filter>
         </activity>
 
-        <receiver
-            android:name=".notifications.ReminderReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.ideasinc.followthrough.action.GOAL_REMINDER" />
-            </intent-filter>
-        </receiver>
-
-        <!-- New Reminder-model cue-fire + response actions. Explicit-component
+        <!-- Reminder-model cue-fire + response actions. Explicit-component
              intents only (alarms + notification action buttons), so no filter is
              needed; exported=false keeps it private to the app. -->
         <receiver

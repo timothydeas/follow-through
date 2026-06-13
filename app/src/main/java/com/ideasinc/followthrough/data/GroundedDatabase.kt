@@ -1079,10 +1079,20 @@ internal val MIGRATION_34_35 = object : Migration(34, 35) {
     }
 }
 
+internal val MIGRATION_35_36 = object : Migration(35, 36) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // The legacy CheckIn model is fully retired (entity, DAO, screens, and the
+        // per-check-in reminder path all removed). The `check_ins` table is no longer
+        // a declared entity; it is left dormant on disk rather than dropped so the
+        // historical migration tests (which still walk through the check_ins shape on
+        // their way to the current version) remain valid. Room ignores undeclared
+        // tables. `question_labels` is still declared and untouched.
+    }
+}
+
 @Database(
     entities = [
         Goal::class,
-        CheckIn::class,
         QuestionLabel::class,
         Reminder::class,
         ReminderEvent::class,
@@ -1091,13 +1101,12 @@ internal val MIGRATION_34_35 = object : Migration(34, 35) {
         Barrier::class,
         ProgressNote::class
     ],
-    version = 35,
+    version = 36,
     exportSchema = true
 )
 abstract class GroundedDatabase : RoomDatabase() {
 
     abstract fun goalDao(): GoalDao
-    abstract fun checkInDao(): CheckInDao
     abstract fun questionLabelDao(): QuestionLabelDao
     abstract fun reminderDao(): ReminderDao
     abstract fun reminderEventDao(): ReminderEventDao
@@ -1125,7 +1134,7 @@ abstract class GroundedDatabase : RoomDatabase() {
                         MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28,
                         MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31,
                         MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34,
-                        MIGRATION_34_35
+                        MIGRATION_34_35, MIGRATION_35_36
                     )
                     .build().also { INSTANCE = it }
             }

@@ -4,8 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.ideasinc.followthrough.data.Barrier
-import com.ideasinc.followthrough.data.CheckIn
-import com.ideasinc.followthrough.data.CheckInDao
 import com.ideasinc.followthrough.data.Goal
 import com.ideasinc.followthrough.data.GoalContentDao
 import com.ideasinc.followthrough.data.GoalDao
@@ -16,7 +14,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -35,7 +32,6 @@ data class GoalDetailUiState(
 
 class GoalDetailViewModel(
     private val goalDao: GoalDao,
-    private val checkInDao: CheckInDao,
     private val goalContentDao: GoalContentDao,
     private val reminderDao: ReminderDao,
     private val goalId: String
@@ -135,14 +131,6 @@ class GoalDetailViewModel(
 
     fun onReassuranceDone() = _uiState.update { it.copy(showReassurance = false) }
 
-    /**
-     * Snapshot of this goal's check-ins, for the screen to clean up any legacy
-     * per-check-in reminder alarms/channels/cue images before the goal is deleted.
-     * (New reminders cascade-delete in the DB; their alarms are cleaned in slice 7.)
-     */
-    suspend fun legacyCheckInsForCleanup(): List<CheckIn> =
-        checkInDao.getCheckInsForGoal(goalId).first()
-
     fun deleteGoal() {
         viewModelScope.launch {
             goalDao.deleteById(goalId)
@@ -152,13 +140,12 @@ class GoalDetailViewModel(
 
     class Factory(
         private val goalDao: GoalDao,
-        private val checkInDao: CheckInDao,
         private val goalContentDao: GoalContentDao,
         private val reminderDao: ReminderDao,
         private val goalId: String
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            GoalDetailViewModel(goalDao, checkInDao, goalContentDao, reminderDao, goalId) as T
+            GoalDetailViewModel(goalDao, goalContentDao, reminderDao, goalId) as T
     }
 }

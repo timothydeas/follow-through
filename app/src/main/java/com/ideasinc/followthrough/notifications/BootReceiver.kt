@@ -17,10 +17,8 @@ class BootReceiver : BroadcastReceiver() {
         ) return
 
         val appContext = context.applicationContext
-        // Legacy per-check-in reminders (prefs-backed, synchronous).
-        GoalReminderScheduler.rescheduleAllFromPrefs(appContext)
-        // New Reminder-model alarms (read from Room) — re-register off the main
-        // thread; goAsync keeps the broadcast alive until the DB read completes.
+        // Re-register Reminder-model alarms (read from Room) off the main thread;
+        // goAsync keeps the broadcast alive until the DB read completes.
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {

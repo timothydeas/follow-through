@@ -1,6 +1,5 @@
 ﻿package com.ideasinc.followthrough
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.fragment.app.FragmentActivity
@@ -28,8 +27,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
-import com.ideasinc.followthrough.notifications.EXTRA_CHECKIN_ID
-import com.ideasinc.followthrough.ui.launch.LaunchInsightGate
 import com.ideasinc.followthrough.ui.settings.LocalReduceMotion
 import com.ideasinc.followthrough.ui.settings.SettingsPreferences
 import com.ideasinc.followthrough.ui.theme.GroundedTheme
@@ -37,11 +34,6 @@ import com.ideasinc.followthrough.ui.theme.GroundedTheme
 class MainActivity : FragmentActivity() {
 
     private var authCleared by mutableStateOf(false)
-
-    // A check-in reminder tap arrives as an EXTRA_CHECKIN_ID on the launch intent
-    // (cold start) or the new intent (already running). AppNavigation observes
-    // this and deep-links to that specific check-in, synthesising Home underneath.
-    private var pendingCheckInId by mutableStateOf<String?>(null)
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,13 +56,6 @@ class MainActivity : FragmentActivity() {
 
         val needsBiometric = onboardingComplete && biometricEnabled && !alreadyAuthenticated
         authCleared = !needsBiometric
-
-        pendingCheckInId = checkInIdOf(intent)
-        // A cold start from a reminder tap skips the launch-insight screen so the
-        // deep-link opens the check-in directly. Only set on this cold-start path;
-        // a warm open (onNewIntent) isn't showing the insight, so it leaves it
-        // alone and a later normal launch still sees the insight.
-        LaunchInsightGate.skipForNotificationOpen = pendingCheckInId != null
 
         setContent {
             GroundedTheme {
@@ -104,8 +89,6 @@ class MainActivity : FragmentActivity() {
                         if (authCleared) {
                             AppNavigation(
                                 container = container,
-                                pendingCheckInId = pendingCheckInId,
-                                onCheckInConsumed = { pendingCheckInId = null },
                                 isExpandedWidth = isExpandedWidth,
                                 useNavRail = useNavRail
                             )
@@ -120,21 +103,10 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        // Adopt the new intent as the activity's current intent, then surface any
-        // per-goal deep link to the navigation layer.
-        setIntent(intent)
-        checkInIdOf(intent)?.let { pendingCheckInId = it }
-    }
-
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBoolean(KEY_AUTH_DONE, authCleared)
     }
-
-    private fun checkInIdOf(intent: Intent?): String? =
-        intent?.getStringExtra(EXTRA_CHECKIN_ID)?.takeIf { it.isNotBlank() }
 
     private fun showBiometricPrompt() {
         val executor = ContextCompat.getMainExecutor(this)

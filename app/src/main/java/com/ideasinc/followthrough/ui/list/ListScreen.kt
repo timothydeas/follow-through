@@ -86,7 +86,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.ideasinc.followthrough.R
-import com.ideasinc.followthrough.notifications.GoalReminderScheduler
 import com.ideasinc.followthrough.ui.rememberIsTouchExplorationEnabled
 import com.ideasinc.followthrough.ui.theme.AppColors
 import kotlinx.coroutines.flow.drop
@@ -101,8 +100,7 @@ fun ListScreen(
     viewModel: ListViewModel,
     onGoalClick: (String) -> Unit,
     onNewGoal: () -> Unit,
-    onSettingsClick: () -> Unit,
-    onStatsClick: () -> Unit
+    onSettingsClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val accentColor = AppColors.BrandAccentText
@@ -225,53 +223,6 @@ fun ListScreen(
                 }
             }
 
-                // Streak + follow-throughs summary — tap to open the full Stats
-                // screen (which also reaches "Your FollowThrus").
-                if (uiState.streakDays > 0 || uiState.totalFollowThroughs > 0) {
-                    val statsRowA11y = "Check-In Streak ${uiState.streakDays}, " +
-                        "FollowThrus ${uiState.totalFollowThroughs}. " +
-                        "Double tap to view full stats."
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(MaterialTheme.colorScheme.surface)
-                            .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
-                            .clickable(
-                                onClickLabel = "Tap to see full stats",
-                                role = Role.Button,
-                                onClick = onStatsClick
-                            )
-                            .semantics(mergeDescendants = true) {
-                                contentDescription = statsRowA11y
-                            }
-                            .padding(start = 18.dp, end = 14.dp, top = 16.dp, bottom = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        StatChip(
-                            iconRes = R.drawable.ic_flame,
-                            iconTint = AppColors.Gold,
-                            value = uiState.streakDays,
-                            label = "Check-In Streak"
-                        )
-                        Spacer(modifier = Modifier.width(28.dp))
-                        StatChip(
-                            iconRes = R.drawable.ic_check_circle,
-                            iconTint = MaterialTheme.colorScheme.primary,
-                            value = uiState.totalFollowThroughs,
-                            label = "FollowThrus"
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_chevron_right),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-
                 SearchBar(
                     query = uiState.query,
                     onQueryChange = viewModel::onQueryChange,
@@ -320,39 +271,6 @@ fun ListScreen(
                         }
                     }
                 }
-        }
-    }
-}
-
-@Composable
-private fun StatChip(
-    iconRes: Int,
-    iconTint: androidx.compose.ui.graphics.Color,
-    value: Int,
-    label: String
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = Modifier.clearAndSetSemantics { contentDescription = "$label $value" }
-    ) {
-        Icon(
-            painter = painterResource(id = iconRes),
-            contentDescription = null,
-            tint = iconTint,
-            modifier = Modifier.size(24.dp)
-        )
-        Column {
-            Text(
-                text = "$value",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }
@@ -453,10 +371,7 @@ private fun GoalCardContent(
     onMoveDown: () -> Unit,
     onArrowLongPress: () -> Unit
 ) {
-    val context = LocalContext.current
-    val hasReminder = remember(row.goal.id, row.currentPlan) {
-        GoalReminderScheduler.read(context, row.goal.id)?.enabled == true
-    }
+    val hasReminder = row.hasReminder
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -534,9 +449,9 @@ private fun GoalCardContent(
         // Supporting line aligns under the title — indented past the reserved
         // badge column (30dp) plus its 12dp spacer so it sits flush under the title.
         val supportingIndent = 42.dp
-        // Subtitle: the goal's current plan — the intention from its most recent
-        // check-in. A gentle prompt when there's no plan yet.
-        val subtitle = row.currentPlan?.takeIf { it.isNotBlank() }
+        // Subtitle: the goal's most recent reminder intention. A gentle prompt when
+        // there's no reminder yet.
+        val subtitle = row.currentIntention?.takeIf { it.isNotBlank() }
         if (subtitle != null) {
             Text(
                 text = subtitle,
@@ -548,7 +463,7 @@ private fun GoalCardContent(
             )
         } else {
             Text(
-                text = "No plan yet",
+                text = "No reminder yet",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = supportingIndent)

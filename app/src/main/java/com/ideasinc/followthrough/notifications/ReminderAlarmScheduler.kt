@@ -12,10 +12,8 @@ import com.ideasinc.followthrough.data.WeekDay
 import kotlinx.coroutines.flow.first
 import java.util.Calendar
 
-// New Reminder-model alarms. Distinct action namespace from the legacy per-check-in
-// path (ACTION_GOAL_REMINDER) so the two coexist until CheckIn is retired. The
-// schedule lives on the Reminder row (Room), read live at fire time; nothing here
-// is mirrored to prefs. Same reliability contract as the legacy path:
+// Reminder-model alarms. The schedule lives on the Reminder row (Room), read live
+// at fire time; nothing here is mirrored to prefs. Reliability contract:
 // setExactAndAllowWhileIdle, re-arm after fire, re-register on boot.
 const val ACTION_REMINDER_FIRE = "com.ideasinc.followthrough.action.REMINDER_FIRE"
 const val ACTION_REMINDER_RESPONSE = "com.ideasinc.followthrough.action.REMINDER_RESPONSE"

@@ -189,7 +189,7 @@ class Migration26To27Test {
             .addMigrations(
                 MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29,
                 MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33,
-                MIGRATION_33_34, MIGRATION_34_35
+                MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36
             )
             .build()
 

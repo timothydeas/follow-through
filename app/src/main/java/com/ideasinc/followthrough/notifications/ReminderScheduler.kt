@@ -5,15 +5,10 @@ import android.content.Context
 import android.os.Build
 import java.util.Calendar
 
-// Day-of-week extra carried by per-goal reminder alarms. Shared by
-// [GoalReminderScheduler] (which sets it) and [ReminderReceiver] (which reads it
-// to re-arm next week's alarm after firing).
-const val EXTRA_REMINDER_DAY = "com.ideasinc.followthrough.extra.REMINDER_DAY"
-
 /**
  * Next epoch-ms at which [dayOfWeek] (Calendar.SUNDAY..SATURDAY) falls at
- * [hour]:[minute], always in the future. Used by the per-goal reminders
- * ([GoalReminderScheduler]) to compute trigger times.
+ * [hour]:[minute], always in the future. Shared alarm-scheduling helper used by
+ * [ReminderAlarmScheduler] to compute trigger times.
  */
 internal fun computeNextTriggerMs(dayOfWeek: Int, hour: Int, minute: Int): Long {
     val now = Calendar.getInstance()

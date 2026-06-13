@@ -83,8 +83,15 @@ fun ReminderBuilderScreen(
         )
     )
     val s by vm.uiState.collectAsState()
+    val activity = LocalContext.current as? android.app.Activity
 
-    LaunchedEffect(s.savedGoalId) { s.savedGoalId?.let(onSaved) }
+    LaunchedEffect(s.savedGoalId) {
+        s.savedGoalId?.let { goalId ->
+            // Count genuine use for the (never sentiment-gated) Play review prompt.
+            activity?.let { com.ideasinc.followthrough.feedback.AppReview.onReminderSaved(it) }
+            onSaved(goalId)
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,

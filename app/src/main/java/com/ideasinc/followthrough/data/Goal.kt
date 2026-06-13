@@ -4,9 +4,9 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * A goal. Its implementation intentions, cues, and reminders live on its
- * [CheckIn]s (a goal has many), so the goal itself carries only its identity,
- * ordering, and follow-through state.
+ * A goal. Its intentions, cues, and schedules live on its [Reminder]s (a goal has
+ * many); its barriers and progress notes live on [Barrier]/[ProgressNote]. The goal
+ * itself carries its identity, "why it matters", ordering, and follow-through state.
  */
 @Entity(tableName = "goals")
 data class Goal(

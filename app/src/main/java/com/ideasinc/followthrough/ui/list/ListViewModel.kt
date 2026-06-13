@@ -3,10 +3,10 @@ package com.ideasinc.followthrough.ui.list
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.ideasinc.followthrough.data.CheckIn
-import com.ideasinc.followthrough.data.CheckInDao
 import com.ideasinc.followthrough.data.Goal
 import com.ideasinc.followthrough.data.GoalDao
+import com.ideasinc.followthrough.data.Reminder
+import com.ideasinc.followthrough.data.ReminderDao
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.Calendar
 
 // Number of leading positions in the unified list that are treated as
 // "priority" — highlighted and rank-numbered. Position 0 → rank 1, etc.
@@ -59,23 +58,21 @@ internal fun decideFocusReminder(
 data class GoalRowData(
     val goal: Goal,
     val rank: Int?,  // 1, 2, or 3 for the top three positions; null below
-    // A subtitle for the card: the goal's most recent plan's intention (a goal
-    // holds many plans). Null when the goal has no plan with an intention yet.
-    val currentPlan: String?
+    // Subtitle: the goal's most recent reminder's intention ("When …, I will …").
+    val currentIntention: String?,
+    val hasReminder: Boolean
 )
 
 data class ListUiState(
     val goals: List<GoalRowData> = emptyList(),
-    val query: String = "",
-    val streakDays: Int = 0,
-    val totalFollowThroughs: Int = 0
+    val query: String = ""
 )
 
 private data class DragState(val orderedIds: List<String>)
 
 class ListViewModel(
     private val goalDao: GoalDao,
-    private val checkInDao: CheckInDao
+    private val reminderDao: ReminderDao
 ) : ViewModel() {
 
     private val _query = MutableStateFlow("")
@@ -83,13 +80,11 @@ class ListViewModel(
 
     val uiState: StateFlow<ListUiState> = combine(
         goalDao.getAllGoals(),
-        checkInDao.getAllCheckIns(),
+        reminderDao.getActiveReminders(),
         _query,
         _dragState
-    ) { goals, allCheckIns, query, dragState ->
-        val checkInsByGoal = allCheckIns.groupBy { it.goalId }
-        val total = goals.count { it.followedThrough }
-        val streak = computeStreakWithFlex(allCheckIns.map { it.createdAt })
+    ) { goals, reminders, query, dragState ->
+        val remindersByGoal = reminders.groupBy { it.goalId }
 
         val activeGoals = goals.filter { !it.followedThrough }
         val filtered = if (query.isBlank()) activeGoals
@@ -108,15 +103,10 @@ class ListViewModel(
 
         val rows = ordered.mapIndexed { idx, goal ->
             val rank = if (!isFiltered && idx < PRIORITY_SLOT_COUNT) idx + 1 else null
-            rowFor(goal, rank, checkInsByGoal)
+            rowFor(goal, rank, remindersByGoal)
         }
 
-        ListUiState(
-            goals = rows,
-            query = query,
-            streakDays = streak.days,
-            totalFollowThroughs = total
-        )
+        ListUiState(goals = rows, query = query)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -222,24 +212,25 @@ class ListViewModel(
     private fun rowFor(
         goal: Goal,
         rank: Int?,
-        checkInsByGoal: Map<String, List<CheckIn>>
+        remindersByGoal: Map<String, List<Reminder>>
     ): GoalRowData {
-        // getAllCheckIns is newest-first, so the first non-blank intention is the
-        // goal's most recent implementation intention.
-        val currentPlan = checkInsByGoal[goal.id]
-            ?.firstOrNull { it.intention.isNotBlank() }
-            ?.intention
-            ?.trim()
-        return GoalRowData(goal = goal, rank = rank, currentPlan = currentPlan)
+        val goalReminders = remindersByGoal[goal.id].orEmpty()
+        val currentIntention = goalReminders.maxByOrNull { it.createdAt }?.intentionText?.trim()
+        return GoalRowData(
+            goal = goal,
+            rank = rank,
+            currentIntention = currentIntention,
+            hasReminder = goalReminders.isNotEmpty()
+        )
     }
 
     class Factory(
         private val goalDao: GoalDao,
-        private val checkInDao: CheckInDao
+        private val reminderDao: ReminderDao
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            ListViewModel(goalDao, checkInDao) as T
+            ListViewModel(goalDao, reminderDao) as T
     }
 }
 
@@ -253,62 +244,4 @@ private val unifiedComparator: Comparator<Goal> = Comparator { a, b ->
         aPri != bPri -> aPri.compareTo(bPri)
         else -> a.createdAt.compareTo(b.createdAt)
     }
-}
-
-private fun startOfDay(ts: Long): Long {
-    val cal = Calendar.getInstance()
-    cal.timeInMillis = ts
-    cal.set(Calendar.HOUR_OF_DAY, 0)
-    cal.set(Calendar.MINUTE, 0)
-    cal.set(Calendar.SECOND, 0)
-    cal.set(Calendar.MILLISECOND, 0)
-    return cal.timeInMillis
-}
-
-data class StreakResult(val days: Int, val flexDayUsed: Boolean)
-
-/**
- * Streak counts consecutive days ending today (or yesterday, if nothing happened
- * today yet) on which the user did the activity. Up to two consecutive missed
- * days in the window are allowed (the "flex" buffer) — the streak only resets when
- * three or more consecutive missed days are encountered. The buffer resets after
- * each hit. flexDayUsed is true when the flex actually bridged a miss back to a hit.
- */
-internal fun computeStreakWithFlex(timestamps: List<Long>): StreakResult {
-    val dayMs = 24L * 60 * 60 * 1000
-    val activityDays = timestamps.map { startOfDay(it) }.toHashSet()
-    if (activityDays.isEmpty()) return StreakResult(0, false)
-
-    val today = startOfDay(System.currentTimeMillis())
-    val yesterday = today - dayMs
-    val dayBeforeYesterday = today - 2 * dayMs
-
-    val startDay = when {
-        activityDays.contains(today) -> today
-        activityDays.contains(yesterday) -> yesterday
-        activityDays.contains(dayBeforeYesterday) -> dayBeforeYesterday
-        else -> return StreakResult(0, false)
-    }
-
-    var hitCount = 0
-    var flexUsed = false
-    var current = startDay
-    var consecutiveMisses = 0
-
-    while (true) {
-        val isHit = activityDays.contains(current)
-        if (isHit) {
-            if (consecutiveMisses > 0) {
-                flexUsed = true
-                consecutiveMisses = 0
-            }
-            hitCount++
-            current -= dayMs
-        } else {
-            if (consecutiveMisses >= 2) break
-            consecutiveMisses++
-            current -= dayMs
-        }
-    }
-    return StreakResult(hitCount, flexUsed)
 }
