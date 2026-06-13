@@ -121,11 +121,6 @@ fun AppNavigation(
     val context = LocalContext.current
     val navController = rememberNavController()
 
-    // The goal selected in the two-pane (expanded-width) Goals tab. Hoisted here so
-    // it survives while modal flows cover the NavHost and is restored after process
-    // death. Ignored on compact widths, where a goal opens as its own destination.
-    var selectedGoalId by rememberSaveable { mutableStateOf<String?>(null) }
-
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
     val savedVersion = prefs.getInt(KEY_ONBOARDING_VERSION, 0)
     val startDestination = if (savedVersion < CURRENT_ONBOARDING_VERSION) ROUTE_ONBOARDING else ROUTE_TODAY
@@ -160,8 +155,6 @@ fun AppNavigation(
                     listViewModel = listViewModel,
                     prefs = prefs,
                     isExpandedWidth = isExpandedWidth,
-                    selectedGoalId = selectedGoalId,
-                    onSelectGoal = { selectedGoalId = it },
                     modifier = Modifier.padding(padding)
                 )
             }
@@ -215,8 +208,6 @@ private fun AppNavHost(
     listViewModel: ListViewModel,
     prefs: android.content.SharedPreferences,
     isExpandedWidth: Boolean,
-    selectedGoalId: String?,
-    onSelectGoal: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
@@ -267,26 +258,13 @@ private fun AppNavHost(
         }
 
         composable(ROUTE_GOALS) {
-            if (isExpandedWidth) {
-                TwoPaneGoals(
-                    container = container,
-                    listViewModel = listViewModel,
-                    selectedGoalId = selectedGoalId,
-                    onSelectGoal = onSelectGoal,
+            CenteredPane(maxWidth = if (isExpandedWidth) 900.dp else 600.dp) {
+                ListScreen(
+                    viewModel = listViewModel,
+                    onGoalClick = { id -> navController.navigate("goal_detail/$id") },
                     onNewGoal = { navController.navigate(ROUTE_NEW_GOAL) },
-                    onSettingsClick = { navController.navigateToTab(ROUTE_SETTINGS) },
-                    onAddReminder = { id -> navController.navigate("builder_new/$id") },
-                    onOpenReminder = { reminderId -> navController.navigate("builder_edit/$reminderId") }
+                    isExpandedWidth = isExpandedWidth
                 )
-            } else {
-                CenteredPane {
-                    ListScreen(
-                        viewModel = listViewModel,
-                        onGoalClick = { id -> navController.navigate("goal_detail/$id") },
-                        onNewGoal = { navController.navigate(ROUTE_NEW_GOAL) },
-                        onSettingsClick = { navController.navigateToTab(ROUTE_SETTINGS) }
-                    )
-                }
             }
         }
 
@@ -418,77 +396,3 @@ private fun CenteredPane(
     }
 }
 
-/**
- * Expanded-width (tablet/landscape) Goals tab: a fixed goals-list pane on the left
- * and the selected goal's detail on the right, so the list stays visible while a
- * goal is open. Tapping a goal updates [selectedGoalId] instead of pushing a new
- * destination; the right pane shows a placeholder until one is chosen.
- */
-@Composable
-private fun TwoPaneGoals(
-    container: AppContainer,
-    listViewModel: ListViewModel,
-    selectedGoalId: String?,
-    onSelectGoal: (String?) -> Unit,
-    onNewGoal: () -> Unit,
-    onSettingsClick: () -> Unit,
-    onAddReminder: (String) -> Unit,
-    onOpenReminder: (String) -> Unit
-) {
-    CenteredPane(maxWidth = 1200.dp) {
-        Row(modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.width(360.dp).fillMaxHeight()) {
-                ListScreen(
-                    viewModel = listViewModel,
-                    onGoalClick = { onSelectGoal(it) },
-                    onNewGoal = onNewGoal,
-                    onSettingsClick = onSettingsClick
-                )
-            }
-            VerticalDivider(color = AppColors.Border)
-            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                if (selectedGoalId != null) {
-                    key(selectedGoalId) {
-                        val vm: GoalDetailViewModel = viewModel(
-                            key = "detail_$selectedGoalId",
-                            factory = GoalDetailViewModel.Factory(
-                                container.goalDao,
-                                container.goalContentDao,
-                                container.reminderDao,
-                                selectedGoalId
-                            )
-                        )
-                        GoalDetailScreen(
-                            viewModel = vm,
-                            onBack = { onSelectGoal(null) },
-                            onNavigateToList = { onSelectGoal(null) },
-                            onAddReminder = { onAddReminder(selectedGoalId) },
-                            onOpenReminder = onOpenReminder
-                        )
-                    }
-                } else {
-                    DetailPlaceholder()
-                }
-            }
-        }
-    }
-}
-
-/** Right-pane resting state in the two-pane Goals tab, before a goal is selected. */
-@Composable
-private fun DetailPlaceholder() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "Select a goal to see its reminders and progress.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(32.dp)
-        )
-    }
-}

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -180,24 +181,38 @@ private fun PanePremise() {
 @Composable
 private fun PaneIdea() {
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text("Here's the whole idea in 30 seconds.", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.semantics { heading() })
+        Text(
+            "Here's the whole idea in 30 seconds.",
+            style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.semantics { heading() }
+        )
         IdeaRow("💊", "The goal", "Take blood-pressure meds every morning.")
-        IdeaRow("☕", "The cue from your life", "Starting the morning coffee — the pill sits right by the orange Chemex.")
+        IdeaRow("☕", "The cue from your life", "☕ Starting the morning coffee — the pill sits right by the orange Chemex.")
         IdeaRow("→", "The moment reminds you", "\"When I start the morning coffee, I will take the BP pill next to the Chemex.\" The text always travels with the cue.")
     }
 }
 
+/**
+ * One idea step (prototype onboardingExample.png): a pale-coral circle holding the
+ * glyph, then a bold label and the body copy, in a white hairline-bordered card.
+ */
 @Composable
 private fun IdeaRow(glyph: String, label: String, text: String) {
     Row(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surface).border(1.dp, AppColors.Border, RoundedCornerShape(16.dp)).padding(16.dp),
         verticalAlignment = Alignment.Top
     ) {
-        Text(glyph, style = MaterialTheme.typography.titleMedium)
+        Box(
+            modifier = Modifier.size(44.dp).clip(CircleShape).background(AppColors.CoralTint),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(glyph, style = MaterialTheme.typography.titleMedium)
+        }
         Spacer(Modifier.width(14.dp))
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text(label, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
+            Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
