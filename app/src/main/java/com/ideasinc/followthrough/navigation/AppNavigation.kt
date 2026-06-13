@@ -54,21 +54,15 @@ import com.ideasinc.followthrough.ui.goals.GoalDetailScreen
 import com.ideasinc.followthrough.ui.goals.GoalDetailViewModel
 import com.ideasinc.followthrough.ui.goals.NewGoalFlowScreen
 import com.ideasinc.followthrough.ui.goals.NewGoalFlowViewModel
-import com.ideasinc.followthrough.ui.launch.LaunchInsightScreen
-import com.ideasinc.followthrough.ui.launch.markInsightShownToday
-import com.ideasinc.followthrough.ui.launch.pickLaunchInsight
-import com.ideasinc.followthrough.ui.launch.shouldShowInsightToday
 import com.ideasinc.followthrough.ui.list.ListScreen
 import com.ideasinc.followthrough.ui.list.ListViewModel
 import com.ideasinc.followthrough.ui.onboarding.OnboardingScreen
-import com.ideasinc.followthrough.ui.settings.ScienceScreen
 import com.ideasinc.followthrough.ui.settings.SettingsScreen
 import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.today.TodayScreen
 
-// Pre-spine full-screen routes (outside the bottom-bar / rail chrome).
+// Pre-spine full-screen route (outside the bottom-bar / rail chrome).
 private const val ROUTE_ONBOARDING = "onboarding"
-private const val ROUTE_LAUNCH_INSIGHT = "launch_insight"
 
 // Primary destinations — the four spine tabs (Today · Goals · About You · Settings).
 private const val ROUTE_TODAY = "today"
@@ -82,7 +76,6 @@ private const val ROUTE_GOAL_DETAIL = "goal_detail/{goalId}"
 private const val ROUTE_BUILDER = "builder"
 private const val ROUTE_BUILDER_NEW = "builder_new/{goalId}"
 private const val ROUTE_BUILDER_EDIT = "builder_edit/{reminderId}"
-private const val ROUTE_SCIENCE = "science"
 private const val ARG_GOAL_ID = "goalId"
 private const val ARG_REMINDER_ID = "reminderId"
 
@@ -98,7 +91,10 @@ internal const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
 // Bumped 112 → 113 for the full CheckIn retirement: goal creation now flows into
 // the Reminder Builder (no legacy check-in flow), Stats/FollowThrus folded away,
 // DB v36. Re-show the full first-run on the next test build (no data reset).
-internal const val CURRENT_ONBOARDING_VERSION = 113
+// Bumped 113 → 114 for the device-test polish: LaunchInsight + Science removed,
+// onboarding tagline dropped + step-2 restyle + button-layout fix, Goals card
+// redesign. Re-show the full first-run on the next test build (no data reset).
+internal const val CURRENT_ONBOARDING_VERSION = 114
 
 /** A primary spine destination, rendered in both the bottom bar and the nav rail. */
 private data class PrimaryDestination(
@@ -132,19 +128,14 @@ fun AppNavigation(
 
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
     val savedVersion = prefs.getInt(KEY_ONBOARDING_VERSION, 0)
-    // The launch insight is a once-a-day moment, not an every-launch interstitial.
-    val startDestination = when {
-        savedVersion < CURRENT_ONBOARDING_VERSION -> ROUTE_ONBOARDING
-        shouldShowInsightToday(prefs) -> ROUTE_LAUNCH_INSIGHT
-        else -> ROUTE_TODAY
-    }
+    val startDestination = if (savedVersion < CURRENT_ONBOARDING_VERSION) ROUTE_ONBOARDING else ROUTE_TODAY
 
     val listViewModel: ListViewModel = viewModel(
         factory = ListViewModel.Factory(container.goalDao, container.reminderDao)
     )
 
     // Chrome (bottom bar / rail) shows only on the four primary destinations; every
-    // full-screen route (onboarding, launch, builder, goal detail) hides it.
+    // full-screen route (onboarding, builder, goal detail) hides it.
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val showChrome = currentRoute in PRIMARY_ROUTES
@@ -234,7 +225,7 @@ private fun AppNavHost(
                 OnboardingScreen(
                     onComplete = {
                         prefs.edit().putInt(KEY_ONBOARDING_VERSION, CURRENT_ONBOARDING_VERSION).apply()
-                        navController.navigate(ROUTE_LAUNCH_INSIGHT) {
+                        navController.navigate(ROUTE_TODAY) {
                             popUpTo(ROUTE_ONBOARDING) { inclusive = true }
                         }
                     },
@@ -244,22 +235,6 @@ private fun AppNavHost(
                             popUpTo(ROUTE_ONBOARDING) { inclusive = true }
                         }
                         navController.navigate(ROUTE_BUILDER)
-                    }
-                )
-            }
-        }
-
-        composable(ROUTE_LAUNCH_INSIGHT) {
-            // Pick once and mark today's insight as shown so later launches today
-            // go straight to Today.
-            val insight = remember { markInsightShownToday(prefs); pickLaunchInsight(prefs) }
-            CenteredPane {
-                LaunchInsightScreen(
-                    text = insight,
-                    onDismiss = {
-                        navController.navigate(ROUTE_TODAY) {
-                            popUpTo(ROUTE_LAUNCH_INSIGHT) { inclusive = true }
-                        }
                     }
                 )
             }
@@ -324,7 +299,6 @@ private fun AppNavHost(
                 SettingsScreen(
                     container = container,
                     onBack = { navController.navigateToTab(ROUTE_TODAY) },
-                    onScience = { navController.navigate(ROUTE_SCIENCE) },
                     onReplayIntro = {
                         // Re-show the Welcome; gate resets so a normal relaunch also
                         // re-shows until completed. No user data is touched.
@@ -336,10 +310,6 @@ private fun AppNavHost(
                     }
                 )
             }
-        }
-
-        composable(ROUTE_SCIENCE) {
-            CenteredPane { ScienceScreen(onBack = { navController.popBackStack() }) }
         }
 
         composable(ROUTE_NEW_GOAL) {

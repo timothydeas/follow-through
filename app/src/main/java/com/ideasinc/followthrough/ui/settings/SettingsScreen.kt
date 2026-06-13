@@ -74,7 +74,6 @@ import com.ideasinc.followthrough.navigation.PREFS_NAME
 fun SettingsScreen(
     container: AppContainer,
     onBack: () -> Unit,
-    onScience: () -> Unit,
     onReplayIntro: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -304,34 +303,6 @@ fun SettingsScreen(
                         .semantics { heading() }
                 )
 
-                // The science behind FollowThru — read-only sources screen, placed
-                // directly above the version line.
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(
-                            onClickLabel = "Open The science behind FollowThru",
-                            role = Role.Button,
-                            onClick = onScience
-                        )
-                        .heightIn(min = 48.dp)
-                        .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "The science behind FollowThru",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_chevron_right),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -377,13 +348,6 @@ fun SettingsScreen(
 
                 Text(
                     text = "FollowThru is not a substitute for professional medical, psychological, or coaching advice.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-
-                Text(
-                    text = "FollowThru uses research-backed questions to support personal reflection. All questions are optional and fully customizable — you are always in control.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 4.dp)

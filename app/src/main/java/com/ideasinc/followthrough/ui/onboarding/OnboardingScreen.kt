@@ -97,7 +97,6 @@ fun OnboardingScreen(
         ) {
             Column(modifier = Modifier.weight(1f).semantics(mergeDescendants = true) { heading() }) {
                 Text("FollowThru", style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.primary)
-                Text("in every moment", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             TextButton(onClick = onComplete, modifier = Modifier.semantics { contentDescription = "Skip onboarding" }) {
                 Text("Skip", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)

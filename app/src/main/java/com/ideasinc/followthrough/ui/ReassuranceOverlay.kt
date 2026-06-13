@@ -41,21 +41,27 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.R
-import com.ideasinc.followthrough.ui.launch.insightDisplayDurationMs
 import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
 
 /**
- * Full-screen brand "forge" overlay — a brief, celebratory close message styled to
- * match the launch-insight screen (LaunchInsightScreen): coral
- * [AppColors.ForgeBackground] with [AppColors.OnForgeBackground] text, and the same
- * icon → wordmark → message → caption recipe. Shared by the "I followed through"
- * reassurance and the post-check-in close message so the two stay visually
- * identical and pick up any restyle automatically.
+ * Time the celebratory overlay stays up, scaled to its word count at ~200 wpm plus
+ * a 3-second buffer, clamped to 5–10s. (The user can always tap to continue sooner.)
+ */
+private fun reassuranceDurationMs(text: String): Long {
+    val words = text.trim().split(Regex("\\s+")).count { it.isNotBlank() }
+    return ((words.toLong() * 60_000L) / 200L + 3_000L).coerceIn(5_000L, 10_000L)
+}
+
+/**
+ * Full-screen brand "forge" overlay — a brief, celebratory close message: coral
+ * [AppColors.ForgeBackground] with [AppColors.OnForgeBackground] text, in an
+ * icon → wordmark → message → caption recipe. Used by the "I followed through"
+ * reassurance moment.
  *
- * Dismisses on tap or after the shared [insightDisplayDurationMs] auto-timer (the
- * timer is skipped when an accessibility service is active so the user can read at
- * their own pace and dismiss with a tap). [onDismiss] runs on either path.
+ * Dismisses on tap or after a short word-count-scaled auto-timer (skipped when an
+ * accessibility service is active so the user can read at their own pace and dismiss
+ * with a tap). [onDismiss] runs on either path.
  */
 @Composable
 internal fun ReassuranceOverlay(message: String, onDismiss: () -> Unit) {
@@ -80,7 +86,7 @@ internal fun ReassuranceOverlay(message: String, onDismiss: () -> Unit) {
         val handler = Handler(Looper.getMainLooper())
         val runnable = Runnable { onDismiss() }
         if (a11yManager?.isEnabled != true) {
-            handler.postDelayed(runnable, insightDisplayDurationMs(message))
+            handler.postDelayed(runnable, reassuranceDurationMs(message))
         }
         onDispose {
             handler.removeCallbacks(runnable)
