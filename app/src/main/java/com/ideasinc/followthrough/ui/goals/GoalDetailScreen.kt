@@ -63,6 +63,7 @@ import com.ideasinc.followthrough.R
 import com.ideasinc.followthrough.data.Reminder
 import com.ideasinc.followthrough.notifications.CueImageStore
 import com.ideasinc.followthrough.notifications.GoalReminderScheduler
+import com.ideasinc.followthrough.notifications.ReminderAlarmScheduler
 import com.ideasinc.followthrough.notifications.deleteCueChannels
 import com.ideasinc.followthrough.ui.ReassuranceOverlay
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
@@ -112,6 +113,9 @@ fun GoalDetailScreen(
                         // Clean up any legacy per-check-in reminder alarms/channels/images
                         // before the goal (and its cascade children) are removed.
                         scope.launch {
+                            // New Reminder-model alarms for this goal.
+                            uiState.reminders.forEach { r -> ReminderAlarmScheduler.cancel(context, r.id) }
+                            // Legacy per-check-in reminders/channels/cue images.
                             viewModel.legacyCheckInsForCleanup().forEach { c ->
                                 GoalReminderScheduler.remove(context, c.id)
                                 deleteCueChannels(context, c.id)

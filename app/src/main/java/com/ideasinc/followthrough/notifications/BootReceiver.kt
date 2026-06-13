@@ -3,6 +3,9 @@
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class BootReceiver : BroadcastReceiver() {
 
@@ -14,6 +17,17 @@ class BootReceiver : BroadcastReceiver() {
         ) return
 
         val appContext = context.applicationContext
+        // Legacy per-check-in reminders (prefs-backed, synchronous).
         GoalReminderScheduler.rescheduleAllFromPrefs(appContext)
+        // New Reminder-model alarms (read from Room) — re-register off the main
+        // thread; goAsync keeps the broadcast alive until the DB read completes.
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                ReminderAlarmScheduler.rescheduleAllActive(appContext)
+            } finally {
+                pendingResult.finish()
+            }
+        }
     }
 }

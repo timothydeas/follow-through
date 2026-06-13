@@ -76,9 +76,10 @@ fun ReminderBuilderScreen(
     onClose: () -> Unit,
     onSaved: (goalId: String) -> Unit
 ) {
+    val appContext = LocalContext.current.applicationContext
     val vm: ReminderBuilderViewModel = viewModel(
         factory = ReminderBuilderViewModel.Factory(
-            container.goalDao, container.goalContentDao, container.paletteDao, container.reminderDao, goalId, reminderId
+            appContext, container.goalDao, container.goalContentDao, container.paletteDao, container.reminderDao, goalId, reminderId
         )
     )
     val s by vm.uiState.collectAsState()

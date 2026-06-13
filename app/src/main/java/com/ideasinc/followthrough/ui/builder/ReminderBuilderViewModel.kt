@@ -1,5 +1,6 @@
 package com.ideasinc.followthrough.ui.builder
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -16,6 +17,7 @@ import com.ideasinc.followthrough.data.ReminderDao
 import com.ideasinc.followthrough.data.ReminderStatus
 import com.ideasinc.followthrough.data.ScheduleMode
 import com.ideasinc.followthrough.data.WeekDay
+import com.ideasinc.followthrough.notifications.ReminderAlarmScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -82,6 +84,7 @@ data class BuilderUiState(
 }
 
 class ReminderBuilderViewModel(
+    private val appContext: Context,
     private val goalDao: GoalDao,
     private val goalContentDao: GoalContentDao,
     private val paletteDao: PaletteDao,
@@ -229,11 +232,14 @@ class ReminderBuilderViewModel(
                 updatedAt = now
             )
             reminderDao.upsert(reminder)
+            // Schedule (or reschedule, on edit) the exact alarms for this reminder.
+            ReminderAlarmScheduler.schedule(appContext, reminder)
             _uiState.update { it.copy(savedGoalId = goalId) }
         }
     }
 
     class Factory(
+        private val appContext: Context,
         private val goalDao: GoalDao,
         private val goalContentDao: GoalContentDao,
         private val paletteDao: PaletteDao,
@@ -243,6 +249,6 @@ class ReminderBuilderViewModel(
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            ReminderBuilderViewModel(goalDao, goalContentDao, paletteDao, reminderDao, initialGoalId, editReminderId) as T
+            ReminderBuilderViewModel(appContext, goalDao, goalContentDao, paletteDao, reminderDao, initialGoalId, editReminderId) as T
     }
 }

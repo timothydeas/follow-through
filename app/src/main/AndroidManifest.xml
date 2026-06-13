@@ -51,6 +51,13 @@
             </intent-filter>
         </receiver>
 
+        <!-- New Reminder-model cue-fire + response actions. Explicit-component
+             intents only (alarms + notification action buttons), so no filter is
+             needed; exported=false keeps it private to the app. -->
+        <receiver
+            android:name=".notifications.ReminderFireReceiver"
+            android:exported="false" />
+
         <receiver
             android:name=".notifications.BootReceiver"
             android:exported="true">
