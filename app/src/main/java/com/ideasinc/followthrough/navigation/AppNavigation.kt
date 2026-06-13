@@ -49,6 +49,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ideasinc.followthrough.di.AppContainer
 import com.ideasinc.followthrough.ui.aboutyou.AboutYouScreen
+import com.ideasinc.followthrough.ui.builder.ReminderBuilderScreen
 import com.ideasinc.followthrough.ui.checkin.CheckInEditorScreen
 import com.ideasinc.followthrough.ui.checkin.CheckInEditorViewModel
 import com.ideasinc.followthrough.ui.checkin.CheckInFlowScreen
@@ -84,11 +85,14 @@ private const val ROUTE_NEW_GOAL = "new_goal"
 private const val ROUTE_GOAL_DETAIL = "goal_detail/{goalId}"
 private const val ROUTE_CHECKIN_FLOW = "checkin_flow/{goalId}"
 private const val ROUTE_CHECKIN_EDITOR = "checkin_editor/{checkInId}"
+private const val ROUTE_BUILDER_NEW = "builder_new/{goalId}"
+private const val ROUTE_BUILDER_EDIT = "builder_edit/{reminderId}"
 private const val ROUTE_SCIENCE = "science"
 private const val ROUTE_STATS = "stats"
 private const val ROUTE_FOLLOWTHRUS = "followthrus"
 private const val ARG_GOAL_ID = "goalId"
 private const val ARG_CHECKIN_ID = "checkInId"
+private const val ARG_REMINDER_ID = "reminderId"
 
 internal const val PREFS_NAME = "grounded_prefs"
 internal const val KEY_ONBOARDING_VERSION = "onboarding_version"
@@ -284,8 +288,8 @@ private fun AppNavHost(
                     onNewGoal = { navController.navigate(ROUTE_NEW_GOAL) },
                     onSettingsClick = { navController.navigateToTab(ROUTE_SETTINGS) },
                     onStatsClick = { navController.navigate(ROUTE_STATS) },
-                    onAddCheckIn = { id -> navController.navigate("checkin_flow/$id") },
-                    onOpenCheckIn = { checkInId -> navController.navigate("checkin_editor/$checkInId") }
+                    onAddReminder = { id -> navController.navigate("builder_new/$id") },
+                    onOpenReminder = { reminderId -> navController.navigate("builder_edit/$reminderId") }
                 )
             } else {
                 CenteredPane {
@@ -363,7 +367,9 @@ private fun AppNavHost(
         ) { backStackEntry ->
             val goalId = backStackEntry.arguments?.getString(ARG_GOAL_ID) ?: return@composable
             val vm: GoalDetailViewModel = viewModel(
-                factory = GoalDetailViewModel.Factory(container.goalDao, container.checkInDao, goalId)
+                factory = GoalDetailViewModel.Factory(
+                    container.goalDao, container.checkInDao, container.goalContentDao, container.reminderDao, goalId
+                )
             )
             CenteredPane {
                 GoalDetailScreen(
@@ -374,8 +380,50 @@ private fun AppNavHost(
                             popUpTo(ROUTE_GOALS) { inclusive = true }
                         }
                     },
-                    onAddCheckIn = { navController.navigate("checkin_flow/$goalId") },
-                    onOpenCheckIn = { checkInId -> navController.navigate("checkin_editor/$checkInId") }
+                    onAddReminder = { navController.navigate("builder_new/$goalId") },
+                    onOpenReminder = { reminderId -> navController.navigate("builder_edit/$reminderId") }
+                )
+            }
+        }
+
+        composable(
+            route = ROUTE_BUILDER_NEW,
+            arguments = listOf(navArgument(ARG_GOAL_ID) { type = NavType.StringType })
+        ) { backStackEntry ->
+            val goalId = backStackEntry.arguments?.getString(ARG_GOAL_ID) ?: return@composable
+            CenteredPane {
+                ReminderBuilderScreen(
+                    container = container,
+                    goalId = goalId,
+                    reminderId = null,
+                    onClose = { navController.popBackStack() },
+                    onSaved = { savedGoalId ->
+                        navController.navigate("goal_detail/$savedGoalId") {
+                            popUpTo(ROUTE_BUILDER_NEW) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+        }
+
+        composable(
+            route = ROUTE_BUILDER_EDIT,
+            arguments = listOf(navArgument(ARG_REMINDER_ID) { type = NavType.StringType })
+        ) { backStackEntry ->
+            val reminderId = backStackEntry.arguments?.getString(ARG_REMINDER_ID) ?: return@composable
+            CenteredPane {
+                ReminderBuilderScreen(
+                    container = container,
+                    goalId = null,
+                    reminderId = reminderId,
+                    onClose = { navController.popBackStack() },
+                    onSaved = { savedGoalId ->
+                        navController.navigate("goal_detail/$savedGoalId") {
+                            popUpTo(ROUTE_BUILDER_EDIT) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
         }
@@ -457,8 +505,8 @@ private fun TwoPaneGoals(
     onNewGoal: () -> Unit,
     onSettingsClick: () -> Unit,
     onStatsClick: () -> Unit,
-    onAddCheckIn: (String) -> Unit,
-    onOpenCheckIn: (String) -> Unit
+    onAddReminder: (String) -> Unit,
+    onOpenReminder: (String) -> Unit
 ) {
     CenteredPane(maxWidth = 1200.dp) {
         Row(modifier = Modifier.fillMaxSize()) {
@@ -480,6 +528,8 @@ private fun TwoPaneGoals(
                             factory = GoalDetailViewModel.Factory(
                                 container.goalDao,
                                 container.checkInDao,
+                                container.goalContentDao,
+                                container.reminderDao,
                                 selectedGoalId
                             )
                         )
@@ -487,8 +537,8 @@ private fun TwoPaneGoals(
                             viewModel = vm,
                             onBack = { onSelectGoal(null) },
                             onNavigateToList = { onSelectGoal(null) },
-                            onAddCheckIn = { onAddCheckIn(selectedGoalId) },
-                            onOpenCheckIn = onOpenCheckIn
+                            onAddReminder = { onAddReminder(selectedGoalId) },
+                            onOpenReminder = onOpenReminder
                         )
                     }
                 } else {

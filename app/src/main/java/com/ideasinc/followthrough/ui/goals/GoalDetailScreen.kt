@@ -23,18 +23,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FabPosition
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -45,57 +43,57 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.R
-import com.ideasinc.followthrough.data.CheckIn
-import com.ideasinc.followthrough.data.CheckInType
+import com.ideasinc.followthrough.data.Reminder
 import com.ideasinc.followthrough.notifications.CueImageStore
 import com.ideasinc.followthrough.notifications.GoalReminderScheduler
 import com.ideasinc.followthrough.notifications.deleteCueChannels
 import com.ideasinc.followthrough.ui.ReassuranceOverlay
 import com.ideasinc.followthrough.ui.rememberA11yAnnouncer
 import com.ideasinc.followthrough.ui.theme.AppColors
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import androidx.compose.ui.ExperimentalComposeUiApi
+import kotlinx.coroutines.launch
 
+/**
+ * Goal detail — the spine's "why" home. Sections: Why this matters · Barriers ·
+ * Progress notes · Reminders for this goal. "Add reminder" launches the builder
+ * pre-filled with this goal.
+ */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun GoalDetailScreen(
     viewModel: GoalDetailViewModel,
     onBack: () -> Unit,
     onNavigateToList: () -> Unit,
-    onAddCheckIn: () -> Unit,
-    onOpenCheckIn: (String) -> Unit
+    onAddReminder: () -> Unit,
+    onOpenReminder: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showBarrierDialog by remember { mutableStateOf(false) }
+    var showProgressDialog by remember { mutableStateOf(false) }
     val backFocus = remember { FocusRequester() }
-    val deleteTriggerFocus = remember { FocusRequester() }
-    val editTriggerFocus = remember { FocusRequester() }
     val announce = rememberA11yAnnouncer()
 
     LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
-
     LaunchedEffect(uiState.shouldNavigateToList) {
         if (uiState.shouldNavigateToList) {
             announce("Deleted")
@@ -104,41 +102,30 @@ fun GoalDetailScreen(
     }
 
     if (showDeleteDialog) {
-        val confirmFocus = remember { FocusRequester() }
-        LaunchedEffect(Unit) { runCatching { confirmFocus.requestFocus() } }
         AlertDialog(
-            onDismissRequest = {
-                showDeleteDialog = false
-                runCatching { deleteTriggerFocus.requestFocus() }
-            },
-            text = {
-                Text(
-                    "Delete this goal and all its check-ins?",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
+            onDismissRequest = { showDeleteDialog = false },
+            text = { Text("Delete this goal and everything in it?", style = MaterialTheme.typography.bodyMedium) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showDeleteDialog = false
-                        // Drop every check-in's reminder, sound channels, cue image.
-                        uiState.checkIns.forEach { c ->
-                            GoalReminderScheduler.remove(context, c.id)
-                            deleteCueChannels(context, c.id)
-                            CueImageStore.deletePath(c.cueImagePath)
+                        // Clean up any legacy per-check-in reminder alarms/channels/images
+                        // before the goal (and its cascade children) are removed.
+                        scope.launch {
+                            viewModel.legacyCheckInsForCleanup().forEach { c ->
+                                GoalReminderScheduler.remove(context, c.id)
+                                deleteCueChannels(context, c.id)
+                                CueImageStore.deletePath(c.cueImagePath)
+                            }
+                            viewModel.deleteGoal()
                         }
-                        viewModel.deleteGoal()
                     },
-                    colors = ButtonDefaults.textButtonColors(contentColor = AppColors.Destructive),
-                    modifier = Modifier.focusRequester(confirmFocus)
+                    colors = ButtonDefaults.textButtonColors(contentColor = AppColors.Destructive)
                 ) { Text("Delete") }
             },
             dismissButton = {
                 TextButton(
-                    onClick = {
-                        showDeleteDialog = false
-                        runCatching { deleteTriggerFocus.requestFocus() }
-                    },
+                    onClick = { showDeleteDialog = false },
                     colors = ButtonDefaults.textButtonColors(contentColor = AppColors.BrandAccentText)
                 ) { Text("Cancel") }
             }
@@ -146,64 +133,36 @@ fun GoalDetailScreen(
     }
 
     if (uiState.showEditDialog) {
-        val titleFocus = remember { FocusRequester() }
-        LaunchedEffect(Unit) { runCatching { titleFocus.requestFocus() } }
-        AlertDialog(
-            onDismissRequest = {
-                viewModel.dismissEditDialog()
-                runCatching { editTriggerFocus.requestFocus() }
-            },
-            title = { Text("Edit goal", style = MaterialTheme.typography.headlineSmall) },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = uiState.editTitle,
-                        onValueChange = viewModel::onEditTitleChange,
-                        label = { Text("Goal title") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(titleFocus)
-                    )
-                    if (uiState.editTitle.isBlank()) {
-                        Text(
-                            text = "Title cannot be empty.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 4.dp, start = 4.dp)
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.saveGoalEdit()
-                        runCatching { editTriggerFocus.requestFocus() }
-                    },
-                    enabled = uiState.editTitle.isNotBlank(),
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = AppColors.BrandAccentText,
-                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                ) { Text("Save") }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.dismissEditDialog()
-                        runCatching { editTriggerFocus.requestFocus() }
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = AppColors.BrandAccentText)
-                ) { Text("Cancel") }
-            }
+        EditGoalDialog(
+            title = uiState.editTitle,
+            why = uiState.editWhy,
+            onTitleChange = viewModel::onEditTitleChange,
+            onWhyChange = viewModel::onEditWhyChange,
+            onSave = viewModel::saveGoalEdit,
+            onDismiss = viewModel::dismissEditDialog
+        )
+    }
+
+    if (showBarrierDialog) {
+        SingleFieldDialog(
+            title = "What's getting in the way?",
+            placeholder = "After-work slump — I sit down and never get back up.",
+            onSave = { viewModel.addBarrier(it); showBarrierDialog = false },
+            onDismiss = { showBarrierDialog = false }
+        )
+    }
+    if (showProgressDialog) {
+        SingleFieldDialog(
+            title = "What went well?",
+            placeholder = "Ran 1.5 miles, walked the rest. Knees fine.",
+            onSave = { viewModel.addProgressNote(it); showProgressDialog = false },
+            onDismiss = { showProgressDialog = false }
         )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
-            modifier = Modifier.semantics {
-                if (uiState.showReassurance) invisibleToUser()
-            },
+            modifier = Modifier.semantics { if (uiState.showReassurance) invisibleToUser() },
             containerColor = MaterialTheme.colorScheme.background,
             topBar = {
                 Row(
@@ -214,15 +173,8 @@ fun GoalDetailScreen(
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier.focusRequester(backFocus)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Go back",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                    IconButton(onClick = onBack, modifier = Modifier.focusRequester(backFocus)) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Go back", tint = MaterialTheme.colorScheme.onSurface)
                     }
                     Text(
                         text = uiState.goal?.title ?: "",
@@ -230,93 +182,80 @@ fun GoalDetailScreen(
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 4.dp)
-                            .semantics { heading() }
+                        modifier = Modifier.weight(1f).padding(horizontal = 4.dp).semantics { heading() }
                     )
-                    IconButton(
-                        onClick = viewModel::showEditDialog,
-                        modifier = Modifier.focusRequester(editTriggerFocus)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(22.dp)
-                        )
+                    IconButton(onClick = viewModel::showEditDialog) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit goal", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(22.dp))
                     }
-                    IconButton(
-                        onClick = { showDeleteDialog = true },
-                        modifier = Modifier.focusRequester(deleteTriggerFocus)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete goal",
-                            tint = AppColors.Destructive,
-                            modifier = Modifier.size(22.dp)
-                        )
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete goal", tint = AppColors.Destructive, modifier = Modifier.size(22.dp))
                     }
-                }
-            },
-            floatingActionButtonPosition = FabPosition.Center,
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick = onAddCheckIn,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = CircleShape,
-                    modifier = Modifier.semantics { contentDescription = "Add check-in" }
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
                 }
             }
         ) { innerPadding ->
             val goal = uiState.goal
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 48.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 if (goal != null) {
                     item {
-                        FollowThroughButton(
-                            followedThrough = goal.followedThrough,
-                            onFollowThrough = { viewModel.followThrough() }
-                        )
+                        FollowThroughButton(goal.followedThrough) { viewModel.followThrough() }
                     }
 
+                    // Why this matters.
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SectionLabel("CHECK-INS")
-                            FilterRow(selected = uiState.filter, onSelect = viewModel::setFilter)
+                            SectionLabel("WHY THIS MATTERS")
+                            if (goal.whyItMatters.isBlank()) {
+                                Text(
+                                    "Tap the edit pencil to add why this goal matters.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            } else {
+                                Text(
+                                    goal.whyItMatters,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
 
-                    val log = uiState.filteredCheckIns
-                    if (log.isEmpty()) {
-                        item {
-                            Text(
-                                text = if (uiState.checkIns.isEmpty()) {
-                                    "No check-ins yet. Tap + to add one."
-                                } else {
-                                    "No check-ins of this kind yet."
-                                },
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 16.dp)
-                            )
-                        }
+                    // Barriers.
+                    item { SectionLabel("BARRIERS") }
+                    if (uiState.barriers.isEmpty()) {
+                        item { EmptyHint("What might get in the way? Add one to draw from later.") }
                     } else {
-                        items(log, key = { it.id }) { checkIn ->
-                            CheckInLogCard(checkIn = checkIn, onClick = { onOpenCheckIn(checkIn.id) })
+                        items(uiState.barriers, key = { it.id }) { b ->
+                            RemovableRow(text = b.text, removeLabel = "Remove barrier") { viewModel.deleteBarrier(b.id) }
                         }
                     }
+                    item { AddRow("Add a barrier") { showBarrierDialog = true } }
+
+                    // Progress notes.
+                    item { SectionLabel("PROGRESS NOTES") }
+                    if (uiState.progressNotes.isEmpty()) {
+                        item { EmptyHint("Jot what went well — no scoring, just your own record.") }
+                    } else {
+                        items(uiState.progressNotes, key = { it.id }) { n ->
+                            ProgressNoteRow(text = n.text, date = formatDate(n.createdAt)) { viewModel.deleteProgressNote(n.id) }
+                        }
+                    }
+                    item { AddRow("Add a progress note") { showProgressDialog = true } }
+
+                    // Reminders.
+                    item { SectionLabel("REMINDERS") }
+                    if (uiState.reminders.isEmpty()) {
+                        item { EmptyHint("No reminders yet. Add one to tie this goal to a cue.") }
+                    } else {
+                        items(uiState.reminders, key = { it.id }) { r ->
+                            ReminderRow(reminder = r) { onOpenReminder(r.id) }
+                        }
+                    }
+                    item { AddRow("Add reminder") { onAddReminder() } }
                 }
             }
         }
@@ -341,134 +280,100 @@ private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun FilterRow(selected: CheckInFilter, onSelect: (CheckInFilter) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilterPill("All", selected == CheckInFilter.ALL) { onSelect(CheckInFilter.ALL) }
-        FilterPill("Barriers", selected == CheckInFilter.BARRIER) { onSelect(CheckInFilter.BARRIER) }
-        FilterPill("Progress", selected == CheckInFilter.PROGRESS) { onSelect(CheckInFilter.PROGRESS) }
+private fun EmptyHint(text: String) {
+    Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable
+private fun RemovableRow(text: String, removeLabel: String, onRemove: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
+            .padding(start = 16.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f).padding(vertical = 14.dp))
+        IconButton(onClick = onRemove) {
+            Icon(Icons.Filled.Close, contentDescription = removeLabel, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        }
     }
 }
 
 @Composable
-private fun FilterPill(label: String, selected: Boolean, onClick: () -> Unit) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label) },
-        colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-        ),
-        border = FilterChipDefaults.filterChipBorder(
-            enabled = true,
-            selected = selected,
-            borderColor = AppColors.Border,
-            selectedBorderColor = MaterialTheme.colorScheme.primary
-        )
-    )
-}
-
-/**
- * One log entry — its type tag, the note, an intention/cue/reminder hint, the date.
- * Opens the check-in to view and edit.
- */
-@Composable
-private fun CheckInLogCard(checkIn: CheckIn, onClick: () -> Unit) {
-    val context = LocalContext.current
-    val isProgress = checkIn.type == CheckInType.PROGRESS
-    val tagLabel = if (isProgress) "Progress" else "Barrier"
-    val hasReminder = remember(checkIn.id, checkIn.updatedAt) {
-        GoalReminderScheduler.read(context, checkIn.id)?.enabled == true
-    }
-    val a11y = buildString {
-        append("$tagLabel. ${checkIn.note}")
-        checkIn.intention.takeIf { it.isNotBlank() }?.let { append(". Intention: $it") }
-        if (hasReminder) append(". Reminder on")
-        append(". ${formatDate(checkIn.createdAt)}")
-    }
+private fun ProgressNoteRow(text: String, date: String, onRemove: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
-            .clickable(role = Role.Button, onClickLabel = "Open check-in", onClick = onClick)
-            .padding(16.dp)
-            .semantics(mergeDescendants = true) { contentDescription = a11y },
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 8.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            checkIn.cueEmoji?.takeIf { it.isNotBlank() }?.let {
-                Text(text = it, style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.width(6.dp))
+            Text(date, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+            IconButton(onClick = onRemove) {
+                Icon(Icons.Filled.Close, contentDescription = "Remove progress note", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             }
-            TypeTag(label = tagLabel, isProgress = isProgress)
-            Spacer(modifier = Modifier.weight(1f))
-            if (hasReminder) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_bell),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(end = 6.dp).size(18.dp)
-                )
-            }
-            Text(
-                text = formatDate(checkIn.createdAt),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
-        Text(
-            text = checkIn.note,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis
-        )
-        checkIn.intention.takeIf { it.isNotBlank() }?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(bottom = 6.dp))
     }
 }
 
-/** A small pill tagging a log entry as a barrier or progress note. */
 @Composable
-private fun TypeTag(label: String, isProgress: Boolean) {
-    val dotColor = if (isProgress) AppColors.Gold else MaterialTheme.colorScheme.primary
+private fun ReminderRow(reminder: Reminder, onClick: () -> Unit) {
     Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
         modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
+            .clickable(onClickLabel = "Open reminder", onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(dotColor)
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        CueGlyph(reminder)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(reminder.intentionText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            Text(scheduleSummary(reminder), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
+        }
+    }
+}
+
+/** Small cue glyph: emoji shown directly; phrase shown as a bell icon stand-in. */
+@Composable
+private fun CueGlyph(reminder: Reminder) {
+    if (reminder.cueType == com.ideasinc.followthrough.data.CueType.EMOJI && reminder.cueValue.isNotBlank()) {
+        Text(reminder.cueValue, style = MaterialTheme.typography.titleMedium)
+    } else {
+        Icon(
+            painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_bell),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
         )
     }
 }
 
-/** The "I followed through" primary. Undo lives on "Your FollowThrus". */
 @Composable
-private fun FollowThroughButton(
-    followedThrough: Boolean,
-    onFollowThrough: () -> Unit
-) {
+private fun AddRow(text: String, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = AppColors.BrandAccentText)
+    ) {
+        Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(text, style = MaterialTheme.typography.labelLarge)
+    }
+}
+
+@Composable
+private fun FollowThroughButton(followedThrough: Boolean, onFollowThrough: () -> Unit) {
     Button(
         onClick = { if (!followedThrough) onFollowThrough() },
         colors = ButtonDefaults.buttonColors(
@@ -480,25 +385,125 @@ private fun FollowThroughButton(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 52.dp)
-            .semantics {
-                contentDescription =
-                    if (followedThrough) "Followed through" else "I followed through"
-            }
+            .semantics { contentDescription = if (followedThrough) "Followed through" else "I followed through" }
     ) {
-        Icon(
-            painter = painterResource(id = R.drawable.ic_check_circle),
-            contentDescription = null,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
+        Icon(painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_check_circle), contentDescription = null, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(8.dp))
         Text(
             text = if (followedThrough) "Followed through" else "I followed through",
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-            maxLines = 2,
-            textAlign = TextAlign.Center
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
         )
     }
 }
 
-private val dateFormatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
-private fun formatDate(epochMs: Long): String = dateFormatter.format(Date(epochMs))
+@Composable
+private fun EditGoalDialog(
+    title: String,
+    why: String,
+    onTitleChange: (String) -> Unit,
+    onWhyChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val titleFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { titleFocus.requestFocus() } }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit goal", style = MaterialTheme.typography.headlineSmall) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = onTitleChange,
+                    label = { Text("Goal title") },
+                    modifier = Modifier.fillMaxWidth().focusRequester(titleFocus)
+                )
+                OutlinedTextField(
+                    value = why,
+                    onValueChange = onWhyChange,
+                    label = { Text("Why it matters") },
+                    placeholder = { Text("Energy back, and Biscuit needs a running buddy.") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onSave,
+                enabled = title.isNotBlank(),
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = AppColors.BrandAccentText,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, colors = ButtonDefaults.textButtonColors(contentColor = AppColors.BrandAccentText)) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+private fun SingleFieldDialog(
+    title: String,
+    placeholder: String,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var text by remember { mutableStateOf("") }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, style = MaterialTheme.typography.headlineSmall) },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                placeholder = { Text(placeholder) },
+                modifier = Modifier.fillMaxWidth().focusRequester(focus)
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSave(text) },
+                enabled = text.isNotBlank(),
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = AppColors.BrandAccentText,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) { Text("Add") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, colors = ButtonDefaults.textButtonColors(contentColor = AppColors.BrandAccentText)) { Text("Cancel") }
+        }
+    )
+}
+
+private fun scheduleSummary(reminder: Reminder): String {
+    val time = formatTime(reminder.scheduleTimeLocal)
+    val days = reminder.days
+    val daysLabel = if (days.size == 7 || reminder.scheduleMode == com.ideasinc.followthrough.data.ScheduleMode.DAILY) {
+        "Daily"
+    } else {
+        days.joinToString(", ") { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }
+    }
+    return "$daysLabel · $time"
+}
+
+/** "HH:mm" 24h → a friendly 12h label, e.g. "06:45" → "6:45 AM". */
+private fun formatTime(hhmm: String): String {
+    val parts = hhmm.split(":")
+    val h = parts.getOrNull(0)?.toIntOrNull() ?: return hhmm
+    val m = parts.getOrNull(1)?.toIntOrNull() ?: 0
+    val period = if (h < 12) "AM" else "PM"
+    val h12 = when {
+        h == 0 -> 12
+        h > 12 -> h - 12
+        else -> h
+    }
+    return "%d:%02d %s".format(h12, m, period)
+}
+
+private val dateFormatter = java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+private fun formatDate(epochMs: Long): String = dateFormatter.format(java.util.Date(epochMs))
