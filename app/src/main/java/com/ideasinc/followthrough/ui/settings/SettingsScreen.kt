@@ -34,6 +34,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ideasinc.followthrough.BuildConfig
 import com.ideasinc.followthrough.R
+import com.ideasinc.followthrough.debug.DemoSeed
 import com.ideasinc.followthrough.di.AppContainer
 import com.ideasinc.followthrough.feedback.AppReview
 import com.ideasinc.followthrough.ui.theme.AppColors
@@ -82,6 +84,7 @@ fun SettingsScreen(
     var biometricEnabled by remember { mutableStateOf(prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false)) }
     val backFocus = remember { FocusRequester() }
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
 
     Scaffold(
@@ -127,6 +130,36 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             HorizontalDivider(color = AppColors.Border)
+
+            // DEBUG ONLY: reset the screenshot demo data. Gated to debug builds; the
+            // row never appears in release.
+            if (BuildConfig.DEBUG) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            onClickLabel = "Reset demo data",
+                            role = Role.Button,
+                            onClick = {
+                                scope.launch {
+                                    DemoSeed.reset(container)
+                                    snackbarHostState.showSnackbar("Demo data reset")
+                                }
+                            }
+                        )
+                        .heightIn(min = 48.dp)
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Reset demo data (debug)",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontFamily = PoppinsFontFamily),
+                        color = AppColors.BrandAccentText,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                HorizontalDivider(color = AppColors.Border)
+            }
 
             // Biometric section
             Row(
