@@ -343,7 +343,16 @@ private fun AppNavHost(
                 SettingsScreen(
                     container = container,
                     onBack = { navController.navigateToTab(ROUTE_TODAY) },
-                    onScience = { navController.navigate(ROUTE_SCIENCE) }
+                    onScience = { navController.navigate(ROUTE_SCIENCE) },
+                    onReplayIntro = {
+                        // Re-show the Welcome; gate resets so a normal relaunch also
+                        // re-shows until completed. No user data is touched.
+                        prefs.edit().putInt(KEY_ONBOARDING_VERSION, 0).apply()
+                        navController.navigate(ROUTE_ONBOARDING) {
+                            popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
         }

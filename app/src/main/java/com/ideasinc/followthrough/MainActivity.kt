@@ -24,8 +24,14 @@ import com.ideasinc.followthrough.navigation.CURRENT_ONBOARDING_VERSION
 import com.ideasinc.followthrough.navigation.KEY_BIOMETRIC_ENABLED
 import com.ideasinc.followthrough.navigation.KEY_ONBOARDING_VERSION
 import com.ideasinc.followthrough.navigation.PREFS_NAME
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import com.ideasinc.followthrough.notifications.EXTRA_CHECKIN_ID
 import com.ideasinc.followthrough.ui.launch.LaunchInsightGate
+import com.ideasinc.followthrough.ui.settings.LocalReduceMotion
+import com.ideasinc.followthrough.ui.settings.SettingsPreferences
 import com.ideasinc.followthrough.ui.theme.GroundedTheme
 
 class MainActivity : FragmentActivity() {
@@ -44,6 +50,9 @@ class MainActivity : FragmentActivity() {
         // Edge-to-edge so the launch insight screen's brown background paints
         // under the status and navigation bars for a true full-screen takeover.
         WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        // Display preferences (text size 100–200%, reduce motion) load once here.
+        SettingsPreferences.load(this)
 
         val container = (application as GroundedApplication).container
 
@@ -78,19 +87,29 @@ class MainActivity : FragmentActivity() {
                 val widthClass = windowSizeClass.widthSizeClass
                 val useNavRail = widthClass != WindowWidthSizeClass.Compact
                 val isExpandedWidth = widthClass == WindowWidthSizeClass.Expanded
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background)
+                // Apply the user's text-size preference (100–200%) on top of the
+                // system fontScale, and expose reduce-motion to composables.
+                val textScale by SettingsPreferences.textScale.collectAsState()
+                val reduceMotion by SettingsPreferences.reduceMotion.collectAsState()
+                val baseDensity = LocalDensity.current
+                CompositionLocalProvider(
+                    LocalDensity provides Density(baseDensity.density, baseDensity.fontScale * textScale),
+                    LocalReduceMotion provides reduceMotion
                 ) {
-                    if (authCleared) {
-                        AppNavigation(
-                            container = container,
-                            pendingCheckInId = pendingCheckInId,
-                            onCheckInConsumed = { pendingCheckInId = null },
-                            isExpandedWidth = isExpandedWidth,
-                            useNavRail = useNavRail
-                        )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background)
+                    ) {
+                        if (authCleared) {
+                            AppNavigation(
+                                container = container,
+                                pendingCheckInId = pendingCheckInId,
+                                onCheckInConsumed = { pendingCheckInId = null },
+                                isExpandedWidth = isExpandedWidth,
+                                useNavRail = useNavRail
+                            )
+                        }
                     }
                 }
             }

@@ -74,7 +74,8 @@ import com.ideasinc.followthrough.navigation.PREFS_NAME
 fun SettingsScreen(
     container: AppContainer,
     onBack: () -> Unit,
-    onScience: () -> Unit
+    onScience: () -> Unit,
+    onReplayIntro: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
@@ -196,6 +197,96 @@ fun SettingsScreen(
                         ThemePreferences.setMode(context, it)
                     }
                 }
+            }
+
+            HorizontalDivider(color = AppColors.Border)
+
+            // Display section — text size (100–200%), reduce motion.
+            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                Text(
+                    text = "Display",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontFamily = PoppinsFontFamily, fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 8.dp).semantics { heading() }
+                )
+                val textScale by SettingsPreferences.textScale.collectAsState()
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Text size",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = "${(textScale * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                androidx.compose.material3.Slider(
+                    value = textScale,
+                    onValueChange = { SettingsPreferences.setTextScale(context, it) },
+                    valueRange = 1.0f..2.0f,
+                    modifier = Modifier.semantics {
+                        contentDescription = "Text size, ${(textScale * 100).toInt()} percent"
+                    }
+                )
+                Text(
+                    text = "Aa — preview at this size",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                val reduceMotion by SettingsPreferences.reduceMotion.collectAsState()
+                SettingsSwitchRow(
+                    label = "Reduce motion",
+                    checked = reduceMotion,
+                    onCheckedChange = { SettingsPreferences.setReduceMotion(context, it) }
+                )
+            }
+
+            HorizontalDivider(color = AppColors.Border)
+
+            // Notifications section — cue sound.
+            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                Text(
+                    text = "Notifications",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontFamily = PoppinsFontFamily, fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 8.dp).semantics { heading() }
+                )
+                val soundOn by SettingsPreferences.notificationSound.collectAsState()
+                SettingsSwitchRow(
+                    label = "Notification sound",
+                    checked = soundOn,
+                    onCheckedChange = { SettingsPreferences.setNotificationSound(context, it) }
+                )
+            }
+
+            HorizontalDivider(color = AppColors.Border)
+
+            // Replay the intro — re-shows the Welcome on next entry. No data reset.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClickLabel = "Replay the intro", role = Role.Button, onClick = onReplayIntro)
+                    .heightIn(min = 48.dp)
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Replay the intro",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontFamily = PoppinsFontFamily),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_chevron_right),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
             }
 
             HorizontalDivider(color = AppColors.Border)
@@ -330,6 +421,41 @@ fun SettingsScreen(
 
             HorizontalDivider(color = AppColors.Border)
         }
+    }
+}
+
+/** A labelled ≥48dp switch row that announces label + on/off state to TalkBack. */
+@Composable
+private fun SettingsSwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                uncheckedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                uncheckedTrackColor = AppColors.SwitchUncheckedTrack,
+                uncheckedBorderColor = Color.Transparent
+            ),
+            modifier = Modifier.semantics {
+                contentDescription = label
+                stateDescription = if (checked) "On" else "Off"
+                role = Role.Switch
+            }
+        )
     }
 }
 

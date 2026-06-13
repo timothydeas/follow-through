@@ -124,6 +124,12 @@ class ReminderFireReceiver : BroadcastReceiver() {
             .addAction(0, "Snooze", responsePending(context, reminder.id, EventAction.SNOOZED, notificationId))
             .addAction(0, "Not today", responsePending(context, reminder.id, EventAction.NOT_TODAY, notificationId))
 
+        // Honor the Settings notification-sound toggle (read straight from prefs —
+        // this runs in a background broadcast where the in-memory flow may be cold).
+        val soundOn = context.getSharedPreferences("grounded_prefs", Context.MODE_PRIVATE)
+            .getBoolean("notification_sound_enabled", true)
+        if (!soundOn) builder.setSilent(true)
+
         try {
             nm.notify(notificationId, builder.build())
         } catch (_: SecurityException) {
