@@ -208,7 +208,11 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 8.dp).semantics { heading() }
                 )
-                val textScale by SettingsPreferences.textScale.collectAsState()
+                val persistedScale by SettingsPreferences.textScale.collectAsState()
+                // Drive the thumb from local state so dragging is smooth; reflow text
+                // live by updating the in-memory scale every frame, and persist to
+                // disk only when the drag ends (per-frame disk writes broke the drag).
+                var sliderValue by remember { mutableStateOf(persistedScale) }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "Text size",
@@ -217,17 +221,21 @@ fun SettingsScreen(
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        text = "${(textScale * 100).toInt()}%",
+                        text = "${(sliderValue * 100).toInt()}%",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 androidx.compose.material3.Slider(
-                    value = textScale,
-                    onValueChange = { SettingsPreferences.setTextScale(context, it) },
+                    value = sliderValue,
+                    onValueChange = {
+                        sliderValue = it
+                        SettingsPreferences.setTextScaleLive(it)
+                    },
+                    onValueChangeFinished = { SettingsPreferences.setTextScale(context, sliderValue) },
                     valueRange = 1.0f..2.0f,
                     modifier = Modifier.semantics {
-                        contentDescription = "Text size, ${(textScale * 100).toInt()} percent"
+                        contentDescription = "Text size, ${(sliderValue * 100).toInt()} percent"
                     }
                 )
                 Text(

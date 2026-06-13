@@ -17,18 +17,22 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -45,6 +49,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ideasinc.followthrough.ui.theme.AppColors
 
@@ -126,15 +131,20 @@ fun OnboardingScreen(
 
             Spacer(Modifier.height(16.dp))
 
+            // Full-width primary, with Back below (matches the prototype and keeps
+            // the long "Create my first reminder" label fitting — it wraps within the
+            // full-width button rather than overflowing, including at 200% text.
             when (pane) {
-                0 -> PrimaryButton("Continue", onComplete = goForward)
-                1 -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BackButton(onClick = goBack, modifier = Modifier.weight(1f))
-                    Box(Modifier.weight(1f)) { PrimaryButton("Continue", onComplete = goForward) }
+                0 -> PrimaryButton("Continue", showArrow = true, onClick = goForward)
+                1 -> {
+                    PrimaryButton("Continue", showArrow = true, onClick = goForward)
+                    Spacer(Modifier.height(4.dp))
+                    BackButton(onClick = goBack)
                 }
-                else -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BackButton(onClick = goBack, modifier = Modifier.weight(1f))
-                    Box(Modifier.weight(1.4f)) { PrimaryButton("Create my first reminder", onComplete = onCreateFirstReminder) }
+                else -> {
+                    PrimaryButton("Create my first reminder", showArrow = false, onClick = onCreateFirstReminder)
+                    Spacer(Modifier.height(4.dp))
+                    BackButton(onClick = goBack)
                 }
             }
         }
@@ -201,25 +211,37 @@ private fun PanePrivacy() {
 }
 
 @Composable
-private fun PrimaryButton(label: String, onComplete: () -> Unit) {
+private fun PrimaryButton(label: String, showArrow: Boolean, onClick: () -> Unit) {
     Button(
-        onClick = onComplete,
-        modifier = Modifier.fillMaxWidth().semantics { contentDescription = label },
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp)
+            .semantics { contentDescription = label },
         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
         shape = RoundedCornerShape(14.dp),
-        contentPadding = PaddingValues(vertical = 16.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
     ) {
-        Text(label, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold), maxLines = 1)
+        // The label may wrap to a second line (long copy at large text scale) rather
+        // than overflow; the row stays centred.
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+            textAlign = TextAlign.Center,
+            maxLines = 2
+        )
+        if (showArrow) {
+            Spacer(Modifier.width(8.dp))
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
+        }
     }
 }
 
 @Composable
-private fun BackButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    OutlinedButton(
+private fun BackButton(onClick: () -> Unit) {
+    TextButton(
         onClick = onClick,
-        modifier = modifier.semantics { contentDescription = "Back" },
-        shape = RoundedCornerShape(14.dp),
-        contentPadding = PaddingValues(vertical = 16.dp)
+        modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Back" }
     ) {
         Text("Back", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.primary)
     }

@@ -35,6 +35,16 @@ object SettingsPreferences {
         _notificationSound.value = p.getBoolean(KEY_NOTIFICATION_SOUND, true)
     }
 
+    /**
+     * Updates the in-memory scale only (no disk write) — used during a slider drag
+     * so text reflows live every frame without thrashing SharedPreferences (the disk
+     * write per frame was stalling the drag gesture). Persist with [setTextScale] on
+     * drag end.
+     */
+    fun setTextScaleLive(scale: Float) {
+        _textScale.value = scale.coerceIn(1.0f, 2.0f)
+    }
+
     fun setTextScale(context: Context, scale: Float) {
         val v = scale.coerceIn(1.0f, 2.0f)
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putFloat(KEY_TEXT_SCALE, v).apply()
