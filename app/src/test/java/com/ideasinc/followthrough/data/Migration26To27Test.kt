@@ -189,7 +189,7 @@ class Migration26To27Test {
             .addMigrations(
                 MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29,
                 MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33,
-                MIGRATION_33_34
+                MIGRATION_33_34, MIGRATION_34_35
             )
             .build()
 
@@ -227,15 +227,26 @@ class Migration26To27Test {
         // (legacy reflection rows are intentionally not carried over).
         assertEquals("check_ins recreated empty", 0, rowCount(db, "check_ins"))
 
-        // Every retired table is gone: the v26 legacy tables and the short-lived
-        // v29/v30 helper tables.
+        // Permanently retired tables stay gone: the v26 legacy tables, the
+        // short-lived v29/v30 helper tables, and the v33 plans table.
         assertFalse("steps dropped", tableExists(db, "steps"))
         assertFalse("notes dropped", tableExists(db, "notes"))
         assertFalse("follow_throughs dropped", tableExists(db, "follow_throughs"))
         assertFalse("implementation_intentions dropped", tableExists(db, "implementation_intentions"))
-        assertFalse("barriers dropped", tableExists(db, "barriers"))
-        assertFalse("progress_notes dropped", tableExists(db, "progress_notes"))
         assertFalse("plans dropped", tableExists(db, "plans"))
+
+        // barriers + progress_notes were dropped at v31 but are RE-INTRODUCED at
+        // v35 (now goal-owned, alongside the new Reminder model), so by the current
+        // endpoint they exist again — recreated empty.
+        assertTrue("barriers re-introduced at v35", tableExists(db, "barriers"))
+        assertTrue("progress_notes re-introduced at v35", tableExists(db, "progress_notes"))
+        assertEquals("barriers empty", 0, rowCount(db, "barriers"))
+        assertEquals("progress_notes empty", 0, rowCount(db, "progress_notes"))
+        // The rest of the v35 foundation is present too.
+        assertTrue("reminders table", tableExists(db, "reminders"))
+        assertTrue("reminder_events table", tableExists(db, "reminder_events"))
+        assertTrue("passions_interests table", tableExists(db, "passions_interests"))
+        assertTrue("learnings table", tableExists(db, "learnings"))
 
         room.close()
     }
