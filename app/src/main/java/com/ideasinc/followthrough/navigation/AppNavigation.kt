@@ -85,6 +85,7 @@ private const val ROUTE_NEW_GOAL = "new_goal"
 private const val ROUTE_GOAL_DETAIL = "goal_detail/{goalId}"
 private const val ROUTE_CHECKIN_FLOW = "checkin_flow/{goalId}"
 private const val ROUTE_CHECKIN_EDITOR = "checkin_editor/{checkInId}"
+private const val ROUTE_BUILDER = "builder"
 private const val ROUTE_BUILDER_NEW = "builder_new/{goalId}"
 private const val ROUTE_BUILDER_EDIT = "builder_edit/{reminderId}"
 private const val ROUTE_SCIENCE = "science"
@@ -275,7 +276,29 @@ private fun AppNavHost(
         }
 
         composable(ROUTE_TODAY) {
-            CenteredPane { TodayScreen() }
+            CenteredPane {
+                TodayScreen(
+                    container = container,
+                    onNewReminder = { navController.navigate(ROUTE_BUILDER) }
+                )
+            }
+        }
+
+        composable(ROUTE_BUILDER) {
+            CenteredPane {
+                ReminderBuilderScreen(
+                    container = container,
+                    goalId = null,
+                    reminderId = null,
+                    onClose = { navController.popBackStack() },
+                    onSaved = { savedGoalId ->
+                        navController.navigate("goal_detail/$savedGoalId") {
+                            popUpTo(ROUTE_BUILDER) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
         }
 
         composable(ROUTE_GOALS) {
