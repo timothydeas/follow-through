@@ -1,15 +1,12 @@
 package com.ideasinc.followthrough.ui.launch
 
-import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.Configuration
-import android.os.Handler
-import android.os.Looper
-import android.view.accessibility.AccessibilityManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -18,16 +15,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -41,6 +38,24 @@ import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
 
 const val KEY_LAST_INSIGHT_INDEX = "last_insight_index"
+const val KEY_LAST_INSIGHT_DAY = "last_insight_day"
+
+/**
+ * The insight is a once-a-day moment, not an every-launch interstitial. Returns
+ * true only when it hasn't already been shown today (device-local calendar day).
+ */
+fun shouldShowInsightToday(prefs: SharedPreferences): Boolean =
+    prefs.getInt(KEY_LAST_INSIGHT_DAY, -1) != todayKey()
+
+/** Records that today's insight has been shown, so later launches today skip it. */
+fun markInsightShownToday(prefs: SharedPreferences) {
+    prefs.edit().putInt(KEY_LAST_INSIGHT_DAY, todayKey()).apply()
+}
+
+private fun todayKey(): Int {
+    val c = java.util.Calendar.getInstance()
+    return c.get(java.util.Calendar.YEAR) * 1000 + c.get(java.util.Calendar.DAY_OF_YEAR)
+}
 
 /**
  * One-shot signal that the current cold start originated from a reminder-tap
@@ -117,30 +132,10 @@ fun LaunchInsightScreen(text: String, onDismiss: () -> Unit) {
 
     val forgeBg = AppColors.ForgeBackground
     val forgeOn = AppColors.OnForgeBackground
-    // Capture the insight once so the timer keys off a stable value.
     val insightText = remember { text }
-    val context = LocalContext.current
 
-    // Auto-dismiss via a plain Handler so the countdown lives outside the
-    // composition — no LaunchedEffect, no coroutine state, nothing that
-    // could trigger recomposition during the countdown. TalkBack discovers
-    // the content naturally via clearAndSetSemantics contentDescription.
-    // When an accessibility service is active the timer is skipped entirely so
-    // the user can read at their own pace and dismiss with a tap.
-    DisposableEffect(Unit) {
-        val a11yManager =
-            context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
-        val handler = Handler(Looper.getMainLooper())
-        val runnable = Runnable { onDismiss() }
-        if (a11yManager?.isEnabled != true) {
-            handler.postDelayed(runnable, insightDisplayDurationMs(insightText))
-        }
-        onDispose {
-            handler.removeCallbacks(runnable)
-        }
-    }
-
-    // System back is a no-op on this screen.
+    // No timed auto-dismiss (beta complaint + the no-timed-dismiss rule): the user
+    // always tap- or swipe-continues at their own pace. System back is a no-op.
     BackHandler(enabled = true) { /* intentionally empty */ }
 
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -150,36 +145,37 @@ fun LaunchInsightScreen(text: String, onDismiss: () -> Unit) {
             .fillMaxSize()
             .background(forgeBg)
             .clickable(onClickLabel = "Continue", onClick = onDismiss)
-            // Whole screen is one opaque accessibility node so TalkBack
-            // reads only the insight text — not the icon, title, or caption.
+            // Swipe in any direction also continues.
+            .pointerInput(Unit) {
+                detectDragGestures(onDragEnd = { onDismiss() }) { _, _ -> }
+            }
+            // Whole screen is one opaque accessibility node so TalkBack reads only
+            // the insight text — not the icon, title, or caption.
             .clearAndSetSemantics {
                 contentDescription = insightText
                 onClick(label = "Continue") {
                     onDismiss()
                     true
                 }
-            }
+            },
+        contentAlignment = Alignment.Center
     ) {
-        // In portrait the weight(1f) spacers float the insight to the visual
-        // center and pin the caption near the bottom. In landscape the screen
-        // is too short for that arrangement, so the column becomes scrollable
-        // with fixed spacers and the content flows top-to-bottom.
+        // Contained centered moment: the content is capped at a comfortable reading
+        // width and centred on the full-bleed coral field, so on a tablet it reads
+        // as one focused moment rather than text stretched edge-to-edge. Type scales
+        // gently; landscape becomes scrollable for short screens.
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .widthIn(max = 460.dp)
                 .systemBarsPadding()
-                .then(
-                    if (isLandscape) Modifier.verticalScroll(rememberScrollState())
-                    else Modifier
-                )
-                .padding(horizontal = 32.dp),
+                .then(if (isLandscape) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+                .padding(horizontal = 32.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(if (isLandscape) 24.dp else 96.dp))
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
                 contentDescription = null,
-                modifier = Modifier.size(120.dp)
+                modifier = Modifier.size(if (isLandscape) 88.dp else 112.dp)
             )
             Spacer(Modifier.height(16.dp))
             Text(
@@ -187,10 +183,10 @@ fun LaunchInsightScreen(text: String, onDismiss: () -> Unit) {
                 color = forgeOn,
                 fontFamily = PoppinsFontFamily,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 28.sp,
+                fontSize = 26.sp,
                 textAlign = TextAlign.Center
             )
-            if (isLandscape) Spacer(Modifier.height(32.dp)) else Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(40.dp))
             Text(
                 text = insightText,
                 color = forgeOn,
@@ -200,16 +196,15 @@ fun LaunchInsightScreen(text: String, onDismiss: () -> Unit) {
                 lineHeight = 28.sp,
                 textAlign = TextAlign.Center
             )
-            if (isLandscape) Spacer(Modifier.height(32.dp)) else Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(40.dp))
             Text(
-                text = "Tap anywhere to continue",
+                text = "Tap or swipe to continue",
                 color = forgeOn,
                 fontFamily = PoppinsFontFamily,
                 fontWeight = FontWeight.Normal,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(if (isLandscape) 24.dp else 48.dp))
         }
     }
 }

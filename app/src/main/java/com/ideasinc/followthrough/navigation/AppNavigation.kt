@@ -60,7 +60,9 @@ import com.ideasinc.followthrough.ui.goals.GoalDetailViewModel
 import com.ideasinc.followthrough.ui.goals.NewGoalFlowScreen
 import com.ideasinc.followthrough.ui.goals.NewGoalFlowViewModel
 import com.ideasinc.followthrough.ui.launch.LaunchInsightScreen
+import com.ideasinc.followthrough.ui.launch.markInsightShownToday
 import com.ideasinc.followthrough.ui.launch.pickLaunchInsight
+import com.ideasinc.followthrough.ui.launch.shouldShowInsightToday
 import com.ideasinc.followthrough.ui.list.ListScreen
 import com.ideasinc.followthrough.ui.list.ListViewModel
 import com.ideasinc.followthrough.ui.onboarding.OnboardingScreen
@@ -140,7 +142,12 @@ fun AppNavigation(
 
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
     val savedVersion = prefs.getInt(KEY_ONBOARDING_VERSION, 0)
-    val startDestination = if (savedVersion >= CURRENT_ONBOARDING_VERSION) ROUTE_LAUNCH_INSIGHT else ROUTE_ONBOARDING
+    // The launch insight is a once-a-day moment, not an every-launch interstitial.
+    val startDestination = when {
+        savedVersion < CURRENT_ONBOARDING_VERSION -> ROUTE_ONBOARDING
+        shouldShowInsightToday(prefs) -> ROUTE_LAUNCH_INSIGHT
+        else -> ROUTE_TODAY
+    }
 
     val listViewModel: ListViewModel = viewModel(
         factory = ListViewModel.Factory(container.goalDao, container.checkInDao)
@@ -269,7 +276,9 @@ private fun AppNavHost(
         }
 
         composable(ROUTE_LAUNCH_INSIGHT) {
-            val insight = remember { pickLaunchInsight(prefs) }
+            // Pick once and mark today's insight as shown so later launches today
+            // go straight to Today.
+            val insight = remember { markInsightShownToday(prefs); pickLaunchInsight(prefs) }
             CenteredPane {
                 LaunchInsightScreen(
                     text = insight,
