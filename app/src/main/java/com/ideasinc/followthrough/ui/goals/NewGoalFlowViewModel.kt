@@ -34,8 +34,11 @@ class NewGoalFlowViewModel(
 
     fun onNameChange(value: String) = _uiState.update { it.copy(goalName = value) }
 
+    private fun hasUnsavedInput() =
+        _uiState.value.goalName.isNotBlank()
+
     fun onBack() {
-        if (_uiState.value.goalName.isNotBlank()) {
+        if (hasUnsavedInput()) {
             _uiState.update { it.copy(showDiscardDialog = true) }
         } else {
             _uiState.update { it.copy(shouldExit = true) }
@@ -43,7 +46,7 @@ class NewGoalFlowViewModel(
     }
 
     fun onSystemBack() {
-        if (_uiState.value.goalName.isNotBlank()) {
+        if (hasUnsavedInput()) {
             _uiState.update { it.copy(showDiscardDialog = true) }
         } else {
             _uiState.update { it.copy(shouldExit = true) }

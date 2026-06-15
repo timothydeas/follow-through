@@ -179,21 +179,21 @@ fun NewGoalFlowScreen(
                 )
             }
             Spacer(modifier = Modifier.height(24.dp))
+            val fieldColors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+            )
             OutlinedTextField(
                 value = uiState.goalName,
                 onValueChange = viewModel::onNameChange,
                 placeholder = { Text(placeholder) },
                 textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = DmSansFontFamily),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                ),
+                colors = fieldColors,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
                     .semantics { contentDescription = label }
             )
         }

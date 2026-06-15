@@ -23,28 +23,15 @@ import java.util.TimeZone
  * weeks of follow-through events, so screens show a real, encouraging state.
  *
  * NEVER call this outside `if (BuildConfig.DEBUG)`. Release users get the normal
- * empty first-run; the only call sites are debug-gated (GroundedApplication seed-on-
- * empty, and the debug "Reset demo data" Settings button), so R8 strips this from
- * release builds.
+ * empty first-run; the only call site is debug-gated (GroundedApplication seed-on-
+ * empty), so R8 strips this from release builds. There is no visible demo UI — the
+ * seed is silent and only fills an empty DB on a debug launch (for screenshots).
  */
 object DemoSeed {
 
     /** Seeds only if there are no goals yet (debug launch into an empty DB). */
     suspend fun seedIfEmpty(container: AppContainer) {
         if (container.goalDao.getAllGoals().first().isEmpty()) seed(container)
-    }
-
-    /** Wipes all user content and re-seeds — for the debug "Reset demo data" button. */
-    suspend fun reset(container: AppContainer) {
-        wipe(container)
-        seed(container)
-    }
-
-    private suspend fun wipe(container: AppContainer) {
-        // Deleting goals cascades reminders → events, plus barriers + progress notes.
-        container.goalDao.getAllGoals().first().forEach { container.goalDao.deleteById(it.id) }
-        container.paletteDao.getPassions().first().forEach { container.paletteDao.deletePassion(it.id) }
-        container.paletteDao.getLearnings().first().forEach { container.paletteDao.deleteLearning(it.id) }
     }
 
     private suspend fun seed(container: AppContainer) {

@@ -275,7 +275,6 @@ private fun AppNavHost(
         composable(ROUTE_SETTINGS) {
             CenteredPane {
                 SettingsScreen(
-                    container = container,
                     onBack = { navController.navigateToTab(ROUTE_TODAY) },
                     onReplayIntro = {
                         // Re-show the Welcome; gate resets so a normal relaunch also

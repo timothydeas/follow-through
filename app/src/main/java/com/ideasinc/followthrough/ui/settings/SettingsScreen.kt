@@ -23,8 +23,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -34,7 +32,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,21 +57,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ideasinc.followthrough.BuildConfig
 import com.ideasinc.followthrough.R
-import com.ideasinc.followthrough.debug.DemoSeed
-import com.ideasinc.followthrough.di.AppContainer
 import com.ideasinc.followthrough.feedback.AppReview
 import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
 import com.ideasinc.followthrough.ui.theme.ThemeMode
 import com.ideasinc.followthrough.ui.theme.ThemePreferences
-import kotlinx.coroutines.launch
 import com.ideasinc.followthrough.navigation.KEY_BIOMETRIC_ENABLED
 import com.ideasinc.followthrough.navigation.PREFS_NAME
 
 
 @Composable
 fun SettingsScreen(
-    container: AppContainer,
     onBack: () -> Unit,
     onReplayIntro: () -> Unit = {}
 ) {
@@ -83,13 +76,10 @@ fun SettingsScreen(
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
     var biometricEnabled by remember { mutableStateOf(prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false)) }
     val backFocus = remember { FocusRequester() }
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Row(
                 modifier = Modifier
@@ -130,36 +120,6 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             HorizontalDivider(color = AppColors.Border)
-
-            // DEBUG ONLY: reset the screenshot demo data. Gated to debug builds; the
-            // row never appears in release.
-            if (BuildConfig.DEBUG) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(
-                            onClickLabel = "Reset demo data",
-                            role = Role.Button,
-                            onClick = {
-                                scope.launch {
-                                    DemoSeed.reset(container)
-                                    snackbarHostState.showSnackbar("Demo data reset")
-                                }
-                            }
-                        )
-                        .heightIn(min = 48.dp)
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Reset demo data (debug)",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontFamily = PoppinsFontFamily),
-                        color = AppColors.BrandAccentText,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                HorizontalDivider(color = AppColors.Border)
-            }
 
             // Biometric section
             Row(
@@ -233,7 +193,8 @@ fun SettingsScreen(
 
             HorizontalDivider(color = AppColors.Border)
 
-            // Display section — text size (100–200%), reduce motion.
+            // Display section — reduce motion. (Text size follows the OS font-scale
+            // setting; there is no in-app slider.)
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                 Text(
                     text = "Display",
@@ -241,43 +202,6 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 8.dp).semantics { heading() }
                 )
-                val persistedScale by SettingsPreferences.textScale.collectAsState()
-                // Drive the thumb from local state so dragging is smooth; reflow text
-                // live by updating the in-memory scale every frame, and persist to
-                // disk only when the drag ends (per-frame disk writes broke the drag).
-                var sliderValue by remember { mutableStateOf(persistedScale) }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Text size",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Text(
-                        text = "${(sliderValue * 100).toInt()}%",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                androidx.compose.material3.Slider(
-                    value = sliderValue,
-                    onValueChange = {
-                        sliderValue = it
-                        SettingsPreferences.setTextScaleLive(it)
-                    },
-                    onValueChangeFinished = { SettingsPreferences.setTextScale(context, sliderValue) },
-                    valueRange = 1.0f..2.0f,
-                    modifier = Modifier.semantics {
-                        contentDescription = "Text size, ${(sliderValue * 100).toInt()} percent"
-                    }
-                )
-                Text(
-                    text = "Aa — preview at this size",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
                 val reduceMotion by SettingsPreferences.reduceMotion.collectAsState()
                 SettingsSwitchRow(
                     label = "Reduce motion",

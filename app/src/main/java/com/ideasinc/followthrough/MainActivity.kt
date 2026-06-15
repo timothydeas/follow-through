@@ -25,8 +25,6 @@ import com.ideasinc.followthrough.navigation.KEY_ONBOARDING_VERSION
 import com.ideasinc.followthrough.navigation.PREFS_NAME
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Density
 import com.ideasinc.followthrough.ui.settings.LocalReduceMotion
 import com.ideasinc.followthrough.ui.settings.SettingsPreferences
 import com.ideasinc.followthrough.ui.theme.GroundedTheme
@@ -43,7 +41,8 @@ class MainActivity : FragmentActivity() {
         // under the status and navigation bars for a true full-screen takeover.
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        // Display preferences (text size 100–200%, reduce motion) load once here.
+        // Display preferences (reduce motion) load once here. Text size is honored
+        // straight from the OS font-scale setting — no in-app override.
         SettingsPreferences.load(this)
 
         val container = (application as GroundedApplication).container
@@ -72,13 +71,10 @@ class MainActivity : FragmentActivity() {
                 val widthClass = windowSizeClass.widthSizeClass
                 val useNavRail = widthClass != WindowWidthSizeClass.Compact
                 val isExpandedWidth = widthClass == WindowWidthSizeClass.Expanded
-                // Apply the user's text-size preference (100–200%) on top of the
-                // system fontScale, and expose reduce-motion to composables.
-                val textScale by SettingsPreferences.textScale.collectAsState()
+                // Text size follows the OS font-scale setting via the default
+                // LocalDensity; expose reduce-motion to composables.
                 val reduceMotion by SettingsPreferences.reduceMotion.collectAsState()
-                val baseDensity = LocalDensity.current
                 CompositionLocalProvider(
-                    LocalDensity provides Density(baseDensity.density, baseDensity.fontScale * textScale),
                     LocalReduceMotion provides reduceMotion
                 ) {
                     Box(

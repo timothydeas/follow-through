@@ -69,7 +69,13 @@ class GoalDetailViewModel(
 
     fun showEditDialog() {
         val goal = _uiState.value.goal ?: return
-        _uiState.update { it.copy(showEditDialog = true, editTitle = goal.title, editWhy = goal.whyItMatters) }
+        _uiState.update {
+            it.copy(
+                showEditDialog = true,
+                editTitle = goal.title,
+                editWhy = goal.whyItMatters
+            )
+        }
     }
 
     fun dismissEditDialog() = _uiState.update { it.copy(showEditDialog = false) }

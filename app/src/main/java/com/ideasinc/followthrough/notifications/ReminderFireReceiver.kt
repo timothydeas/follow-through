@@ -91,17 +91,18 @@ class ReminderFireReceiver : BroadcastReceiver() {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
         val notificationId = reminderNotificationId(reminder.id)
 
-        // Title carries the cue (emoji prefix when present); the body always carries
-        // the full intention text so meaning never depends on the cue alone.
-        val cuePrefix = if (reminder.cueType == CueType.EMOJI && reminder.cueValue.isNotBlank()) {
-            "${reminder.cueValue}  "
+        // Keep the notification short: the cue alone is the title, the full intention
+        // text is the body. No goal name (it made notifications too long). The text
+        // always carries complete meaning so it never depends on the cue alone
+        // (WCAG 1.1.1 / 1.4.1). Only emoji/phrase cues are surfaced as text; photo/
+        // sound cue values are launch-off and never reach here.
+        val cue = if (reminder.cueType == CueType.EMOJI || reminder.cueType == CueType.PHRASE) {
+            reminder.cueValue.trim()
         } else ""
-        val title = if (reminder.cueType == CueType.PHRASE && reminder.cueValue.isNotBlank()) {
-            reminder.cueValue
-        } else {
-            cuePrefix + reminder.iWill.trim().replaceFirstChar { it.uppercase() }
-        }
-        val body = reminder.intentionText
+        val intention = reminder.intentionText
+        val title = cue.ifBlank { intention }
+        // When there's no cue, the intention is already the title — don't repeat it.
+        val body = if (cue.isNotBlank()) intention else ""
 
         val tapIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -115,14 +116,16 @@ class ReminderFireReceiver : BroadcastReceiver() {
             .setSmallIcon(R.mipmap.ic_launcher)
             .setColor(0xFFB5402C.toInt())
             .setContentTitle(title)
-            .setContentText(body)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(tapPending)
             .setAutoCancel(true)
             .addAction(0, "Done", responsePending(context, reminder.id, EventAction.DONE, notificationId))
             .addAction(0, "Snooze", responsePending(context, reminder.id, EventAction.SNOOZED, notificationId))
             .addAction(0, "Not today", responsePending(context, reminder.id, EventAction.NOT_TODAY, notificationId))
+        if (body.isNotBlank()) {
+            builder.setContentText(body)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+        }
 
         // Honor the Settings notification-sound toggle (read straight from prefs —
         // this runs in a background broadcast where the in-memory flow may be cold).
