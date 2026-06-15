@@ -4,6 +4,8 @@ Reference prototype for refining the existing native Android app **FollowThru** 
 
 This prototype is a web reference (TanStack Start + React + Tailwind v4). State is in-memory only (no backend, no localStorage), mirroring the native app's local_only storage posture.
 
+**Product thesis (two jobs).** FollowThru partners with you to follow through through *two partnering jobs*, not one: (1) **helping you build goals worth pursuing** — intrinsic motivation lives in the **goal** (find/build the want-to, reframe a have-to toward a way you'd enjoy, connect to your About You passions, choose the path that pulls); and (2) **reminding you at the moment** via a single distinctive cue (RTA — Rogers & Milkman, 2016). The two engines never fight, nag, or compete. **Intrinsic motivation is never funneled into the cue or the implementation intention** — the reminder carries the user's own intention as written; the wanting is built into the goal itself. `lean-prd.md` "## Thesis" is the source of truth. *How* goal creation should build that want-to is an **open, undecided proposal** — see `docs/references/goal-design-proposal.md`; this handoff does not specify that goal-design layer.
+
 ## 1. Screen inventory & navigation map
 
 The spine every screen advances along: **goal → self-knowledge → intention → one cue → reminder.**
@@ -72,6 +74,9 @@ data class Settings(
     @PrimaryKey val id: String,
     val title: String, val why_it_matters: String,
     val status: String, val created_at: String,
+    // Intrinsic motivation lives in the goal but its data shape is undecided — the
+    // former `enjoyable_way` field (which seeded the intention) is removed. See the
+    // open proposal: docs/references/goal-design-proposal.md.
 )
 @Entity data class Barrier(@PrimaryKey val id: String, val goalId: String, val text: String)
 @Entity data class ProgressNote(
@@ -110,6 +115,7 @@ data class Schedule(
 - `cue.type` selects the `CueView` rendering; `cue.alt_text` is required when `type == photo` and is the `contentDescription`.
 - `cue.is_palette_drawn` / `source_palette_id` — set when a cue was chosen from the palette; drives the `reminders_with_palette_cue` counter.
 - `full_text_always_shown` — intention text always renders beside the cue.
+- *(intrinsic-motivation goal data — undecided)* The former `enjoyable_way` field that seeded the intention's **"I will"** is removed; intrinsic motivation belongs to the goal, never the intention or cue (see Product thesis). The goal-design data shape is an open proposal — `docs/references/goal-design-proposal.md`.
 - `reminder_events.action` + `undone` — power the Today progress line and all metrics. Undone events are excluded from counts.
 
 ## 4. State & business rules
@@ -294,6 +300,7 @@ Word choices are part of the brand. Keep these exact terms; do not substitute sy
 - **"reminder"** — the saved intention + cue + schedule unit. Never "task", "to-do", or "habit".
 - **"intention"** — the if/when → I will statement. Phrased as "When I …, I will …". Never "rule" or "goal" for this field.
 - **"goal"** — the broader thing the user is working toward, with a "why it matters". Distinct from a reminder.
+- **Intrinsic motivation lives in the goal, not the reminder** — it is never funneled into the cue or the implementation intention; the reminder carries the user's own intention as written (see Product thesis). The former "the most enjoyable way" goal field is **retired** — it seeded the intention's "I will" and has been removed. How goal creation should build the want-to is an open proposal (`docs/references/goal-design-proposal.md`); no fixed goal-design vocabulary yet. ("Why it matters" — the goal's importance — stays.)
 - **Three Today actions: Done, Snooze, Not today** — always these three labels. Never "Skip", "Fail", "Miss", or "Complete".
 - **"Not today" is forgiving, never punitive** — no failure/streak-break language anywhere near it.
 - **Celebration:** "Followed through. Nice." is the canonical done-moment copy (gold accent). Keep it warm and brief; no exclamation pile-ups, no badges, no streak counts.
@@ -309,3 +316,4 @@ Recorded during prototype-alignment slice 1. The handoff is the tiebreaker where
 3. **LaunchInsight splash** is kept, but must be **user-dismissed** (tap/swipe to continue), never timed-auto-dismiss, and shown **at most once per calendar day** (not every launch).
 4. **Standalone Stats and FollowThrus screens** fold into **Today** (weekly progress + lifetime line) and **Goal detail** (barriers/progress integrated). The encouraging progress content is preserved, not siloed.
 5. **Biometric lock** is kept as an **optional Settings toggle** (a FollowThru extra beyond the prototype).
+6. **(2026-06-14) Reconciled to the two-jobs thesis.** Intrinsic motivation is **goal-design, not a reminder input**: the `enjoyable_way` goal field that seeded the intention's "I will" is removed from §3 (data model + field-driven-UI list) and §9.2 (vocabulary), and a Product thesis note (two partnering jobs) was added up top — matching the reverted app (DB back to v36) and `lean-prd.md` "## Thesis". **No replacement goal-design mechanism is specified here** — how goal creation builds intrinsic motivation is an **open, undecided proposal**: `docs/references/goal-design-proposal.md`.

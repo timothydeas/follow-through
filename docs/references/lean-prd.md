@@ -5,7 +5,17 @@
 ---
 
 ## Problem
-People fail to follow through on intentions primarily because they forget at the actionable moment — not because they lack willpower — and FollowThru's beta proved that an unclear purpose, heavy reflection, and inaccessible UI kill engagement before the science can work (43% "where to start," 43% reflection burden, 43% accessibility, 29% layout). The MVP boundary is the single spine — goal → relevant self-knowledge → implementation intention → one user-chosen distinctive cue → reminder surfaced at the moment — with zero AI, zero accounts, zero cloud.
+People fall short on their intentions for two reasons that compound, and neither is a willpower failure: at the actionable moment they **forget**, and over time the goal drifts into a pure **have-to** — disconnected from the want-to that made it worth doing. FollowThru's beta also proved that unclear purpose, heavy reflection, and inaccessible UI kill engagement before any of the science can work (43% "where to start," 43% reflection burden, 43% accessibility, 29% layout). The MVP boundary is the single spine — goal → relevant self-knowledge → implementation intention → one user-chosen distinctive cue → reminder surfaced at the moment — with zero AI, zero accounts, zero cloud.
+
+## Thesis
+
+FollowThru partners with you to follow through, through two jobs — not one:
+
+1. Helping you build goals worth pursuing (intrinsic motivation). Goals you're intrinsically motivated by get followed through; goals you merely "should" do don't. So FollowThru is more than a reminder app: when you create a goal, it helps you find or build the want-to in it — reframe a have-to toward a way you'd actually enjoy, connect it to your passions and interests (the About You palette feeds this directly), and choose the path that pulls you. The goal pulls you before any reminder exists. This applies to both want-to and have-to goals: the want-to in a have-to is harnessed, never dismissed; want-to goals are only slightly prioritized.
+
+2. Reminding you at the moment (reminder through association). When the moment to act arrives, a single distinctive cue you chose helps you remember — RTA (Rogers & Milkman, 2016).
+
+These two engines partner; they never fight, nag, or compete. Intrinsic motivation lives in the goal, not the reminder — it is never funneled into the cue or the implementation intention. The reminder carries your own intention as you wrote it; the wanting is built into the goal itself. Everything downstream — positioning, the goal-creation flow, the reminder's voice, progress framing — serves these two jobs.
 
 ## North Star Metric
 **Day-7 device retention** (Play Console aggregates — privacy-first, no *automatic* transmission). Target: **≥ 12%** vs. ~5.15% Android average (Pushwoosh 2025) and ~10.7% global average. Measurement is consent-tiered, not absolutist: Play aggregates (anonymous) + on-device counters (never auto-sent) + a voluntary user-initiated "share my stats" path (fast-follow) + survey re-run. Launch on the free local-only option; see measurement-options.md for the free/paid × local-only/shared matrix and revisit triggers. "No tracking" stays literally true.
