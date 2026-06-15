@@ -191,7 +191,7 @@ private fun ReminderCard(
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionButton("Done", onDone, Modifier.weight(1f))
+            ActionButton("Did it", onDone, Modifier.weight(1f))
             ActionButton("Snooze", onSnooze, Modifier.weight(1f))
             ActionButton("Not today", onNotToday, Modifier.weight(1f))
         }

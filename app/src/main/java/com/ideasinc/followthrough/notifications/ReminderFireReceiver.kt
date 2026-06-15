@@ -119,12 +119,32 @@ class ReminderFireReceiver : BroadcastReceiver() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(tapPending)
             .setAutoCancel(true)
-            .addAction(0, "Done", responsePending(context, reminder.id, EventAction.DONE, notificationId))
+            .addAction(0, "Did it", responsePending(context, reminder.id, EventAction.DONE, notificationId))
             .addAction(0, "Snooze", responsePending(context, reminder.id, EventAction.SNOOZED, notificationId))
             .addAction(0, "Not today", responsePending(context, reminder.id, EventAction.NOT_TODAY, notificationId))
         if (body.isNotBlank()) {
             builder.setContentText(body)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+        }
+
+        // Privacy on the lock screen. If the user enabled the app lock (biometric/PIN)
+        // they've signaled they don't want others seeing their reminders — so on a secure
+        // lock screen show only a discreet line, revealing the cue + intention once
+        // unlocked (publicVersion). Without the app lock, keep full content on the lock
+        // screen so the RTA cue is visible at the moment. Read from prefs directly — this
+        // runs in a background broadcast where the in-memory state may be cold.
+        val appLocked = context.getSharedPreferences("grounded_prefs", Context.MODE_PRIVATE)
+            .getBoolean("biometric_enabled", false)
+        if (appLocked) {
+            val publicVersion = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setColor(0xFFB5402C.toInt())
+                .setContentTitle("FollowThru reminder")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .build()
+            builder.setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setPublicVersion(publicVersion)
+        } else {
+            builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         }
 
         // Honor the Settings notification-sound toggle (read straight from prefs —
