@@ -79,6 +79,11 @@ private const val ROUTE_BUILDER_EDIT = "builder_edit/{reminderId}"
 private const val ARG_GOAL_ID = "goalId"
 private const val ARG_REMINDER_ID = "reminderId"
 
+// One-shot flag set on Today's back-stack entry so Today opens the builder once after
+// onboarding's "Create my first reminder". A second navigate() issued in the same frame
+// as the navigate to Today is dropped by the NavController, so we defer it to Today.
+private const val KEY_OPEN_BUILDER_ON_TODAY = "open_builder_on_today"
+
 internal const val PREFS_NAME = "grounded_prefs"
 internal const val KEY_ONBOARDING_VERSION = "onboarding_version"
 internal const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
@@ -225,13 +230,27 @@ private fun AppNavHost(
                         navController.navigate(ROUTE_TODAY) {
                             popUpTo(ROUTE_ONBOARDING) { inclusive = true }
                         }
-                        navController.navigate(ROUTE_BUILDER)
+                        // Defer opening the builder to Today (consumed there): a second
+                        // navigate() in this same frame is dropped, leaving the user on
+                        // Today. The flag yields a [Today, Builder] stack so closing the
+                        // first reminder returns to Today.
+                        navController.getBackStackEntry(ROUTE_TODAY)
+                            .savedStateHandle[KEY_OPEN_BUILDER_ON_TODAY] = true
                     }
                 )
             }
         }
 
-        composable(ROUTE_TODAY) {
+        composable(ROUTE_TODAY) { entry ->
+            // Consume the one-shot "open builder" flag from onboarding's CTA (see
+            // KEY_OPEN_BUILDER_ON_TODAY). Runs after Today is on screen, so the
+            // navigate is reliable; cleared so returning to Today won't re-open it.
+            LaunchedEffect(Unit) {
+                if (entry.savedStateHandle.get<Boolean>(KEY_OPEN_BUILDER_ON_TODAY) == true) {
+                    entry.savedStateHandle[KEY_OPEN_BUILDER_ON_TODAY] = false
+                    navController.navigate(ROUTE_BUILDER)
+                }
+            }
             CenteredPane {
                 TodayScreen(
                     container = container,

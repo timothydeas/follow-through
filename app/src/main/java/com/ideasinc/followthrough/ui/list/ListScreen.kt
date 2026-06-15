@@ -18,13 +18,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -97,16 +95,14 @@ fun ListScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background,
-        floatingActionButtonPosition = FabPosition.Center,
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNewGoal,
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = CircleShape,
                 modifier = Modifier.semantics { contentDescription = "Add new goal" }
             ) {
-                Icon(painter = painterRes(R.drawable.ic_plus), contentDescription = null, modifier = Modifier.size(24.dp))
+                Icon(Icons.Default.Add, contentDescription = null)
             }
         }
     ) { innerPadding ->
