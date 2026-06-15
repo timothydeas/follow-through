@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -29,6 +30,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.outlined.Coffee
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -49,10 +52,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.ideasinc.followthrough.R
 import com.ideasinc.followthrough.ui.theme.AppColors
+import com.ideasinc.followthrough.ui.theme.CoralLight
 
 private const val FADE_MS = 350
 private const val PANE_COUNT = 3
@@ -101,11 +109,29 @@ fun OnboardingScreen(
                 .padding(start = 24.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f).semantics(mergeDescendants = true) { heading() }) {
-                Text("FollowThru", style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.primary)
+            Row(
+                modifier = Modifier.weight(1f).semantics(mergeDescendants = true) { heading() },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // App launcher icon. Reproduced from its adaptive-icon layers (fixed
+                // brand-coral background + white foreground vector, inset 18% as the
+                // mipmap does) and masked to a circle — painterResource can't load the
+                // AdaptiveIconDrawable directly. Decorative; the label carries the name.
+                Box(
+                    modifier = Modifier.size(32.dp).clip(CircleShape).background(CoralLight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.ic_launcher_foreground),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize().padding(6.dp)
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Text("FollowThru", style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onBackground)
             }
             TextButton(onClick = onComplete, modifier = Modifier.semantics { contentDescription = "Skip onboarding" }) {
-                Text("Skip", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
+                Text("Skip", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         HorizontalDivider(color = AppColors.Border)
@@ -152,16 +178,26 @@ fun OnboardingScreen(
     }
 }
 
+/**
+ * Carousel-style progress (handoff §8 "progress dots", prototype onboardingExample.png):
+ * a centred row where only the current pane is a wide coral pill; the others are small
+ * neutral dots. Not a cumulative stepper — earlier panes are not filled in.
+ */
 @Composable
 private fun SegmentedProgress(currentIndex: Int, total: Int, modifier: Modifier = Modifier) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         repeat(total) { idx ->
+            val active = idx == currentIndex
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(if (idx <= currentIndex) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer)
+                    .height(8.dp)
+                    .width(if (active) 28.dp else 8.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
             )
         }
     }
@@ -187,18 +223,21 @@ private fun PaneIdea() {
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.semantics { heading() }
         )
-        IdeaRow("💊", "The goal", "Take blood-pressure meds every morning.")
-        IdeaRow("☕", "The cue from your life", "☕ Starting the morning coffee — the pill sits right by the orange Chemex.")
-        IdeaRow("→", "The moment reminds you", "\"When I start the morning coffee, I will take the BP pill next to the Chemex.\" The text always travels with the cue.")
+        IdeaRow(ImageVector.vectorResource(R.drawable.ic_pill), "The goal", "Take blood-pressure meds every morning.")
+        IdeaRow(Icons.Outlined.Coffee, "The cue from your life", "☕ Starting the morning coffee — the pill sits right by the orange Chemex.")
+        IdeaRow(Icons.AutoMirrored.Outlined.ArrowForward, "The moment reminds you", "\"When I start the morning coffee, I will take the BP pill next to the Chemex.\" The text always travels with the cue.")
     }
 }
 
 /**
- * One idea step (prototype onboardingExample.png): a pale-coral circle holding the
- * glyph, then a bold label and the body copy, in a white hairline-bordered card.
+ * One idea step (prototype onboardingExample.png): a pale-coral circle holding a coral
+ * outline icon, then a bold label and the body copy, in a white hairline-bordered card.
+ * The circle icon is illustrative onboarding art (handoff §9.1 permits a matching
+ * illustration here), not interface chrome — distinct from any inline emoji in [text],
+ * which is verbatim §8 cue copy.
  */
 @Composable
-private fun IdeaRow(glyph: String, label: String, text: String) {
+private fun IdeaRow(icon: ImageVector, label: String, text: String) {
     Row(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surface).border(1.dp, AppColors.Border, RoundedCornerShape(16.dp)).padding(16.dp),
         verticalAlignment = Alignment.Top
@@ -207,7 +246,7 @@ private fun IdeaRow(glyph: String, label: String, text: String) {
             modifier = Modifier.size(44.dp).clip(CircleShape).background(AppColors.CoralTint),
             contentAlignment = Alignment.Center
         ) {
-            Text(glyph, style = MaterialTheme.typography.titleMedium)
+            Icon(icon, contentDescription = null, tint = AppColors.OnCoralTint, modifier = Modifier.size(22.dp))
         }
         Spacer(Modifier.width(14.dp))
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
