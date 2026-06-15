@@ -40,6 +40,10 @@ data class BuilderUiState(
     val creatingNewGoal: Boolean = false,
     val newGoalTitle: String = "",
     val newGoalWhy: String = "",
+    // Intrinsic motivation — goal-level only, never fed to the intention/cue.
+    val newGoalMotivation: String = "",
+    val newGoalWantTo: String = "",
+    val newGoalLinkedPassions: Set<String> = emptySet(),
     // Step 2 — draw from yourself.
     val passions: List<PassionInterest> = emptyList(),
     val learnings: List<Learning> = emptyList(),
@@ -163,6 +167,12 @@ class ReminderBuilderViewModel(
     fun startNewGoal() = _uiState.update { it.copy(creatingNewGoal = true, goalId = null) }
     fun onNewGoalTitle(v: String) = _uiState.update { it.copy(newGoalTitle = v) }
     fun onNewGoalWhy(v: String) = _uiState.update { it.copy(newGoalWhy = v) }
+    // Toggle: tapping the selected motivation again clears it (optional field).
+    fun onNewGoalMotivation(v: String) = _uiState.update { it.copy(newGoalMotivation = if (it.newGoalMotivation == v) "" else v) }
+    fun onNewGoalWantTo(v: String) = _uiState.update { it.copy(newGoalWantTo = v) }
+    fun toggleNewGoalPassion(id: String) = _uiState.update {
+        it.copy(newGoalLinkedPassions = if (id in it.newGoalLinkedPassions) it.newGoalLinkedPassions - id else it.newGoalLinkedPassions + id)
+    }
     fun applyTemplate(title: String) =
         _uiState.update { it.copy(creatingNewGoal = true, goalId = null, newGoalTitle = title) }
 
@@ -206,7 +216,10 @@ class ReminderBuilderViewModel(
                         title = s.newGoalTitle.trim(),
                         createdAt = now,
                         updatedAt = now,
-                        whyItMatters = s.newGoalWhy.trim()
+                        whyItMatters = s.newGoalWhy.trim(),
+                        motivationType = s.newGoalMotivation,
+                        wantToFraming = s.newGoalWantTo.trim(),
+                        linkedPassionIds = s.newGoalLinkedPassions.joinToString(",")
                     )
                 )
                 id

@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ideasinc.followthrough.data.CueType
+import com.ideasinc.followthrough.data.MotivationType
 import com.ideasinc.followthrough.data.ScheduleMode
 import com.ideasinc.followthrough.data.WeekDay
 import com.ideasinc.followthrough.di.AppContainer
@@ -209,6 +210,26 @@ private fun StepGoal(s: BuilderUiState, vm: ReminderBuilderViewModel) {
             label = { Text("Why it matters (optional)") },
             modifier = Modifier.fillMaxWidth()
         )
+        // Intrinsic motivation — goal-level only (never the reminder/intention/cue). Optional.
+        Text("Want to, or have to? (optional)", style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip("Want to", s.newGoalMotivation == MotivationType.WANT_TO) { vm.onNewGoalMotivation(MotivationType.WANT_TO) }
+            Chip("Have to", s.newGoalMotivation == MotivationType.HAVE_TO) { vm.onNewGoalMotivation(MotivationType.HAVE_TO) }
+        }
+        OutlinedTextField(
+            value = s.newGoalWantTo, onValueChange = vm::onNewGoalWantTo,
+            label = { Text("A way you'd actually enjoy it (optional)") },
+            placeholder = { Text("turn the run into a podcast walk-jog by the river") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        if (s.passions.isNotEmpty()) {
+            Text("Connect to what you love (optional)", style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                s.passions.forEach { p ->
+                    Chip("${p.emoji} ${p.label}", p.id in s.newGoalLinkedPassions) { vm.toggleNewGoalPassion(p.id) }
+                }
+            }
+        }
         Text("Or start from a template", style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             TEMPLATES.forEach { t -> Chip(label = t, selected = s.newGoalTitle == t) { vm.applyTemplate(t) } }

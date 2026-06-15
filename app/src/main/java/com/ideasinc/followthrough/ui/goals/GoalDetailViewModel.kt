@@ -7,6 +7,8 @@ import com.ideasinc.followthrough.data.Barrier
 import com.ideasinc.followthrough.data.Goal
 import com.ideasinc.followthrough.data.GoalContentDao
 import com.ideasinc.followthrough.data.GoalDao
+import com.ideasinc.followthrough.data.PaletteDao
+import com.ideasinc.followthrough.data.PassionInterest
 import com.ideasinc.followthrough.data.ProgressNote
 import com.ideasinc.followthrough.data.Reminder
 import com.ideasinc.followthrough.data.ReminderDao
@@ -27,6 +29,10 @@ data class GoalDetailUiState(
     val showEditDialog: Boolean = false,
     val editTitle: String = "",
     val editWhy: String = "",
+    val editMotivation: String = "",
+    val editWantTo: String = "",
+    val editLinkedPassions: Set<String> = emptySet(),
+    val allPassions: List<PassionInterest> = emptyList(),
     val showReassurance: Boolean = false
 )
 
@@ -34,6 +40,7 @@ class GoalDetailViewModel(
     private val goalDao: GoalDao,
     private val goalContentDao: GoalContentDao,
     private val reminderDao: ReminderDao,
+    private val paletteDao: PaletteDao,
     private val goalId: String
 ) : ViewModel() {
 
@@ -41,6 +48,11 @@ class GoalDetailViewModel(
     val uiState: StateFlow<GoalDetailUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            paletteDao.getPassions().collect { passions ->
+                _uiState.update { it.copy(allPassions = passions) }
+            }
+        }
         viewModelScope.launch {
             combine(
                 goalDao.getGoalByIdAsFlow(goalId),
@@ -73,7 +85,10 @@ class GoalDetailViewModel(
             it.copy(
                 showEditDialog = true,
                 editTitle = goal.title,
-                editWhy = goal.whyItMatters
+                editWhy = goal.whyItMatters,
+                editMotivation = goal.motivationType,
+                editWantTo = goal.wantToFraming,
+                editLinkedPassions = goal.linkedPassionIds.split(",").filter { it.isNotBlank() }.toSet()
             )
         }
     }
@@ -81,6 +96,11 @@ class GoalDetailViewModel(
     fun dismissEditDialog() = _uiState.update { it.copy(showEditDialog = false) }
     fun onEditTitleChange(value: String) = _uiState.update { it.copy(editTitle = value) }
     fun onEditWhyChange(value: String) = _uiState.update { it.copy(editWhy = value) }
+    fun onEditMotivationChange(value: String) = _uiState.update { it.copy(editMotivation = if (it.editMotivation == value) "" else value) }
+    fun onEditWantToChange(value: String) = _uiState.update { it.copy(editWantTo = value) }
+    fun toggleEditPassion(id: String) = _uiState.update {
+        it.copy(editLinkedPassions = if (id in it.editLinkedPassions) it.editLinkedPassions - id else it.editLinkedPassions + id)
+    }
 
     fun saveGoalEdit() {
         viewModelScope.launch {
@@ -90,6 +110,9 @@ class GoalDetailViewModel(
                 goal.copy(
                     title = title,
                     whyItMatters = _uiState.value.editWhy.trim(),
+                    motivationType = _uiState.value.editMotivation,
+                    wantToFraming = _uiState.value.editWantTo.trim(),
+                    linkedPassionIds = _uiState.value.editLinkedPassions.joinToString(","),
                     updatedAt = System.currentTimeMillis()
                 )
             )
@@ -148,10 +171,11 @@ class GoalDetailViewModel(
         private val goalDao: GoalDao,
         private val goalContentDao: GoalContentDao,
         private val reminderDao: ReminderDao,
+        private val paletteDao: PaletteDao,
         private val goalId: String
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            GoalDetailViewModel(goalDao, goalContentDao, reminderDao, goalId) as T
+            GoalDetailViewModel(goalDao, goalContentDao, reminderDao, paletteDao, goalId) as T
     }
 }

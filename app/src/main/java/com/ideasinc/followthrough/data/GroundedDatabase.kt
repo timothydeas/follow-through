@@ -1090,6 +1090,16 @@ internal val MIGRATION_35_36 = object : Migration(35, 36) {
     }
 }
 
+internal val MIGRATION_36_37 = object : Migration(36, 37) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Intrinsic-motivation goal-design fields — goal-level only, never touch the
+        // reminder. Additive; existing goals default to ''.
+        db.execSQL("ALTER TABLE goals ADD COLUMN motivationType TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE goals ADD COLUMN wantToFraming TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE goals ADD COLUMN linkedPassionIds TEXT NOT NULL DEFAULT ''")
+    }
+}
+
 @Database(
     entities = [
         Goal::class,
@@ -1101,7 +1111,7 @@ internal val MIGRATION_35_36 = object : Migration(35, 36) {
         Barrier::class,
         ProgressNote::class
     ],
-    version = 36,
+    version = 37,
     exportSchema = true
 )
 abstract class GroundedDatabase : RoomDatabase() {
@@ -1134,7 +1144,7 @@ abstract class GroundedDatabase : RoomDatabase() {
                         MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28,
                         MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31,
                         MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34,
-                        MIGRATION_34_35, MIGRATION_35_36
+                        MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37
                     )
                     .build().also { INSTANCE = it }
             }

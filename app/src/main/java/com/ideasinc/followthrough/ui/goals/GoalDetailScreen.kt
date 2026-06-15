@@ -3,8 +3,12 @@ package com.ideasinc.followthrough.ui.goals
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -60,6 +64,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ideasinc.followthrough.R
+import com.ideasinc.followthrough.data.MotivationType
+import com.ideasinc.followthrough.data.PassionInterest
 import com.ideasinc.followthrough.data.Reminder
 import com.ideasinc.followthrough.notifications.ReminderAlarmScheduler
 import com.ideasinc.followthrough.ui.ReassuranceOverlay
@@ -130,8 +136,15 @@ fun GoalDetailScreen(
         EditGoalDialog(
             title = uiState.editTitle,
             why = uiState.editWhy,
+            motivation = uiState.editMotivation,
+            wantTo = uiState.editWantTo,
+            allPassions = uiState.allPassions,
+            linkedPassions = uiState.editLinkedPassions,
             onTitleChange = viewModel::onEditTitleChange,
             onWhyChange = viewModel::onEditWhyChange,
+            onMotivationChange = viewModel::onEditMotivationChange,
+            onWantToChange = viewModel::onEditWantToChange,
+            onTogglePassion = viewModel::toggleEditPassion,
             onSave = viewModel::saveGoalEdit,
             onDismiss = viewModel::dismissEditDialog
         )
@@ -214,6 +227,39 @@ fun GoalDetailScreen(
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
+                            }
+                        }
+                    }
+
+                    // What pulls you (intrinsic motivation — goal-level, never the reminder).
+                    val linkedIds = goal.linkedPassionIds.split(",").filter { it.isNotBlank() }.toSet()
+                    val linkedPassions = uiState.allPassions.filter { it.id in linkedIds }
+                    if (goal.motivationType.isNotBlank() || goal.wantToFraming.isNotBlank() || linkedPassions.isNotEmpty()) {
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                SectionLabel("WHAT PULLS YOU")
+                                if (goal.motivationType.isNotBlank()) {
+                                    Text(
+                                        if (goal.motivationType == MotivationType.WANT_TO) "A want-to goal."
+                                        else "A have-to — with the want-to harnessed.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (goal.wantToFraming.isNotBlank()) {
+                                    Text(
+                                        goal.wantToFraming,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                if (linkedPassions.isNotEmpty()) {
+                                    Text(
+                                        "Draws on " + linkedPassions.joinToString(", ") { "${it.emoji} ${it.label}" },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
@@ -391,11 +437,36 @@ private fun FollowThroughButton(followedThrough: Boolean, onFollowThrough: () ->
 }
 
 @Composable
+private fun MotivationChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    val pad = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+    if (selected) {
+        Button(
+            onClick = onClick,
+            contentPadding = pad,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        ) { Text(label) }
+    } else {
+        OutlinedButton(onClick = onClick, contentPadding = pad) { Text(label) }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
 private fun EditGoalDialog(
     title: String,
     why: String,
+    motivation: String,
+    wantTo: String,
+    allPassions: List<PassionInterest>,
+    linkedPassions: Set<String>,
     onTitleChange: (String) -> Unit,
     onWhyChange: (String) -> Unit,
+    onMotivationChange: (String) -> Unit,
+    onWantToChange: (String) -> Unit,
+    onTogglePassion: (String) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -405,7 +476,10 @@ private fun EditGoalDialog(
         onDismissRequest = onDismiss,
         title = { Text("Edit goal", style = MaterialTheme.typography.headlineSmall) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = onTitleChange,
@@ -419,6 +493,34 @@ private fun EditGoalDialog(
                     placeholder = { Text("Energy back, and Biscuit needs a running buddy.") },
                     modifier = Modifier.fillMaxWidth()
                 )
+                // Intrinsic motivation — goal-level only (never the reminder/intention/cue).
+                Text(
+                    "Want to, or have to?",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    MotivationChip("Want to", motivation == MotivationType.WANT_TO) { onMotivationChange(MotivationType.WANT_TO) }
+                    MotivationChip("Have to", motivation == MotivationType.HAVE_TO) { onMotivationChange(MotivationType.HAVE_TO) }
+                }
+                OutlinedTextField(
+                    value = wantTo,
+                    onValueChange = onWantToChange,
+                    label = { Text("A way you'd enjoy it") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (allPassions.isNotEmpty()) {
+                    Text(
+                        "Draws on",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        allPassions.forEach { p ->
+                            MotivationChip("${p.emoji} ${p.label}", p.id in linkedPassions) { onTogglePassion(p.id) }
+                        }
+                    }
+                }
             }
         },
         confirmButton = {

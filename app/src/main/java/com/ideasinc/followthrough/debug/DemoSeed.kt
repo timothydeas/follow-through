@@ -5,6 +5,7 @@ import com.ideasinc.followthrough.data.CueType
 import com.ideasinc.followthrough.data.EventAction
 import com.ideasinc.followthrough.data.Goal
 import com.ideasinc.followthrough.data.Learning
+import com.ideasinc.followthrough.data.MotivationType
 import com.ideasinc.followthrough.data.PassionInterest
 import com.ideasinc.followthrough.data.ProgressNote
 import com.ideasinc.followthrough.data.Reminder
@@ -53,11 +54,19 @@ object DemoSeed {
 
         // ── Goals (with why / barriers / progress notes) ──
         val g1 = Goal("goal_001", "Run a 5K without stopping by August", createdAt = now, updatedAt = now,
-            whyItMatters = "Energy back, and Biscuit needs a running buddy.")
+            whyItMatters = "Energy back, and Biscuit needs a running buddy.",
+            motivationType = MotivationType.WANT_TO,
+            wantToFraming = "the river loop with a podcast — it barely feels like training",
+            linkedPassionIds = "pi_004")
         val g2 = Goal("goal_002", "Take blood-pressure meds every morning", createdAt = now, updatedAt = now,
-            whyItMatters = "Doctor flagged it in May. Non-negotiable.")
+            whyItMatters = "Doctor flagged it in May. Non-negotiable.",
+            motivationType = MotivationType.HAVE_TO,
+            wantToFraming = "right after the first coffee, so it rides a habit I already love",
+            linkedPassionIds = "pi_003")
         val g3 = Goal("goal_003", "Call Mom every Sunday", createdAt = now, updatedAt = now,
-            whyItMatters = "She mentioned twice that I only text now.")
+            whyItMatters = "She mentioned twice that I only text now.",
+            motivationType = MotivationType.WANT_TO,
+            wantToFraming = "on the Sunday walk, when I actually have things to say")
         listOf(g1, g2, g3).forEach { container.goalDao.insertGoal(it) }
 
         listOf(

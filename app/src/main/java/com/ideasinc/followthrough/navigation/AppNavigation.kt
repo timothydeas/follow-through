@@ -338,7 +338,7 @@ private fun AppNavHost(
             val goalId = backStackEntry.arguments?.getString(ARG_GOAL_ID) ?: return@composable
             val vm: GoalDetailViewModel = viewModel(
                 factory = GoalDetailViewModel.Factory(
-                    container.goalDao, container.goalContentDao, container.reminderDao, goalId
+                    container.goalDao, container.goalContentDao, container.reminderDao, container.paletteDao, goalId
                 )
             )
             CenteredPane {
