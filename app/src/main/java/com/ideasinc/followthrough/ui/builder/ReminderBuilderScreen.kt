@@ -1,6 +1,12 @@
 package com.ideasinc.followthrough.ui.builder
 
+import android.Manifest
 import android.app.TimePickerDialog
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -90,6 +96,22 @@ fun ReminderBuilderScreen(
             // Count genuine use for the (never sentiment-gated) Play review prompt.
             activity?.let { com.ideasinc.followthrough.feedback.AppReview.onReminderSaved(it) }
             onSaved(goalId)
+        }
+    }
+
+    // Reminder delivery needs notification permission on Android 13+. Ask once while
+    // the user is building a reminder (the relevant moment); if they decline, the
+    // Settings → Notifications row repairs it. Without this the fired notification is
+    // silently dropped (ReminderFireReceiver catches the SecurityException).
+    val notifPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* granted or not: no inline UI — the Settings affordance handles the denied case */ }
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(appContext, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 

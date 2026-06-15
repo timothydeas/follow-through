@@ -129,7 +129,7 @@ data class Schedule(
 
 ### 4a. Weekly progress — flexible & forgiving (the only progress mechanic)
 
-The in-scope replacement for rigid streaks (lean-prd "Out of scope" #3). §7's exclusion of "streak counters/badges" means the rigid, gamified, break-the-chain kind — **not** this. The voice is *progress, not perfection*: it reads the week warmly and points a hard week forward to Monday, never back at the miss.
+The in-scope replacement for rigid streaks (lean-prd "Out of scope" #3). §7's exclusion of "streak counters/badges" means the rigid, gamified, break-the-chain kind — **not** this. The voice is *progress, not perfection*: it reads the week warmly and points a hard week forward to Monday, never back at the miss. This mechanic is the concrete defense against the **"what-the-hell" effect** (one miss → "why bother" → abandonment): a miss must never cascade, reset progress, or read as judgment — see lean-prd "Redesign Principle: flexibility over rigidity," which binds *every* element, not just this one.
 
 - **The measure.** Follow-through = a delivered reminder marked **Done** — a non-undone `ReminderEvent` with `action == done`. Same signal as the follow-through-rate leading indicator, so the progress line and the metric never disagree.
 - **The week.** Monday 00:00 → Sunday 23:59:59, **device-local** time, recomputed on read so travel/DST can't corrupt it. A new week starts clean at Monday 00:00 (fresh-start effect — Dai, Milkman & Riis).

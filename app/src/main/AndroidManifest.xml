@@ -2,7 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Reminder delivery must be exact and survive Doze (CLAUDE.md rule 7).
+         USE_EXACT_ALARM (API 33+) is auto-granted for a reminders/alarms app, so
+         canScheduleExactAlarms() is true without sending the user to settings;
+         SCHEDULE_EXACT_ALARM covers API 31–32 only (it is denied-by-default on 33+). -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- targetSdk 35 enforces package visibility: declare the cue pickers we

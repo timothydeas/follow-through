@@ -42,6 +42,8 @@ These two engines partner; they never fight, nag, or compete. Intrinsic motivati
 ## Redesign Principle (every MVP element must satisfy)
 **"Purpose visible, one cue, full meaning in text, always declinable":** every screen must move the user one step along the spine, state why it matters, carry complete meaning in plain accessible text (never in a single sense or channel), and leave the user one effortless tap from saying no.
 
+**Flexibility over rigidity — the "what-the-hell" guardrail (co-equal principle):** every element must assume people *will* miss and make a miss a non-event. Rigid systems trigger the **what-the-hell effect** — after one slip, "I already broke it, so why bother," and the user abandons the goal (the abstinence-violation / diet-binge pattern). FollowThru never lets a miss cascade or reset progress: no break-the-chain streaks, nothing that resets to zero, no loss-framing, anticipatory-failure, or willpower-shaming copy. A miss is undoable and judgment-free ("Not today" is one tap); the weekly streak is flexible (≤2 misses auto-forgiven, fresh Monday start — Sharif & Shu; Dai, Milkman & Riis); the lifetime follow-through count only ever grows. **The test for any new element:** would a user who *just missed* feel invited back, or judged? If judged, it's wrong. This is as binding as the spine principle above — flexibility is not a tone preference, it's the mechanic that keeps the core hypothesis alive.
+
 ## MVP Features (3 max)
 
 ### 1. Guided Reminder Builder (the spine)

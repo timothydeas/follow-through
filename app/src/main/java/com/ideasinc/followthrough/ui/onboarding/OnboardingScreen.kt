@@ -32,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Coffee
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -258,9 +259,21 @@ private fun IdeaRow(icon: ImageVector, label: String, text: String) {
 
 @Composable
 private fun PanePrivacy() {
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        Text("Private by design.", style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.semantics { heading() })
-        Text("Everything stays on this device. No account, no cloud, no tracking.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Pale-coral lock circle — illustrative onboarding art (handoff §9.1 permits it),
+        // matching the pane-2 idea circles. Decorative; the headline carries the meaning.
+        Box(
+            modifier = Modifier.size(96.dp).clip(CircleShape).background(AppColors.CoralTint),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Outlined.Lock, contentDescription = null, tint = AppColors.OnCoralTint, modifier = Modifier.size(44.dp))
+        }
+        Text("Private by design.", style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onBackground, textAlign = TextAlign.Center, modifier = Modifier.semantics { heading() })
+        Text("Everything stays on this device. No account, no cloud, no tracking.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
     }
 }
 
