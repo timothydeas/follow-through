@@ -61,9 +61,6 @@ import com.ideasinc.followthrough.ui.settings.SettingsScreen
 import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.today.TodayScreen
 
-// Pre-spine full-screen route (outside the bottom-bar / rail chrome).
-private const val ROUTE_ONBOARDING = "onboarding"
-
 // Primary destinations — the four spine tabs (Today · Goals · About You · Settings).
 private const val ROUTE_TODAY = "today"
 private const val ROUTE_GOALS = "goals"
@@ -78,11 +75,6 @@ private const val ROUTE_BUILDER_NEW = "builder_new/{goalId}"
 private const val ROUTE_BUILDER_EDIT = "builder_edit/{reminderId}"
 private const val ARG_GOAL_ID = "goalId"
 private const val ARG_REMINDER_ID = "reminderId"
-
-// One-shot flag set on Today's back-stack entry so Today opens the builder once after
-// onboarding's "Create my first reminder". A second navigate() issued in the same frame
-// as the navigate to Today is dropped by the NavController, so we defer it to Today.
-private const val KEY_OPEN_BUILDER_ON_TODAY = "open_builder_on_today"
 
 internal const val PREFS_NAME = "grounded_prefs"
 internal const val KEY_ONBOARDING_VERSION = "onboarding_version"
@@ -124,45 +116,100 @@ fun AppNavigation(
     useNavRail: Boolean = false
 ) {
     val context = LocalContext.current
-    val navController = rememberNavController()
-
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
-    val savedVersion = prefs.getInt(KEY_ONBOARDING_VERSION, 0)
-    val startDestination = if (savedVersion < CURRENT_ONBOARDING_VERSION) ROUTE_ONBOARDING else ROUTE_TODAY
 
+    // Onboarding is a GATE rendered OUTSIDE the nav graph (not a destination), so Today
+    // is always the graph's stable start destination. Previously onboarding WAS the start
+    // destination and got popped on completion, which left tab-switching and system-back
+    // popping toward a destination no longer on the back stack — and the stack could empty
+    // to a blank screen. As a gate, the back stack always bottoms out at Today, and back
+    // from Today exits the app cleanly.
+    var showOnboarding by rememberSaveable {
+        mutableStateOf(prefs.getInt(KEY_ONBOARDING_VERSION, 0) < CURRENT_ONBOARDING_VERSION)
+    }
+    // One-shot: onboarding's "Create my first reminder" asks the app to open the builder
+    // once the main UI (NavHost) is up.
+    var pendingOpenBuilder by rememberSaveable { mutableStateOf(false) }
+
+    if (showOnboarding) {
+        CenteredPane {
+            OnboardingScreen(
+                onComplete = {
+                    prefs.edit().putInt(KEY_ONBOARDING_VERSION, CURRENT_ONBOARDING_VERSION).apply()
+                    showOnboarding = false
+                },
+                onCreateFirstReminder = {
+                    prefs.edit().putInt(KEY_ONBOARDING_VERSION, CURRENT_ONBOARDING_VERSION).apply()
+                    pendingOpenBuilder = true
+                    showOnboarding = false
+                }
+            )
+        }
+        return
+    }
+
+    val navController = rememberNavController()
     val listViewModel: ListViewModel = viewModel(
         factory = ListViewModel.Factory(container.goalDao, container.reminderDao)
     )
 
+    // After onboarding's "Create my first reminder", open the builder on top of Today
+    // (so closing the first reminder returns to Today). `awaitingBuilder` covers the
+    // one-frame Today render during this handoff with the app background, so the user
+    // sees a clean onboarding→builder transition instead of a flash of Today. Captured
+    // synchronously so the cover is up on the very first frame; latches off once the
+    // builder is on screen.
+    var awaitingBuilder by remember { mutableStateOf(pendingOpenBuilder) }
+    LaunchedEffect(Unit) {
+        if (pendingOpenBuilder) {
+            pendingOpenBuilder = false
+            navController.navigate(ROUTE_BUILDER)
+        }
+    }
+
     // Chrome (bottom bar / rail) shows only on the four primary destinations; every
-    // full-screen route (onboarding, builder, goal detail) hides it.
+    // full-screen route (builder, goal detail) hides it.
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val showChrome = currentRoute in PRIMARY_ROUTES
 
-    Row(modifier = Modifier.fillMaxSize()) {
-        if (useNavRail && showChrome) {
-            AppNavigationRail(currentRoute = currentRoute, onSelect = { navController.navigateToTab(it) })
-            VerticalDivider(color = AppColors.Border)
-        }
-        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-            Scaffold(
-                bottomBar = {
-                    if (!useNavRail && showChrome) {
-                        AppBottomBar(currentRoute = currentRoute, onSelect = { navController.navigateToTab(it) })
-                    }
-                }
-            ) { padding ->
-                AppNavHost(
-                    navController = navController,
-                    startDestination = startDestination,
-                    container = container,
-                    listViewModel = listViewModel,
-                    prefs = prefs,
-                    isExpandedWidth = isExpandedWidth,
-                    modifier = Modifier.padding(padding)
-                )
+    LaunchedEffect(currentRoute) {
+        if (currentRoute == ROUTE_BUILDER) awaitingBuilder = false
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            if (useNavRail && showChrome) {
+                AppNavigationRail(currentRoute = currentRoute, onSelect = { navController.navigateToTab(it) })
+                VerticalDivider(color = AppColors.Border)
             }
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                Scaffold(
+                    bottomBar = {
+                        if (!useNavRail && showChrome) {
+                            AppBottomBar(currentRoute = currentRoute, onSelect = { navController.navigateToTab(it) })
+                        }
+                    }
+                ) { padding ->
+                    AppNavHost(
+                        navController = navController,
+                        container = container,
+                        listViewModel = listViewModel,
+                        onReplayIntro = {
+                            // Re-show the Welcome gate; reset the version so a normal relaunch
+                            // also re-shows until completed. No user data is touched.
+                            prefs.edit().putInt(KEY_ONBOARDING_VERSION, 0).apply()
+                            showOnboarding = true
+                        },
+                        isExpandedWidth = isExpandedWidth,
+                        modifier = Modifier.padding(padding)
+                    )
+                }
+            }
+        }
+        if (awaitingBuilder) {
+            // Same-color cover over the one-frame Today render during the handoff.
+            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
         }
     }
 }
@@ -208,49 +255,14 @@ private fun AppNavigationRail(currentRoute: String?, onSelect: (String) -> Unit)
 @Composable
 private fun AppNavHost(
     navController: NavHostController,
-    startDestination: String,
     container: AppContainer,
     listViewModel: ListViewModel,
-    prefs: android.content.SharedPreferences,
+    onReplayIntro: () -> Unit,
     isExpandedWidth: Boolean,
     modifier: Modifier = Modifier
 ) {
-    NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
-        composable(ROUTE_ONBOARDING) {
-            CenteredPane {
-                OnboardingScreen(
-                    onComplete = {
-                        prefs.edit().putInt(KEY_ONBOARDING_VERSION, CURRENT_ONBOARDING_VERSION).apply()
-                        navController.navigate(ROUTE_TODAY) {
-                            popUpTo(ROUTE_ONBOARDING) { inclusive = true }
-                        }
-                    },
-                    onCreateFirstReminder = {
-                        prefs.edit().putInt(KEY_ONBOARDING_VERSION, CURRENT_ONBOARDING_VERSION).apply()
-                        navController.navigate(ROUTE_TODAY) {
-                            popUpTo(ROUTE_ONBOARDING) { inclusive = true }
-                        }
-                        // Defer opening the builder to Today (consumed there): a second
-                        // navigate() in this same frame is dropped, leaving the user on
-                        // Today. The flag yields a [Today, Builder] stack so closing the
-                        // first reminder returns to Today.
-                        navController.getBackStackEntry(ROUTE_TODAY)
-                            .savedStateHandle[KEY_OPEN_BUILDER_ON_TODAY] = true
-                    }
-                )
-            }
-        }
-
-        composable(ROUTE_TODAY) { entry ->
-            // Consume the one-shot "open builder" flag from onboarding's CTA (see
-            // KEY_OPEN_BUILDER_ON_TODAY). Runs after Today is on screen, so the
-            // navigate is reliable; cleared so returning to Today won't re-open it.
-            LaunchedEffect(Unit) {
-                if (entry.savedStateHandle.get<Boolean>(KEY_OPEN_BUILDER_ON_TODAY) == true) {
-                    entry.savedStateHandle[KEY_OPEN_BUILDER_ON_TODAY] = false
-                    navController.navigate(ROUTE_BUILDER)
-                }
-            }
+    NavHost(navController = navController, startDestination = ROUTE_TODAY, modifier = modifier) {
+        composable(ROUTE_TODAY) {
             CenteredPane {
                 TodayScreen(
                     container = container,
@@ -295,15 +307,7 @@ private fun AppNavHost(
             CenteredPane {
                 SettingsScreen(
                     onBack = { navController.navigateToTab(ROUTE_TODAY) },
-                    onReplayIntro = {
-                        // Re-show the Welcome; gate resets so a normal relaunch also
-                        // re-shows until completed. No user data is touched.
-                        prefs.edit().putInt(KEY_ONBOARDING_VERSION, 0).apply()
-                        navController.navigate(ROUTE_ONBOARDING) {
-                            popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
-                            launchSingleTop = true
-                        }
-                    }
+                    onReplayIntro = onReplayIntro
                 )
             }
         }

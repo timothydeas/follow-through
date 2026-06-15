@@ -4,8 +4,7 @@ import android.Manifest
 import android.app.TimePickerDialog
 import android.content.pm.PackageManager
 import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,6 +48,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -66,6 +70,10 @@ private val TEMPLATES = listOf(
     "Call someone I love",
     "Ship the thing I keep postponing"
 )
+
+// Must fit in the lower 16 bits: MainActivity is a FragmentActivity (for BiometricPrompt),
+// whose validateRequestPermissionsRequestCode rejects larger codes.
+private const val REQUEST_POST_NOTIFICATIONS = 1001
 
 /**
  * Reminder Builder — the 4-step spine wizard: goal → draw from yourself → intention
@@ -103,15 +111,21 @@ fun ReminderBuilderScreen(
     // the user is building a reminder (the relevant moment); if they decline, the
     // Settings → Notifications row repairs it. Without this the fired notification is
     // silently dropped (ReminderFireReceiver catches the SecurityException).
-    val notifPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { /* granted or not: no inline UI — the Settings affordance handles the denied case */ }
+    //
+    // Use the classic ActivityCompat.requestPermissions — NOT rememberLauncherFor-
+    // ActivityResult: the host is a FragmentActivity (for BiometricPrompt), and the
+    // Activity-Result registry's >16-bit request code makes FragmentActivity throw
+    // "Can only use lower 16 bits for requestCode". No result callback is needed —
+    // a granted permission just lets future notifications post.
     LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(appContext, Manifest.permission.POST_NOTIFICATIONS) !=
+        val act = activity
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && act != null &&
+            ContextCompat.checkSelfPermission(act, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
         ) {
-            notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            ActivityCompat.requestPermissions(
+                act, arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQUEST_POST_NOTIFICATIONS
+            )
         }
     }
 
@@ -255,12 +269,12 @@ private fun StepIntention(s: BuilderUiState, vm: ReminderBuilderViewModel) {
 private fun StepCue(s: BuilderUiState, vm: ReminderBuilderViewModel) {
     StepHeader("Choose ONE cue", "The single most vivid thing for you. One beats many.")
 
-    // Type toggle: emoji / phrase enabled; photo / sound shown as the target state.
+    // Emoji / phrase are the launch cue types. Photo / sound stay in the data model
+    // (CueType) as the documented target state but are NOT offered in the UI — no
+    // "(soon)" teasers for features that aren't shipping at launch.
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Chip("Emoji", s.cueType == CueType.EMOJI) { vm.setCueType(CueType.EMOJI) }
         Chip("Phrase", s.cueType == CueType.PHRASE) { vm.setCueType(CueType.PHRASE) }
-        Chip("Photo (soon)", selected = false, enabled = false) {}
-        Chip("Sound (soon)", selected = false, enabled = false) {}
     }
 
     if (s.cueSuggestions.isNotEmpty()) {
@@ -382,8 +396,13 @@ private fun Chip(label: String, selected: Boolean, enabled: Boolean = true, onCl
             .background(bg)
             .border(1.dp, border, RoundedCornerShape(50))
             .clickable(enabled = enabled, onClick = onClick)
-            .heightIn(min = 40.dp)
-            .padding(horizontal = 14.dp, vertical = 8.dp)
+            .heightIn(min = 48.dp)
+            .semantics(mergeDescendants = true) {
+                role = Role.Button
+                stateDescription = if (selected) "Selected" else "Not selected"
+            }
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
     ) {
         Text(label, style = MaterialTheme.typography.labelLarge, color = fg)
     }
@@ -392,13 +411,27 @@ private fun Chip(label: String, selected: Boolean, enabled: Boolean = true, onCl
 @Composable
 private fun DayChip(day: WeekDay, selected: Boolean, onClick: () -> Unit) {
     val letter = day.name.first().toString()
+    val fullName = when (day) {
+        WeekDay.MON -> "Monday"
+        WeekDay.TUE -> "Tuesday"
+        WeekDay.WED -> "Wednesday"
+        WeekDay.THU -> "Thursday"
+        WeekDay.FRI -> "Friday"
+        WeekDay.SAT -> "Saturday"
+        WeekDay.SUN -> "Sunday"
+    }
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .size(48.dp)
             .clip(CircleShape)
             .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface)
             .border(1.dp, if (selected) MaterialTheme.colorScheme.primary else AppColors.Border, CircleShape)
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) {
+                role = Role.Button
+                contentDescription = fullName
+                stateDescription = if (selected) "Selected" else "Not selected"
+            },
         contentAlignment = Alignment.Center
     ) {
         Text(

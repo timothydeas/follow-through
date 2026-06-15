@@ -1,6 +1,7 @@
 package com.ideasinc.followthrough.ui.onboarding
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -60,6 +61,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ideasinc.followthrough.R
+import com.ideasinc.followthrough.ui.settings.LocalReduceMotion
 import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.CoralLight
 
@@ -143,9 +145,15 @@ fun OnboardingScreen(
             modifier = Modifier.fillMaxWidth().weight(1f).navigationBarsPadding().padding(horizontal = 24.dp).padding(bottom = 16.dp)
         ) {
             Box(modifier = Modifier.weight(1f)) {
+                // Honor the Reduce motion setting (vestibular accessibility): snap
+                // instantly between panes instead of cross-fading when it's on.
+                val reduceMotion = LocalReduceMotion.current
                 AnimatedContent(
                     targetState = pane,
-                    transitionSpec = { fadeIn(tween(FADE_MS)) togetherWith fadeOut(tween(FADE_MS)) },
+                    transitionSpec = {
+                        if (reduceMotion) fadeIn(snap()) togetherWith fadeOut(snap())
+                        else fadeIn(tween(FADE_MS)) togetherWith fadeOut(tween(FADE_MS))
+                    },
                     label = "welcome-body",
                     modifier = Modifier.fillMaxSize()
                 ) { current ->
@@ -209,7 +217,7 @@ private fun PanePremise() {
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Text("Progress, not perfection.", style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.semantics { heading() })
         Text(
-            "People mostly forget at the moment they could act — it's not a willpower problem. FollowThru ties each intention to one vivid cue from your own life, so the moment itself reminds you.",
+            "People mostly forget at the moment they could act — it's not a willpower problem. FollowThru ties each intention to one vivid cue from your own life, so the moment itself reminds you. And when you miss — everyone does — nothing breaks: the cue just brings you back next time.",
             style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
