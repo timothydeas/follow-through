@@ -91,7 +91,10 @@ internal const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
 // Bumped 113 → 114 for the device-test polish: LaunchInsight + Science removed,
 // onboarding tagline dropped + step-2 restyle + button-layout fix, Goals card
 // redesign. Re-show the full first-run on the next test build (no data reset).
-internal const val CURRENT_ONBOARDING_VERSION = 114
+// Bumped 114 → 115: pane 2 ("the whole idea") now teaches Job #1 (intrinsic motivation /
+// the want-to) alongside RTA, reflecting the goal-design work. Re-show the refreshed intro
+// on the next build (no data reset).
+internal const val CURRENT_ONBOARDING_VERSION = 115
 
 /** A primary spine destination, rendered in both the bottom bar and the nav rail. */
 private data class PrimaryDestination(

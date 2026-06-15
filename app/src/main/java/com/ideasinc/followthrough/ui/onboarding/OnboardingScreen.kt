@@ -232,7 +232,7 @@ private fun PaneIdea() {
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.semantics { heading() }
         )
-        IdeaRow(ImageVector.vectorResource(R.drawable.ic_pill), "The goal", "Take blood-pressure meds every morning.")
+        IdeaRow(ImageVector.vectorResource(R.drawable.ic_pill), "The goal, and its want-to", "Take blood-pressure meds — even a have-to has a want-to: pair it with the morning coffee you love.")
         IdeaRow(Icons.Outlined.Coffee, "The cue from your life", "☕ Starting the morning coffee — the pill sits right by the orange Chemex.")
         IdeaRow(Icons.AutoMirrored.Outlined.ArrowForward, "The moment reminds you", "\"When I start the morning coffee, I will take the BP pill next to the Chemex.\" The text always travels with the cue.")
     }

@@ -251,9 +251,10 @@ The `/welcome` flow (`WelcomeScreen` graph, shown when `onboarding_completed == 
 **Pane 2 — the whole idea in 30 seconds (3 steps)**
 
 - Headline: "Here's the whole idea in 30 seconds."
-- The goal (💊): "Take blood-pressure meds every morning."
+- The goal, and its want-to (💊): "Take blood-pressure meds — even a have-to has a want-to: pair it with the morning coffee you love." (Job #1 — surface the want-to / connect to what you love.)
 - The cue from your life (☕): "☕ Starting the morning coffee — the pill sits right by the orange Chemex."
 - The moment reminds you (→): ""When I start the morning coffee, I will take the BP pill next to the Chemex." The text always travels with the cue."
+- Tone note: the three steps now teach BOTH engines — the want-to (intrinsic motivation, step 1) and RTA (the cue + the moment, steps 2–3) — per the two-jobs thesis (lean-prd "## Thesis"). Updated 2026-06-15.
 
 **Pane 3 — privacy**
 
