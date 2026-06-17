@@ -50,6 +50,14 @@
             </intent-filter>
         </activity>
 
+        <!-- The focused in-the-moment screen, opened by tapping a cue-fire notification.
+             Private to the app (explicit intent only); not a launcher entry. -->
+        <activity
+            android:name=".InTheMomentActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.GroundedApp" />
+
         <!-- Reminder-model cue-fire + response actions. Explicit-component
              intents only (alarms + notification action buttons), so no filter is
              needed; exported=false keeps it private to the app. -->

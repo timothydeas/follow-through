@@ -20,6 +20,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,6 +34,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -60,8 +67,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ideasinc.followthrough.BuildConfig
 import com.ideasinc.followthrough.R
+import com.ideasinc.followthrough.data.GroundedDatabase
+import com.ideasinc.followthrough.di.AppContainer
 import com.ideasinc.followthrough.feedback.AppReview
+import com.ideasinc.followthrough.notifications.ReminderAlarmScheduler
 import com.ideasinc.followthrough.ui.theme.AppColors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
 import com.ideasinc.followthrough.ui.theme.ThemeMode
 import com.ideasinc.followthrough.ui.theme.ThemePreferences
@@ -71,6 +84,7 @@ import com.ideasinc.followthrough.navigation.PREFS_NAME
 
 @Composable
 fun SettingsScreen(
+    container: AppContainer,
     onBack: () -> Unit,
     onReplayIntro: () -> Unit = {}
 ) {
@@ -80,6 +94,36 @@ fun SettingsScreen(
     var biometricEnabled by remember { mutableStateOf(prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false)) }
     val backFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
+    val scope = rememberCoroutineScope()
+    var showDeleteData by remember { mutableStateOf(false) }
+
+    if (showDeleteData) {
+        AlertDialog(
+            onDismissRequest = { showDeleteData = false },
+            title = { Text("Delete all your data?") },
+            text = { Text("This permanently removes every intention, cue, and follow-through record from this device. It can't be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteData = false
+                        // Cancel any scheduled alarms first, then wipe every table.
+                        scope.launch(Dispatchers.IO) {
+                            val reminders = container.reminderDao.getActiveReminders().first()
+                            reminders.forEach { ReminderAlarmScheduler.cancel(context, it.id) }
+                            GroundedDatabase.getInstance(context).clearAllTables()
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = AppColors.Destructive)
+                ) { Text("Delete everything") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteData = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = AppColors.BrandAccentText)
+                ) { Text("Cancel") }
+            }
+        )
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -97,7 +141,7 @@ fun SettingsScreen(
                     modifier = Modifier.focusRequester(backFocus)
                 ) {
                     Icon(
-                        painter = painterResource(id = R.drawable.ic_arrow_left),
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                         contentDescription = "Go back",
                         tint = MaterialTheme.colorScheme.onSurface
                     )
@@ -246,13 +290,13 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Allow notifications so your reminders can reach you. Tap to open system settings.",
+                            text = "Allow notifications so your intentions can reach you in the moment. Tap to open system settings.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Icon(
-                        painter = painterResource(id = R.drawable.ic_chevron_right),
+                        imageVector = Icons.Rounded.ChevronRight,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
@@ -285,7 +329,7 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f)
                 )
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_chevron_right),
+                    imageVector = Icons.Rounded.ChevronRight,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
@@ -360,6 +404,31 @@ fun SettingsScreen(
 
             HorizontalDivider(color = AppColors.Border)
 
+            // Your data — delete everything from this device (MVP_User_Flow_IA.md "My data").
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClickLabel = "Delete all my data", role = Role.Button, onClick = { showDeleteData = true })
+                    .heightIn(min = 48.dp)
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Delete all my data",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontFamily = PoppinsFontFamily),
+                        color = AppColors.Destructive
+                    )
+                    Text(
+                        text = "Permanently remove every intention, cue, and record from this device.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            HorizontalDivider(color = AppColors.Border)
+
             // Independent, always-available feedback link (opt-in, no tracking).
             Row(
                 modifier = Modifier
@@ -380,7 +449,7 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f)
                 )
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_chevron_right),
+                    imageVector = Icons.Rounded.ChevronRight,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)

@@ -95,7 +95,6 @@ dependencies {
     // Google's official Play In-App Review API (no data collection of ours).
     implementation("com.google.android.play:review:2.0.2")
     implementation("com.google.android.play:review-ktx:2.0.2")
-    implementation(libs.reorderable)
     debugImplementation(libs.androidx.ui.tooling)
 
     // Local (JVM) tests — Robolectric lets the Room v26→v27 migration test run

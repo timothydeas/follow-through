@@ -12,7 +12,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,10 +32,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
-import androidx.compose.material.icons.outlined.Coffee
-import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -56,7 +60,6 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -121,13 +124,15 @@ fun OnboardingScreen(
                 // mipmap does) and masked to a circle — painterResource can't load the
                 // AdaptiveIconDrawable directly. Decorative; the label carries the name.
                 Box(
-                    modifier = Modifier.size(32.dp).clip(CircleShape).background(CoralLight),
+                    modifier = Modifier.size(34.dp).clip(CircleShape).background(CoralLight),
                     contentAlignment = Alignment.Center
                 ) {
+                    // Tighter inset than the launcher mipmap's 18% — at this 34dp lockup
+                    // size the arrow needs to read boldly, not float in the circle.
                     Image(
                         painter = painterResource(R.drawable.ic_launcher_foreground),
                         contentDescription = null,
-                        modifier = Modifier.fillMaxSize().padding(6.dp)
+                        modifier = Modifier.fillMaxSize().padding(3.dp)
                     )
                 }
                 Spacer(Modifier.width(10.dp))
@@ -178,7 +183,7 @@ fun OnboardingScreen(
                     BackButton(onClick = goBack)
                 }
                 else -> {
-                    PrimaryButton("Create my first reminder", showArrow = false, onClick = onCreateFirstReminder)
+                    PrimaryButton("Set my first intention", showArrow = false, onClick = onCreateFirstReminder)
                     Spacer(Modifier.height(4.dp))
                     BackButton(onClick = goBack)
                 }
@@ -214,8 +219,8 @@ private fun SegmentedProgress(currentIndex: Int, total: Int, modifier: Modifier 
 
 @Composable
 private fun PanePremise() {
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        Text("Progress, not perfection.", style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.semantics { heading() })
+    CenteredScrollPane {
+        Text("Remember what you meant to do.", style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.semantics { heading() })
         Text(
             "People mostly forget at the moment they could act — it's not a willpower problem. FollowThru ties each intention to one vivid cue from your own life, so the moment itself reminds you. And when you miss — everyone does — nothing breaks: the cue just brings you back next time.",
             style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -223,18 +228,47 @@ private fun PanePremise() {
     }
 }
 
+/**
+ * A pane body that sits vertically centered when its content is shorter than the
+ * available height, and scrolls from the top (no clipped heading) when it isn't —
+ * e.g. at 200% text scale. Plain `Arrangement.Center` on a scrollable column can't
+ * do the second half, so we floor the column height to the viewport.
+ */
+@Composable
+private fun CenteredScrollPane(
+    horizontalAlignment: Alignment.Horizontal = Alignment.Start,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = maxHeight)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically),
+            horizontalAlignment = horizontalAlignment,
+            content = content
+        )
+    }
+}
+
 @Composable
 private fun PaneIdea() {
+    // Top-aligned (not centered): the cards can exceed the viewport on small screens,
+    // where centering a scrollable column would push the top out of reach.
+    // The four beats mirror the create-cue flow's steps in order (what → when → cue → Did
+    // it), so the example previews exactly what the user is asked next.
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(
-            "Here's the whole idea in 30 seconds.",
+            "How it works",
             style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.SemiBold),
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.semantics { heading() }
         )
-        IdeaRow(ImageVector.vectorResource(R.drawable.ic_pill), "The goal, and its want-to", "Take blood-pressure meds — even a have-to has a want-to: pair it with the morning coffee you love.")
-        IdeaRow(Icons.Outlined.Coffee, "The cue from your life", "☕ Starting the morning coffee — the pill sits right by the orange Chemex.")
-        IdeaRow(Icons.AutoMirrored.Outlined.ArrowForward, "The moment reminds you", "\"When I start the morning coffee, I will take the BP pill next to the Chemex.\" The text always travels with the cue.")
+        IdeaRow(Icons.AutoMirrored.Rounded.DirectionsRun, "What you want to remember to do", "\"Go for a run after work\" — the thing you keep meaning to do, then forget on the couch.")
+        IdeaRow(Icons.Rounded.Home, "When you'll do it", "\"When I get home and change out of my work clothes.\"")
+        IdeaRow(Icons.Rounded.Bolt, "One vivid cue", "👟 Your running shoes by the door — the one thing you can't miss walking in.")
+        IdeaRow(Icons.Rounded.Check, "Then tap Did it", "When the moment comes, the reminder shows your cue and your words. Tap Did it — and a missed day is no big deal.")
     }
 }
 
@@ -267,18 +301,14 @@ private fun IdeaRow(icon: ImageVector, label: String, text: String) {
 
 @Composable
 private fun PanePrivacy() {
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    CenteredScrollPane(horizontalAlignment = Alignment.CenterHorizontally) {
         // Pale-coral lock circle — illustrative onboarding art (handoff §9.1 permits it),
         // matching the pane-2 idea circles. Decorative; the headline carries the meaning.
         Box(
             modifier = Modifier.size(96.dp).clip(CircleShape).background(AppColors.CoralTint),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Outlined.Lock, contentDescription = null, tint = AppColors.OnCoralTint, modifier = Modifier.size(44.dp))
+            Icon(Icons.Rounded.Lock, contentDescription = null, tint = AppColors.OnCoralTint, modifier = Modifier.size(44.dp))
         }
         Text("Private by design.", style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onBackground, textAlign = TextAlign.Center, modifier = Modifier.semantics { heading() })
         Text("Everything stays on this device. No account, no cloud, no tracking.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
@@ -307,7 +337,7 @@ private fun PrimaryButton(label: String, showArrow: Boolean, onClick: () -> Unit
         )
         if (showArrow) {
             Spacer(Modifier.width(8.dp))
-            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
         }
     }
 }

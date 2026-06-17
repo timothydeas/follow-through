@@ -6,8 +6,9 @@ import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 
 /**
- * The three forgiving responses to a delivered reminder. Stored as the lowercase
- * string in [ReminderEvent.action]. "Not today" is never punitive.
+ * Response actions stored as the lowercase string in [ReminderEvent.action]. The MVP UI
+ * surfaces only [DONE] ("Did it"); [SNOOZED] / [NOT_TODAY] are retained for data and
+ * history compatibility. A missed cue is a non-event — never punitive.
  */
 object EventAction {
     const val DONE = "done"

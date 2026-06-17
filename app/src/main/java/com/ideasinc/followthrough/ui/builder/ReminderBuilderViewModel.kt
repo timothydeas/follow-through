@@ -4,14 +4,9 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.ideasinc.followthrough.data.Barrier
 import com.ideasinc.followthrough.data.CueType
 import com.ideasinc.followthrough.data.Goal
-import com.ideasinc.followthrough.data.GoalContentDao
 import com.ideasinc.followthrough.data.GoalDao
-import com.ideasinc.followthrough.data.Learning
-import com.ideasinc.followthrough.data.PaletteDao
-import com.ideasinc.followthrough.data.PassionInterest
 import com.ideasinc.followthrough.data.Reminder
 import com.ideasinc.followthrough.data.ReminderDao
 import com.ideasinc.followthrough.data.ReminderStatus
@@ -21,79 +16,69 @@ import com.ideasinc.followthrough.notifications.ReminderAlarmScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.TimeZone
 import java.util.UUID
 
-/** A cue suggestion derived from a palette chip in the "working with" tray. */
-data class CueSuggestion(val type: String, val value: String, val sourcePaletteId: String)
-
+/**
+ * Create-cue flow state. The user creates an **Intention** directly — there is no goal
+ * step in the experience (MVP_User_Flow_IA.md). The four steps are:
+ *   0  Name the intention   — "What do you want to remember to do?"  (the action)
+ *   1  Pin the moment       — when / where you'll act + how often      (whenMoment + schedule)
+ *   2  Design the cue       — one distinctive cue, seeded with an example
+ *   3  Review & confirm     — restate, then it's scheduled
+ *
+ * Internally each new Intention still gets a minimal `goals` container row so the existing
+ * `Reminder.goalId` foreign key stays valid (no schema change, no migration). The container
+ * is never shown or named.
+ */
 data class BuilderUiState(
     val step: Int = 0,
     val isEdit: Boolean = false,
     val loaded: Boolean = false,
-    // Step 1 — goal.
-    val goalId: String? = null,
-    val goals: List<Goal> = emptyList(),
-    val creatingNewGoal: Boolean = false,
-    val newGoalTitle: String = "",
-    val newGoalWhy: String = "",
-    // Intrinsic motivation — goal-level only, never fed to the intention/cue.
-    val newGoalMotivation: String = "",
-    val newGoalWantTo: String = "",
-    val newGoalLinkedPassions: Set<String> = emptySet(),
-    // Step 2 — draw from yourself.
-    val passions: List<PassionInterest> = emptyList(),
-    val learnings: List<Learning> = emptyList(),
-    val barriers: List<Barrier> = emptyList(),
-    val trayPaletteIds: Set<String> = emptySet(),
-    // Step 3 — intention.
-    val whenMoment: String = "",
+    // Step 0 — the action ("I will …").
     val iWill: String = "",
-    // Step 4 — one cue + schedule.
+    // Step 1 — the moment + how often it recurs.
+    val whenMoment: String = "",
+    val scheduleMode: String = ScheduleMode.WEEKLY,
+    val days: Set<WeekDay> = WeekDay.ALL.toSet(),
+    val onceDate: String = "", // "yyyy-MM-dd" when scheduleMode == ONCE
+    val hour: Int = 8,
+    val minute: Int = 0,
+    // Step 2 — one cue (emoji or phrase).
     val cueType: String = CueType.EMOJI,
     val cueValue: String = "",
     val cueSourcePaletteId: String? = null,
-    val scheduleMode: String = ScheduleMode.WEEKLY,
-    val days: Set<WeekDay> = WeekDay.ALL.toSet(),
-    val hour: Int = 8,
-    val minute: Int = 0,
-    // Result.
-    val savedGoalId: String? = null
+    // Internal container goal (reused on edit; created on save for a new intention).
+    val goalId: String? = null,
+    // Result — flips true once saved + scheduled, or once deleted.
+    val saved: Boolean = false,
+    val deleted: Boolean = false
 ) {
-    val resolvedGoalTitle: String
-        get() = goals.firstOrNull { it.id == goalId }?.title ?: newGoalTitle
-
+    val step0Valid: Boolean get() = iWill.isNotBlank()
     val step1Valid: Boolean
-        get() = goalId != null || (creatingNewGoal && newGoalTitle.isNotBlank())
-
-    val step3Valid: Boolean get() = whenMoment.isNotBlank() && iWill.isNotBlank()
-
-    // One cue, non-empty. Photo/sound are flagged off at launch, so only emoji/phrase
-    // can be saved; the value must be present.
-    val step4Valid: Boolean
-        get() = cueValue.isNotBlank() && CueType.isEnabledAtLaunch(cueType) &&
-            (scheduleMode == ScheduleMode.DAILY || days.isNotEmpty())
-
-    /** Cue suggestions from the tray: each selected passion offers its emoji + label. */
-    val cueSuggestions: List<CueSuggestion>
-        get() = passions.filter { it.id in trayPaletteIds }.flatMap { p ->
-            listOf(
-                CueSuggestion(CueType.EMOJI, p.emoji, p.id),
-                CueSuggestion(CueType.PHRASE, p.label, p.id)
-            )
+        get() = whenMoment.isNotBlank() && when (scheduleMode) {
+            ScheduleMode.DAILY -> true
+            ScheduleMode.ONCE -> onceDate.isNotBlank()
+            else -> days.isNotEmpty()
         }
+    // One cue, non-empty. Photo/sound are off at launch, so only emoji/phrase can be saved.
+    val step2Valid: Boolean
+        get() = cueValue.isNotBlank() && CueType.isEnabledAtLaunch(cueType)
+
+    fun canAdvance(s: Int): Boolean = when (s) {
+        0 -> step0Valid
+        1 -> step1Valid
+        2 -> step2Valid
+        else -> true
+    }
 }
 
 class ReminderBuilderViewModel(
     private val appContext: Context,
     private val goalDao: GoalDao,
-    private val goalContentDao: GoalContentDao,
-    private val paletteDao: PaletteDao,
     private val reminderDao: ReminderDao,
-    private val initialGoalId: String?,
     private val editReminderId: String?
 ) : ViewModel() {
 
@@ -105,96 +90,53 @@ class ReminderBuilderViewModel(
 
     init {
         viewModelScope.launch {
-            val goals = goalDao.getAllGoals().first()
-            val passions = paletteDao.getPassions().first()
-            val learnings = paletteDao.getLearnings().first()
-
             val existing = editReminderId?.let { reminderDao.getReminderById(it) }
             if (existing != null) {
                 editingId = existing.id
                 editingCreatedAt = existing.createdAt
-                val barriers = goalContentDao.getBarriers(existing.goalId).first()
                 _uiState.update {
                     it.copy(
-                        step = 2, // jump to intention when editing
+                        step = 0,
                         isEdit = true,
                         loaded = true,
-                        goalId = existing.goalId,
-                        goals = goals,
-                        passions = passions,
-                        learnings = learnings,
-                        barriers = barriers,
-                        whenMoment = existing.whenMoment,
                         iWill = existing.iWill,
+                        whenMoment = existing.whenMoment,
+                        scheduleMode = existing.scheduleMode,
+                        onceDate = existing.scheduleDate ?: "",
+                        days = existing.days.toSet().ifEmpty { WeekDay.ALL.toSet() },
+                        hour = existing.scheduleTimeLocal.substringBefore(":").toIntOrNull() ?: 8,
+                        minute = existing.scheduleTimeLocal.substringAfter(":").toIntOrNull() ?: 0,
                         cueType = existing.cueType,
                         cueValue = existing.cueValue,
                         cueSourcePaletteId = existing.cueSourcePaletteId,
-                        scheduleMode = existing.scheduleMode,
-                        days = existing.days.toSet().ifEmpty { WeekDay.ALL.toSet() },
-                        hour = existing.scheduleTimeLocal.substringBefore(":").toIntOrNull() ?: 8,
-                        minute = existing.scheduleTimeLocal.substringAfter(":").toIntOrNull() ?: 0
+                        goalId = existing.goalId
                     )
                 }
             } else {
-                val barriers = initialGoalId?.let { goalContentDao.getBarriers(it).first() } ?: emptyList()
-                _uiState.update {
-                    it.copy(
-                        loaded = true,
-                        goalId = initialGoalId,
-                        goals = goals,
-                        passions = passions,
-                        learnings = learnings,
-                        barriers = barriers,
-                        // With a goal already chosen, start at "draw from yourself".
-                        step = if (initialGoalId != null) 1 else 0
-                    )
-                }
+                _uiState.update { it.copy(loaded = true) }
             }
         }
     }
 
+    // Four steps now: 0 = action, 1 = moment + schedule, 2 = cue, 3 = review.
     fun goToStep(step: Int) = _uiState.update { it.copy(step = step.coerceIn(0, 3)) }
     fun next() = _uiState.update { it.copy(step = (it.step + 1).coerceAtMost(3)) }
     fun back() = _uiState.update { it.copy(step = (it.step - 1).coerceAtLeast(0)) }
 
-    fun selectGoal(goalId: String) {
-        viewModelScope.launch {
-            val barriers = goalContentDao.getBarriers(goalId).first()
-            _uiState.update { it.copy(goalId = goalId, creatingNewGoal = false, barriers = barriers) }
-        }
-    }
-
-    fun startNewGoal() = _uiState.update { it.copy(creatingNewGoal = true, goalId = null) }
-    fun onNewGoalTitle(v: String) = _uiState.update { it.copy(newGoalTitle = v) }
-    fun onNewGoalWhy(v: String) = _uiState.update { it.copy(newGoalWhy = v) }
-    // Toggle: tapping the selected motivation again clears it (optional field).
-    fun onNewGoalMotivation(v: String) = _uiState.update { it.copy(newGoalMotivation = if (it.newGoalMotivation == v) "" else v) }
-    fun onNewGoalWantTo(v: String) = _uiState.update { it.copy(newGoalWantTo = v) }
-    fun toggleNewGoalPassion(id: String) = _uiState.update {
-        it.copy(newGoalLinkedPassions = if (id in it.newGoalLinkedPassions) it.newGoalLinkedPassions - id else it.newGoalLinkedPassions + id)
-    }
-    fun applyTemplate(title: String) =
-        _uiState.update { it.copy(creatingNewGoal = true, goalId = null, newGoalTitle = title) }
-
-    fun toggleTray(paletteId: String) = _uiState.update {
-        val next = if (paletteId in it.trayPaletteIds) it.trayPaletteIds - paletteId else it.trayPaletteIds + paletteId
-        it.copy(trayPaletteIds = next)
-    }
-
-    fun onWhenMoment(v: String) = _uiState.update { it.copy(whenMoment = v) }
     fun onIWill(v: String) = _uiState.update { it.copy(iWill = v) }
+    fun onWhenMoment(v: String) = _uiState.update { it.copy(whenMoment = v) }
 
     // One-cue enforcement: setting a type/value replaces the prior selection wholesale.
     fun setCueType(type: String) = _uiState.update {
         if (CueType.isEnabledAtLaunch(type)) it.copy(cueType = type, cueValue = "", cueSourcePaletteId = null) else it
     }
     fun onCueValue(v: String) = _uiState.update { it.copy(cueValue = v, cueSourcePaletteId = null) }
-    fun pickSuggestion(s: CueSuggestion) = _uiState.update {
-        it.copy(cueType = s.type, cueValue = s.value, cueSourcePaletteId = s.sourcePaletteId)
-    }
 
     fun setScheduleMode(mode: String) = _uiState.update {
         it.copy(scheduleMode = mode, days = if (mode == ScheduleMode.DAILY) WeekDay.ALL.toSet() else it.days)
+    }
+    fun setOnceDate(year: Int, month1to12: Int, day: Int) = _uiState.update {
+        it.copy(onceDate = "%04d-%02d-%02d".format(year, month1to12, day))
     }
     fun toggleDay(day: WeekDay) = _uiState.update {
         val next = if (day in it.days) it.days - day else it.days + day
@@ -204,22 +146,19 @@ class ReminderBuilderViewModel(
 
     fun save() {
         val s = _uiState.value
-        if (!s.step4Valid || !s.step3Valid) return
+        if (!s.step0Valid || !s.step1Valid || !s.step2Valid) return
         viewModelScope.launch {
             val now = System.currentTimeMillis()
-            // Resolve / create the goal.
+            // Resolve the internal container (reuse on edit; create a minimal one otherwise).
+            // It is never shown — its title mirrors the action so any internal listing reads sensibly.
             val goalId = s.goalId ?: run {
                 val id = UUID.randomUUID().toString()
                 goalDao.insertGoal(
                     Goal(
                         id = id,
-                        title = s.newGoalTitle.trim(),
+                        title = s.iWill.trim().take(80),
                         createdAt = now,
-                        updatedAt = now,
-                        whyItMatters = s.newGoalWhy.trim(),
-                        motivationType = s.newGoalMotivation,
-                        wantToFraming = s.newGoalWantTo.trim(),
-                        linkedPassionIds = s.newGoalLinkedPassions.joinToString(",")
+                        updatedAt = now
                     )
                 )
                 id
@@ -236,32 +175,44 @@ class ReminderBuilderViewModel(
                 cueSourcePaletteId = s.cueSourcePaletteId,
                 cueIsPaletteDrawn = s.cueSourcePaletteId != null,
                 scheduleMode = s.scheduleMode,
-                scheduleDays = WeekDay.toCsv(if (s.scheduleMode == ScheduleMode.DAILY) WeekDay.ALL else orderedDays),
+                scheduleDays = when (s.scheduleMode) {
+                    ScheduleMode.DAILY -> WeekDay.toCsv(WeekDay.ALL)
+                    ScheduleMode.ONCE -> ""
+                    else -> WeekDay.toCsv(orderedDays)
+                },
                 scheduleTimeLocal = "%02d:%02d".format(s.hour, s.minute),
                 scheduleTimezone = TimeZone.getDefault().id,
+                scheduleDate = if (s.scheduleMode == ScheduleMode.ONCE) s.onceDate else null,
                 fullTextAlwaysShown = true,
                 status = ReminderStatus.ACTIVE,
                 createdAt = editingCreatedAt.takeIf { it > 0 } ?: now,
                 updatedAt = now
             )
             reminderDao.upsert(reminder)
-            // Schedule (or reschedule, on edit) the exact alarms for this reminder.
+            // Schedule (or reschedule, on edit) the exact alarms for this intention.
             ReminderAlarmScheduler.schedule(appContext, reminder)
-            _uiState.update { it.copy(savedGoalId = goalId) }
+            _uiState.update { it.copy(saved = true) }
+        }
+    }
+
+    /** Delete this intention (edit mode only): cancel its alarm, remove the row, signal done. */
+    fun delete() {
+        val id = editingId ?: return
+        viewModelScope.launch {
+            ReminderAlarmScheduler.cancel(appContext, id)
+            reminderDao.deleteById(id)
+            _uiState.update { it.copy(deleted = true) }
         }
     }
 
     class Factory(
         private val appContext: Context,
         private val goalDao: GoalDao,
-        private val goalContentDao: GoalContentDao,
-        private val paletteDao: PaletteDao,
         private val reminderDao: ReminderDao,
-        private val initialGoalId: String?,
         private val editReminderId: String?
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            ReminderBuilderViewModel(appContext, goalDao, goalContentDao, paletteDao, reminderDao, initialGoalId, editReminderId) as T
+            ReminderBuilderViewModel(appContext, goalDao, reminderDao, editReminderId) as T
     }
 }

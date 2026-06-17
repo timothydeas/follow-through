@@ -17,11 +17,11 @@ val SurfaceLight = Color(0xFFFFFFFF)     // cards
 val BorderLight = Color(0xFFECE3DA)      // hairline
 val TextLight = Color(0xFF2A2622)        // 16:1 on cream
 val TextMutedLight = Color(0xFF6E645D)   // 5.4:1 on cream / 5.8:1 on white — AA pass
-val GoldSurfaceLight = Color(0xFFF8EAC7) // celebratory streak card only
-val GoldLight = Color(0xFFC9A24A)        // gold accent on the streak card
-// Darker gold used ONLY for the streak flame icon: #C9A24A is ~2:1 on the pale
-// gold surface (near-invisible in light mode); #9C7A1A is ~3.4:1 so the flame
-// reads as a real icon. Dark mode keeps GoldDark, which already clears 3:1.
+val GoldSurfaceLight = Color(0xFFF8EAC7) // celebratory follow-through surface only
+val GoldLight = Color(0xFFC9A24A)        // gold accent on the celebratory follow-through moment
+// Darker gold for a gold icon on the pale gold surface: #C9A24A is ~2:1 there
+// (near-invisible in light mode); #9C7A1A is ~3.4:1 so it reads as a real icon.
+// Dark mode keeps GoldDark, which already clears 3:1.
 val GoldIconLight = Color(0xFF9C7A1A)
 
 // Dark — full parity, also high-90s
@@ -43,7 +43,7 @@ val White = Color(0xFFFFFFFF)
 // ─── Backward-compatible aliases ─────────────────────────────────────────────
 // Kept so the small number of files that reference these names keep compiling.
 val Stone = TextLight
-// Gold streak accent — used by the Home summary flame and Stats streak card.
+// Gold accent — the celebratory follow-through moment.
 val Accent = GoldLight
 
 // Destructive accents — #C0392B on cream ≈ 5.0:1 (AA). Dark lifts to #FF8A80.

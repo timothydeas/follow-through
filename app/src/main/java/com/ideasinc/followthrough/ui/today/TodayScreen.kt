@@ -2,8 +2,8 @@ package com.ideasinc.followthrough.ui.today
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,8 +16,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -41,43 +45,47 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ideasinc.followthrough.data.CueType
 import com.ideasinc.followthrough.data.EventAction
 import com.ideasinc.followthrough.data.Reminder
+import com.ideasinc.followthrough.data.ScheduleMode
 import com.ideasinc.followthrough.di.AppContainer
-import com.ideasinc.followthrough.ui.progress.WeeklyProgress
 import com.ideasinc.followthrough.ui.theme.AppColors
 import kotlinx.coroutines.launch
 
 /**
- * Home — Today. The reminders due today, each showing its cue PLUS the full
- * intention text, with three judgment-free one-tap actions (Done · Snooze 1h · Not
- * today), every action undoable via an 8-second snackbar. A gentle weekly progress
- * line (§4a) sits on top; the FAB starts a new reminder.
+ * Intentions — the home tab. The user's active intentions, each showing its cue PLUS the
+ * full intention text. The single response is **Did it** (undoable via an 8-second
+ * snackbar). No streak, no score — a missed cue is a non-event, never logged against the
+ * user (MVP_User_Flow_IA.md). The FAB starts a new intention.
  */
 @Composable
 fun TodayScreen(
     container: AppContainer,
     onNewReminder: () -> Unit,
+    onEditReminder: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val vm: TodayViewModel = viewModel(
-        factory = TodayViewModel.Factory(appContext, container.reminderDao, container.reminderEventDao, container.goalDao)
+        factory = TodayViewModel.Factory(appContext, container.reminderDao, container.reminderEventDao)
     )
     val state by vm.uiState.collectAsState()
     val snackbarHost = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    // Re-read on each composition so it refreshes when the user returns from settings.
+    val notificationsOn = NotificationManagerCompat.from(ctx).areNotificationsEnabled()
 
-    fun onAction(reminder: Reminder, action: String, label: String) {
-        vm.act(reminder, action) { eventId ->
+    fun onDid(reminder: Reminder) {
+        vm.act(reminder, EventAction.DONE) { eventId ->
             scope.launch {
-                // 8-second Undo window (handoff §4); auto-dismisses after 8s or on
-                // an earlier tap. withTimeoutOrNull cancels showSnackbar at 8s.
+                // 8-second Undo window; auto-dismisses after 8s or on an earlier tap.
                 val result = kotlinx.coroutines.withTimeoutOrNull(8_000) {
                     snackbarHost.showSnackbar(
-                        message = label, actionLabel = "Undo", duration = SnackbarDuration.Indefinite
+                        message = "Followed through. Nice.", actionLabel = "Undo", duration = SnackbarDuration.Indefinite
                     )
                 }
                 if (result == SnackbarResult.ActionPerformed) vm.undo(eventId)
@@ -94,8 +102,8 @@ fun TodayScreen(
                 onClick = onNewReminder,
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.semantics { contentDescription = "New reminder" }
-            ) { Icon(Icons.Default.Add, contentDescription = null) }
+                modifier = Modifier.semantics { contentDescription = "New intention" }
+            ) { Icon(Icons.Rounded.Add, contentDescription = null) }
         }
     ) { innerPadding ->
         LazyColumn(
@@ -104,17 +112,31 @@ fun TodayScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text("Today", style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.semantics { heading() })
+                Text("Intentions", style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.semantics { heading() })
             }
             item {
-                Text("Your reminders for the moments that matter.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("What you'll remember, when it matters.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            item { WeeklyProgressLine(state.progress) }
+
+            if (!notificationsOn) {
+                item {
+                    NotificationOffBanner(onClick = {
+                        ctx.startActivity(
+                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                .putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+                        )
+                    })
+                }
+            }
+
+            if (state.loaded && (state.progress.weeklyDone > 0 || state.progress.lifetimeDone > 0)) {
+                item { WeeklyProgressLine(state.progress) }
+            }
 
             if (state.loaded && state.items.isEmpty()) {
                 item {
                     Text(
-                        "Nothing scheduled for today. Tap + to add a reminder.",
+                        "No intentions yet. Tap + to create your first one.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 16.dp)
@@ -123,12 +145,10 @@ fun TodayScreen(
             }
 
             items(state.items, key = { it.reminder.id }) { item ->
-                ReminderCard(
+                IntentionCard(
                     reminder = item.reminder,
-                    goalTitle = item.goalTitle,
-                    onDone = { onAction(item.reminder, EventAction.DONE, "Followed through. Nice.") },
-                    onSnooze = { onAction(item.reminder, EventAction.SNOOZED, "Snoozed an hour.") },
-                    onNotToday = { onAction(item.reminder, EventAction.NOT_TODAY, "Forgiven and rescheduled.") }
+                    onEdit = { onEditReminder(item.reminder.id) },
+                    onDid = { onDid(item.reminder) }
                 )
             }
         }
@@ -136,32 +156,10 @@ fun TodayScreen(
 }
 
 @Composable
-private fun WeeklyProgressLine(progress: WeeklyProgress) {
-    val bg = if (progress.isCelebratory) AppColors.GoldSurface else MaterialTheme.colorScheme.surface
-    val fg = if (progress.isCelebratory) AppColors.OnGoldSurface else MaterialTheme.colorScheme.onSurface
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(bg)
-            .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Text(progress.line, style = MaterialTheme.typography.bodyMedium, color = fg)
-        progress.lifetimeLine?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall, color = if (progress.isCelebratory) fg else MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-private fun ReminderCard(
+private fun IntentionCard(
     reminder: Reminder,
-    goalTitle: String,
-    onDone: () -> Unit,
-    onSnooze: () -> Unit,
-    onNotToday: () -> Unit
+    onEdit: () -> Unit,
+    onDid: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -169,6 +167,10 @@ private fun ReminderCard(
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
+            // Tap the card to edit this intention (time, days, wording, cue). The Did it
+            // button below consumes its own taps, so it's unaffected.
+            .clickable(onClick = onEdit)
+            .semantics { contentDescription = "Edit intention" }
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -182,31 +184,83 @@ private fun ReminderCard(
                     Text("“${reminder.cueValue}”", style = MaterialTheme.typography.titleMedium, color = AppColors.BrandAccentText)
                 }
                 Text(reminder.intentionText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                Row(modifier = Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(formatTime(reminder.scheduleTimeLocal), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (goalTitle.isNotBlank()) {
-                        Text("· $goalTitle", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                    }
+                Row(
+                    modifier = Modifier.padding(top = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(scheduleLabel(reminder), style = MaterialTheme.typography.bodySmall, color = AppColors.BrandAccentText)
+                    Icon(
+                        Icons.Rounded.Edit,
+                        contentDescription = null,
+                        tint = AppColors.BrandAccentText,
+                        modifier = Modifier.size(14.dp)
+                    )
                 }
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionButton("Did it", onDone, Modifier.weight(1f))
-            ActionButton("Snooze", onSnooze, Modifier.weight(1f))
-            ActionButton("Not today", onNotToday, Modifier.weight(1f))
+        // The single response. No response means not done — logged neutrally, no penalty.
+        OutlinedButton(
+            onClick = onDid,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+        ) {
+            Text("Did it", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium), color = AppColors.BrandAccentText)
         }
     }
 }
 
+/** Forgiving progress (Milkman): this week's follow-throughs + a never-resetting lifetime
+ *  total. Gold surface only on the celebratory state (≥1 this week); never breaks on a miss. */
 @Composable
-private fun ActionButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    OutlinedButton(
-        onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        modifier = modifier.heightIn(min = 44.dp),
-        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+private fun WeeklyProgressLine(progress: WeeklyProgress) {
+    val celebratory = progress.weeklyDone > 0
+    val bg = if (celebratory) AppColors.GoldSurface else MaterialTheme.colorScheme.surface
+    val fg = if (celebratory) AppColors.OnGoldSurface else MaterialTheme.colorScheme.onSurface
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(bg)
+            .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text(label, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium), color = AppColors.BrandAccentText, maxLines = 1)
+        Text(weeklyLine(progress.weeklyDone), style = MaterialTheme.typography.bodyMedium, color = fg)
+        if (progress.lifetimeDone > 0) {
+            Text(
+                "${progress.lifetimeDone} follow-through${if (progress.lifetimeDone == 1) "" else "s"} since you started.",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (celebratory) fg else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+private fun weeklyLine(n: Int): String = when (n) {
+    0 -> "A fresh week — your follow-throughs show up here."
+    1 -> "1 follow-through this week. Nice."
+    else -> "$n follow-throughs this week. Nice."
+}
+
+/** Shown when notifications are blocked — for a reminders app this is the biggest retention
+ *  leak (cues silently never fire). Taps through to the system notification settings. */
+@Composable
+private fun NotificationOffBanner(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(AppColors.CoralTint)
+            .clickable(onClickLabel = "Turn on notifications", onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text("Notifications are off", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
+            Text("Your reminders can't reach you. Tap to turn them on.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface)
+        }
+        Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = AppColors.BrandAccentText, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -218,4 +272,27 @@ private fun formatTime(hhmm: String): String {
     val period = if (h < 12) "AM" else "PM"
     val h12 = when { h == 0 -> 12; h > 12 -> h - 12; else -> h }
     return "%d:%02d %s".format(h12, m, period)
+}
+
+/** When an intention fires, shown on its card: e.g. "Every day · 6:45 AM",
+ *  "Mon, Wed, Fri · 5:30 PM", or "Mar 5 · 4:00 PM" for a one-off. */
+private fun scheduleLabel(r: Reminder): String {
+    val time = formatTime(r.scheduleTimeLocal)
+    return when (r.scheduleMode) {
+        ScheduleMode.DAILY -> "Every day · $time"
+        ScheduleMode.ONCE -> r.scheduleDate?.takeIf { it.isNotBlank() }?.let { "${shortDate(it)} · $time" } ?: "Once · $time"
+        else -> {
+            val days = r.days.joinToString(", ") { it.name.lowercase().replaceFirstChar(Char::titlecase).take(3) }
+            if (days.isBlank()) time else "$days · $time"
+        }
+    }
+}
+
+/** "yyyy-MM-dd" → "Mar 5". */
+private fun shortDate(iso: String): String {
+    val p = iso.split("-")
+    val m = p.getOrNull(1)?.toIntOrNull() ?: return iso
+    val d = p.getOrNull(2)?.toIntOrNull() ?: return iso
+    val months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    return "${months.getOrNull(m - 1) ?: return iso} $d"
 }

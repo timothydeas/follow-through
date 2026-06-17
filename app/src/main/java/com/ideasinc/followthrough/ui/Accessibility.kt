@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -99,7 +99,7 @@ fun AccessibilityReorderArrows(
             modifier = Modifier.size(48.dp)
         ) {
             Icon(
-                imageVector = Icons.Filled.KeyboardArrowUp,
+                imageVector = Icons.Rounded.KeyboardArrowUp,
                 contentDescription = "Move goal up",
                 tint = if (canMoveUp) LocalContentColor.current
                 else MaterialTheme.colorScheme.onSurfaceVariant
@@ -112,7 +112,7 @@ fun AccessibilityReorderArrows(
             modifier = Modifier.size(48.dp)
         ) {
             Icon(
-                imageVector = Icons.Filled.KeyboardArrowDown,
+                imageVector = Icons.Rounded.KeyboardArrowDown,
                 contentDescription = "Move goal down",
                 tint = if (canMoveDown) LocalContentColor.current
                 else MaterialTheme.colorScheme.onSurfaceVariant

@@ -30,8 +30,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -45,6 +47,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,65 +64,73 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ideasinc.followthrough.data.CueType
-import com.ideasinc.followthrough.data.MotivationType
 import com.ideasinc.followthrough.data.ScheduleMode
 import com.ideasinc.followthrough.data.WeekDay
 import com.ideasinc.followthrough.di.AppContainer
 import com.ideasinc.followthrough.ui.theme.AppColors
-
-private val TEMPLATES = listOf(
-    "Daily medication",
-    "Move my body",
-    "Call someone I love",
-    "Ship the thing I keep postponing"
-)
 
 // Must fit in the lower 16 bits: MainActivity is a FragmentActivity (for BiometricPrompt),
 // whose validateRequestPermissionsRequestCode rejects larger codes.
 private const val REQUEST_POST_NOTIFICATIONS = 1001
 
 /**
- * Reminder Builder — the 4-step spine wizard: goal → draw from yourself → intention
- * → one cue + schedule. Enforces exactly one cue (emoji or phrase at launch; photo
- * and sound are shown as the target state but disabled). Back is always available;
- * nothing auto-advances.
+ * Create-cue flow — the spine of the MVP (MVP_User_Flow_IA.md §3). Four focused steps:
+ * name the intention → pin the moment → design one distinctive cue → review. The cue is
+ * the hero; the step is seeded with a concrete example so the user never faces a blank
+ * prompt. Exactly one cue (emoji or phrase at launch). Back is always available; nothing
+ * auto-advances; the keyboard never occludes inputs.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ReminderBuilderScreen(
     container: AppContainer,
-    goalId: String?,
     reminderId: String?,
     onClose: () -> Unit,
-    onSaved: (goalId: String) -> Unit
+    onSaved: () -> Unit
 ) {
     val appContext = LocalContext.current.applicationContext
     val vm: ReminderBuilderViewModel = viewModel(
         factory = ReminderBuilderViewModel.Factory(
-            appContext, container.goalDao, container.goalContentDao, container.paletteDao, container.reminderDao, goalId, reminderId
+            appContext, container.goalDao, container.reminderDao, reminderId
         )
     )
     val s by vm.uiState.collectAsState()
     val activity = LocalContext.current as? android.app.Activity
 
-    LaunchedEffect(s.savedGoalId) {
-        s.savedGoalId?.let { goalId ->
-            // Count genuine use for the (never sentiment-gated) Play review prompt.
+    LaunchedEffect(s.saved) {
+        if (s.saved) {
             activity?.let { com.ideasinc.followthrough.feedback.AppReview.onReminderSaved(it) }
-            onSaved(goalId)
+            onSaved()
         }
     }
 
-    // Reminder delivery needs notification permission on Android 13+. Ask once while
-    // the user is building a reminder (the relevant moment); if they decline, the
-    // Settings → Notifications row repairs it. Without this the fired notification is
-    // silently dropped (ReminderFireReceiver catches the SecurityException).
-    //
-    // Use the classic ActivityCompat.requestPermissions — NOT rememberLauncherFor-
-    // ActivityResult: the host is a FragmentActivity (for BiometricPrompt), and the
-    // Activity-Result registry's >16-bit request code makes FragmentActivity throw
-    // "Can only use lower 16 bits for requestCode". No result callback is needed —
-    // a granted permission just lets future notifications post.
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    LaunchedEffect(s.deleted) { if (s.deleted) onClose() }
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete this intention?") },
+            text = { Text("It will stop reminding you and be removed from this device.") },
+            confirmButton = {
+                TextButton(
+                    onClick = { showDeleteConfirm = false; vm.delete() },
+                    colors = ButtonDefaults.textButtonColors(contentColor = AppColors.Destructive)
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteConfirm = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = AppColors.BrandAccentText)
+                ) { Text("Cancel") }
+            }
+        )
+    }
+
+    // Reminder delivery needs notification permission on Android 13+. Ask once while the
+    // user is creating a cue (the relevant moment); if they decline, the Settings →
+    // Notifications row repairs it. Classic ActivityCompat.requestPermissions — NOT the
+    // Activity-Result API: the host is a FragmentActivity (for BiometricPrompt), whose
+    // >16-bit request code throws "Can only use lower 16 bits for requestCode".
     LaunchedEffect(Unit) {
         val act = activity
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && act != null &&
@@ -137,24 +150,24 @@ fun ReminderBuilderScreen(
                 modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { if (s.step > 0 && !s.isEdit) vm.back() else onClose() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
+                IconButton(onClick = { if (s.step > 0) vm.back() else onClose() }) {
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
                 }
                 StepDots(current = s.step, modifier = Modifier.weight(1f))
+                if (s.isEdit) {
+                    IconButton(onClick = { showDeleteConfirm = true }) {
+                        Icon(Icons.Rounded.Delete, contentDescription = "Delete intention", tint = AppColors.Destructive)
+                    }
+                }
                 IconButton(onClick = onClose) {
-                    Icon(Icons.Filled.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurface)
+                    Icon(Icons.Rounded.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurface)
                 }
             }
         },
         bottomBar = {
             BuilderNav(
                 step = s.step,
-                canAdvance = when (s.step) {
-                    0 -> s.step1Valid
-                    1 -> true // draw-from-yourself is skippable
-                    2 -> s.step3Valid
-                    else -> s.step4Valid
-                },
+                canAdvance = s.canAdvance(s.step),
                 isLastStep = s.step == 3,
                 onBack = vm::back,
                 onNext = vm::next,
@@ -173,10 +186,10 @@ fun ReminderBuilderScreen(
         ) {
             Spacer(Modifier.height(4.dp))
             when (s.step) {
-                0 -> StepGoal(s, vm)
-                1 -> StepDraw(s, vm)
-                2 -> StepIntention(s, vm)
-                else -> StepCue(s, vm)
+                0 -> StepName(s, vm)
+                1 -> StepMoment(s, vm)
+                2 -> StepCue(s, vm)
+                else -> StepReview(s)
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -191,153 +204,105 @@ private fun StepHeader(title: String, purpose: String) {
     }
 }
 
+// Tappable starters that fill "I will …" — defeats the blank slate (the beta's "where do
+// I start?"), which an empty field reintroduces. Tapping one fills the still-editable field.
+private val INTENTION_STARTERS = listOf(
+    "take my medication",
+    "go for a walk",
+    "drink a glass of water",
+    "call someone I love",
+    "stretch for five minutes"
+)
+
+/** Step 0 — name the intention (the action). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun StepGoal(s: BuilderUiState, vm: ReminderBuilderViewModel) {
-    StepHeader("Which goal?", "Pick what you're working toward, or start a new one.")
-    s.goals.forEach { g ->
-        SelectableRow(text = g.title, selected = s.goalId == g.id && !s.creatingNewGoal) { vm.selectGoal(g.id) }
-    }
-    SelectableRow(text = "+ New goal", selected = s.creatingNewGoal) { vm.startNewGoal() }
-    if (s.creatingNewGoal) {
-        OutlinedTextField(
-            value = s.newGoalTitle, onValueChange = vm::onNewGoalTitle,
-            label = { Text("Goal") }, placeholder = { Text("Run a 5K without stopping by August") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = s.newGoalWhy, onValueChange = vm::onNewGoalWhy,
-            label = { Text("Why it matters (optional)") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        // Intrinsic motivation — goal-level only (never the reminder/intention/cue). Optional.
-        Text("Want to, or have to? (optional)", style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip("Want to", s.newGoalMotivation == MotivationType.WANT_TO) { vm.onNewGoalMotivation(MotivationType.WANT_TO) }
-            Chip("Have to", s.newGoalMotivation == MotivationType.HAVE_TO) { vm.onNewGoalMotivation(MotivationType.HAVE_TO) }
-        }
-        OutlinedTextField(
-            value = s.newGoalWantTo, onValueChange = vm::onNewGoalWantTo,
-            label = { Text("A way you'd actually enjoy it (optional)") },
-            placeholder = { Text("turn the run into a podcast walk-jog by the river") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        if (s.passions.isNotEmpty()) {
-            Text("Connect to what you love (optional)", style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                s.passions.forEach { p ->
-                    Chip("${p.emoji} ${p.label}", p.id in s.newGoalLinkedPassions) { vm.toggleNewGoalPassion(p.id) }
-                }
-            }
-        }
-        Text("Or start from a template", style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            TEMPLATES.forEach { t -> Chip(label = t, selected = s.newGoalTitle == t) { vm.applyTemplate(t) } }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun StepDraw(s: BuilderUiState, vm: ReminderBuilderViewModel) {
-    StepHeader("Draw from yourself", "Pick what's relevant — this is the palette, not a quiz. You can skip this.")
-    if (s.passions.isEmpty() && s.learnings.isEmpty() && s.barriers.isEmpty()) {
-        Text(
-            "Nothing here yet. Add passions and learnings on the About You tab, or barriers on the goal — they'll show up here as cue material.",
-            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        return
-    }
-    if (s.passions.isNotEmpty()) {
-        Text("PASSIONS & INTERESTS", style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            s.passions.forEach { p -> Chip(label = "${p.emoji} ${p.label}", selected = p.id in s.trayPaletteIds) { vm.toggleTray(p.id) } }
-        }
-    }
-    if (s.learnings.isNotEmpty()) {
-        Text("LEARNINGS", style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            s.learnings.forEach { l -> Chip(label = l.text, selected = l.id in s.trayPaletteIds) { vm.toggleTray(l.id) } }
-        }
-    }
-    if (s.barriers.isNotEmpty()) {
-        Text("BARRIERS", style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            s.barriers.forEach { b -> Chip(label = b.text, selected = b.id in s.trayPaletteIds) { vm.toggleTray(b.id) } }
-        }
-    }
-}
-
-@Composable
-private fun StepIntention(s: BuilderUiState, vm: ReminderBuilderViewModel) {
-    StepHeader("Your intention", "Fill in the moment and the action. The whole sentence travels with the cue.")
-    Text("When…", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
-    OutlinedTextField(
-        value = s.whenMoment, onValueChange = vm::onWhenMoment,
-        placeholder = { Text("I start the morning coffee") },
-        modifier = Modifier.fillMaxWidth()
-    )
-    Text("…I will", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
+private fun StepName(s: BuilderUiState, vm: ReminderBuilderViewModel) {
+    StepHeader("What do you want to remember to do?", "The thing you mean to do but tend to forget in the moment.")
     OutlinedTextField(
         value = s.iWill, onValueChange = vm::onIWill,
-        placeholder = { Text("take the BP pill next to the orange Chemex") },
+        label = { Text("I will…") },
+        placeholder = { Text("take my blood-pressure pill") },
         modifier = Modifier.fillMaxWidth()
     )
+    Text("Need a starting point?", style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        INTENTION_STARTERS.forEach { starter ->
+            Chip(label = starter, selected = s.iWill == starter) { vm.onIWill(starter) }
+        }
+    }
 }
 
+/** Step 1 — pin the moment + how often it recurs. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun StepMoment(s: BuilderUiState, vm: ReminderBuilderViewModel) {
+    StepHeader("When will you do it?", "Name the moment you'll be able to act — and how often it comes around.")
+    OutlinedTextField(
+        value = s.whenMoment, onValueChange = vm::onWhenMoment,
+        label = { Text("When…") },
+        placeholder = { Text("I start the morning coffee") },
+        supportingText = { Text("A situation you'll be in — not a clock time. The time below is just when to nudge you.") },
+        modifier = Modifier.fillMaxWidth()
+    )
+    Spacer(Modifier.height(8.dp))
+    Text("HOW OFTEN", style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Chip("Daily", s.scheduleMode == ScheduleMode.DAILY) { vm.setScheduleMode(ScheduleMode.DAILY) }
+        Chip("Weekly", s.scheduleMode == ScheduleMode.WEEKLY) { vm.setScheduleMode(ScheduleMode.WEEKLY) }
+        Chip("Just once", s.scheduleMode == ScheduleMode.ONCE) { vm.setScheduleMode(ScheduleMode.ONCE) }
+    }
+    if (s.scheduleMode == ScheduleMode.WEEKLY) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            WeekDay.ALL.forEach { d -> DayChip(day = d, selected = d in s.days) { vm.toggleDay(d) } }
+        }
+    }
+    if (s.scheduleMode == ScheduleMode.ONCE) {
+        DateRow(date = s.onceDate, onPick = vm::setOnceDate)
+    }
+    TimeRow(hour = s.hour, minute = s.minute, onPick = vm::setTime)
+}
+
+/** Step 2 — design one distinctive cue. Seeded with a concrete example so the step
+ *  (the one most likely to stall) is never a blank prompt. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun StepCue(s: BuilderUiState, vm: ReminderBuilderViewModel) {
-    StepHeader("Choose ONE cue", "The single most vivid thing for you. One beats many.")
+    StepHeader("Pick one vivid cue", "One specific thing you'll truly see or hear in that moment — the more vivid, the harder to ignore. One beats many.")
 
-    // Emoji / phrase are the launch cue types. Photo / sound stay in the data model
-    // (CueType) as the documented target state but are NOT offered in the UI — no
-    // "(soon)" teasers for features that aren't shipping at launch.
+    // The seeded example — show, don't tell.
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(AppColors.CoralTint)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        // Dark text (onSurface), not coral-on-coral-tint — coral on the pale tint is ~4.2:1,
+        // under AA for small text. The pale-coral card stays; the text reads at ~11:1.
+        Text("For example", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface)
+        Text("\"When I pour my morning coffee\" → ☕ the orange Chemex on the counter.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+    }
+
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Chip("Emoji", s.cueType == CueType.EMOJI) { vm.setCueType(CueType.EMOJI) }
         Chip("Phrase", s.cueType == CueType.PHRASE) { vm.setCueType(CueType.PHRASE) }
     }
 
-    if (s.cueSuggestions.isNotEmpty()) {
-        Text("FROM YOUR PALETTE", style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            s.cueSuggestions.forEach { sug ->
-                Chip(label = if (sug.type == CueType.EMOJI) sug.value else "“${sug.value}”", selected = s.cueValue == sug.value && s.cueType == sug.type) {
-                    vm.pickSuggestion(sug)
-                }
-            }
-        }
-    }
-
     OutlinedTextField(
         value = s.cueValue,
         onValueChange = { vm.onCueValue(if (s.cueType == CueType.EMOJI) it.take(4) else it) },
-        label = { Text(if (s.cueType == CueType.EMOJI) "Your emoji" else "Your phrase") },
+        label = { Text(if (s.cueType == CueType.EMOJI) "Your cue (emoji)" else "Your cue (phrase)") },
         placeholder = { Text(if (s.cueType == CueType.EMOJI) "☕" else "Biscuit's leash is the starting line") },
         modifier = Modifier.fillMaxWidth()
     )
-
-    Spacer(Modifier.height(8.dp))
-    Text("WHEN IT SURFACES", style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Chip("Daily", s.scheduleMode == ScheduleMode.DAILY) { vm.setScheduleMode(ScheduleMode.DAILY) }
-        Chip("Weekly", s.scheduleMode == ScheduleMode.WEEKLY) { vm.setScheduleMode(ScheduleMode.WEEKLY) }
-    }
-    if (s.scheduleMode == ScheduleMode.WEEKLY) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            WeekDay.ALL.forEach { d ->
-                DayChip(day = d, selected = d in s.days) { vm.toggleDay(d) }
-            }
-        }
-    }
-    TimeRow(hour = s.hour, minute = s.minute, onPick = vm::setTime)
-
-    Spacer(Modifier.height(8.dp))
-    ConfirmRestate(s)
 }
 
+/** Step 3 — review & confirm; the bottom bar's "Schedule it" saves. */
 @Composable
-private fun ConfirmRestate(s: BuilderUiState) {
+private fun StepReview(s: BuilderUiState) {
+    StepHeader("Ready?", "Here's your intention. The words always travel with the cue.")
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -347,22 +312,30 @@ private fun ConfirmRestate(s: BuilderUiState) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (s.cueValue.isNotBlank()) {
-                Text(if (s.cueType == CueType.EMOJI) s.cueValue else "“${s.cueValue}”", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.width(10.dp))
-            }
-        }
-        if (s.whenMoment.isNotBlank() || s.iWill.isNotBlank()) {
+        if (s.cueValue.isNotBlank()) {
             Text(
-                "When ${s.whenMoment}, I will ${s.iWill}",
-                style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface
+                if (s.cueType == CueType.EMOJI) s.cueValue else "“${s.cueValue}”",
+                style = MaterialTheme.typography.titleMedium,
+                color = if (s.cueType == CueType.PHRASE) AppColors.BrandAccentText else MaterialTheme.colorScheme.onSurface
             )
         }
         Text(
-            "The text always travels with the cue, so the meaning is never lost.",
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+            "When ${s.whenMoment}, I will ${s.iWill}",
+            style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface
         )
+        Text(scheduleSummary(s), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+private fun scheduleSummary(s: BuilderUiState): String {
+    val time = formatTime(s.hour, s.minute)
+    return when (s.scheduleMode) {
+        ScheduleMode.DAILY -> "Every day · $time"
+        ScheduleMode.ONCE -> "${if (s.onceDate.isBlank()) "Once" else "On ${formatDate(s.onceDate)}"} · $time"
+        else -> {
+            val days = WeekDay.ALL.filter { it in s.days }.joinToString(", ") { it.name.lowercase().replaceFirstChar(Char::titlecase).take(3) }
+            "$days · $time"
+        }
     }
 }
 
@@ -379,32 +352,44 @@ private fun TimeRow(hour: Int, minute: Int, onPick: (Int, Int) -> Unit) {
 }
 
 @Composable
-private fun SelectableRow(text: String, selected: Boolean, onClick: () -> Unit) {
-    val border = if (selected) MaterialTheme.colorScheme.primary else AppColors.Border
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
-            .border(1.dp, border, RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
-            .padding(16.dp)
-    ) {
-        Text(
-            text,
-            style = MaterialTheme.typography.bodyLarge,
-            color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-        )
+private fun DateRow(date: String, onPick: (Int, Int, Int) -> Unit) {
+    val context = LocalContext.current
+    val cal = remember(date) {
+        java.util.Calendar.getInstance().also { c ->
+            val parts = date.split("-")
+            val y = parts.getOrNull(0)?.toIntOrNull()
+            val m = parts.getOrNull(1)?.toIntOrNull()
+            val d = parts.getOrNull(2)?.toIntOrNull()
+            if (y != null && m != null && d != null) c.set(y, m - 1, d)
+        }
     }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Date", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+        TextButton(onClick = {
+            android.app.DatePickerDialog(
+                context,
+                { _, y, m, d -> onPick(y, m + 1, d) },
+                cal.get(java.util.Calendar.YEAR),
+                cal.get(java.util.Calendar.MONTH),
+                cal.get(java.util.Calendar.DAY_OF_MONTH)
+            ).apply { datePicker.minDate = System.currentTimeMillis() - 1000 }.show()
+        }) { Text(if (date.isBlank()) "Pick a date" else formatDate(date), color = AppColors.BrandAccentText) }
+    }
+}
+
+private fun formatDate(iso: String): String {
+    val parts = iso.split("-")
+    val y = parts.getOrNull(0)?.toIntOrNull() ?: return iso
+    val m = parts.getOrNull(1)?.toIntOrNull() ?: return iso
+    val d = parts.getOrNull(2)?.toIntOrNull() ?: return iso
+    val months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    val mon = months.getOrNull(m - 1) ?: return iso
+    return "$mon $d, $y"
 }
 
 @Composable
 private fun Chip(label: String, selected: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
-    val bg = when {
-        !enabled -> MaterialTheme.colorScheme.surface
-        selected -> MaterialTheme.colorScheme.primaryContainer
-        else -> MaterialTheme.colorScheme.surface
-    }
+    val bg = if (selected && enabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
     val fg = when {
         !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
         selected -> MaterialTheme.colorScheme.onPrimaryContainer
@@ -433,13 +418,8 @@ private fun Chip(label: String, selected: Boolean, enabled: Boolean = true, onCl
 private fun DayChip(day: WeekDay, selected: Boolean, onClick: () -> Unit) {
     val letter = day.name.first().toString()
     val fullName = when (day) {
-        WeekDay.MON -> "Monday"
-        WeekDay.TUE -> "Tuesday"
-        WeekDay.WED -> "Wednesday"
-        WeekDay.THU -> "Thursday"
-        WeekDay.FRI -> "Friday"
-        WeekDay.SAT -> "Saturday"
-        WeekDay.SUN -> "Sunday"
+        WeekDay.MON -> "Monday"; WeekDay.TUE -> "Tuesday"; WeekDay.WED -> "Wednesday"
+        WeekDay.THU -> "Thursday"; WeekDay.FRI -> "Friday"; WeekDay.SAT -> "Saturday"; WeekDay.SUN -> "Sunday"
     }
     Box(
         modifier = Modifier
@@ -455,17 +435,17 @@ private fun DayChip(day: WeekDay, selected: Boolean, onClick: () -> Unit) {
             },
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            letter,
-            style = MaterialTheme.typography.labelLarge,
-            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-        )
+        Text(letter, style = MaterialTheme.typography.labelLarge, color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface)
     }
 }
 
 @Composable
 private fun StepDots(current: Int, modifier: Modifier = Modifier) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = modifier.semantics(mergeDescendants = true) { contentDescription = "Step ${current + 1} of 4" },
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         repeat(4) { i ->
             Box(
                 modifier = Modifier
@@ -505,7 +485,7 @@ private fun BuilderNav(
             modifier = Modifier.heightIn(min = 48.dp)
         ) {
             Text(
-                if (isLastStep) "Save reminder" else "Continue",
+                if (isLastStep) "Schedule it" else "Continue",
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
             )
         }

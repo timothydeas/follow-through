@@ -50,16 +50,15 @@ object AppColors {
         @ReadOnlyComposable
         get() = MaterialTheme.colorScheme.outline
 
-    // Gold — celebratory streak only. Never body text.
+    // Gold — celebratory follow-through only. Never body text.
     val Gold: Color
         @Composable
         @ReadOnlyComposable
         get() = MaterialTheme.colorScheme.tertiary
 
-    // Darker gold reserved for the streak flame icon so it meets 3:1 on the pale
-    // gold surface. Light uses #9C7A1A (~3.4:1); dark keeps GoldDark (~6.5:1 on
-    // the dark gold surface). Distinct from [Gold] so the streak number and any
-    // other gold accent are unchanged.
+    // Darker gold for a gold icon so it meets 3:1 on the pale gold surface.
+    // Light uses #9C7A1A (~3.4:1); dark keeps GoldDark (~6.5:1 on the dark gold
+    // surface). Distinct from [Gold] so other gold accents are unchanged.
     val GoldIcon: Color
         @Composable
         @ReadOnlyComposable
@@ -81,18 +80,6 @@ object AppColors {
         @Composable
         @ReadOnlyComposable
         get() = MaterialTheme.colorScheme.error
-
-    // Full-screen brand background (the celebratory ReassuranceOverlay). Coral in
-    // both modes — it's a brand moment, not a surface. Label uses OnForgeBackground.
-    val ForgeBackground: Color
-        @Composable
-        @ReadOnlyComposable
-        get() = MaterialTheme.colorScheme.primary
-
-    val OnForgeBackground: Color
-        @Composable
-        @ReadOnlyComposable
-        get() = MaterialTheme.colorScheme.onPrimary
 
     // Modal scrim — the dim layer behind an overlay card. Always black @ 60%.
     val OverlayScrim: Color = OverlayScrimBlack.copy(alpha = 0.6f)

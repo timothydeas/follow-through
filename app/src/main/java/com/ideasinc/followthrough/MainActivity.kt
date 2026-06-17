@@ -37,8 +37,7 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Edge-to-edge so the launch insight screen's brown background paints
-        // under the status and navigation bars for a true full-screen takeover.
+        // Edge-to-edge so app backgrounds paint under the status and navigation bars.
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         // Display preferences (reduce motion) load once here. Text size is honored

@@ -6,12 +6,14 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
-import com.ideasinc.followthrough.MainActivity
+import com.ideasinc.followthrough.InTheMomentActivity
 import com.ideasinc.followthrough.R
 import com.ideasinc.followthrough.data.CueType
 import com.ideasinc.followthrough.data.EventAction
 import com.ideasinc.followthrough.data.GroundedDatabase
 import com.ideasinc.followthrough.data.Reminder
+import com.ideasinc.followthrough.data.ReminderStatus
+import com.ideasinc.followthrough.data.ScheduleMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -49,9 +51,14 @@ class ReminderFireReceiver : BroadcastReceiver() {
                 val db = GroundedDatabase.getInstance(appContext)
                 val reminder = db.reminderDao().getReminderById(reminderId) ?: return@launch
                 postReminderNotification(appContext, reminder)
-                // Re-arm the weekly cadence for the day that just fired (skip the
-                // one-shot snooze slot, day 0).
-                if (day in Calendar.SUNDAY..Calendar.SATURDAY) {
+                if (reminder.scheduleMode == ScheduleMode.ONCE) {
+                    // One-off: the moment has passed — archive it so it drops off the
+                    // Intentions list. Don't re-arm. The user can still tap Did it on the
+                    // notification / in-the-moment screen to log the follow-through.
+                    db.reminderDao().update(reminder.copy(status = ReminderStatus.ARCHIVED, updatedAt = System.currentTimeMillis()))
+                } else if (day in Calendar.SUNDAY..Calendar.SATURDAY) {
+                    // Re-arm the weekly cadence for the day that just fired (skip the
+                    // one-shot snooze slot, day 0).
                     ReminderAlarmScheduler.rescheduleAfterFire(appContext, reminder, day)
                 }
             } finally {
@@ -78,6 +85,13 @@ class ReminderFireReceiver : BroadcastReceiver() {
                 )
                 if (action == EventAction.SNOOZED) {
                     ReminderAlarmScheduler.snooze(appContext, reminderId)
+                    // Confirm it worked: the notification is about to disappear and the
+                    // re-fire is ~1h out, so without this it looks like nothing happened.
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        android.widget.Toast.makeText(
+                            appContext, "Snoozed — back in about an hour", android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
                 val nm = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
                 nm?.cancel(notificationId)
@@ -104,8 +118,11 @@ class ReminderFireReceiver : BroadcastReceiver() {
         // When there's no cue, the intention is already the title — don't repeat it.
         val body = if (cue.isNotBlank()) intention else ""
 
-        val tapIntent = Intent(context, MainActivity::class.java).apply {
+        // Tapping the notification opens the focused full-screen in-the-moment screen
+        // (cue + intention + the single Did it response).
+        val tapIntent = Intent(context, InTheMomentActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(EXTRA_REMINDER_ID, reminder.id)
         }
         val tapPending = PendingIntent.getActivity(
             context, notificationId, tapIntent,
@@ -119,9 +136,9 @@ class ReminderFireReceiver : BroadcastReceiver() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(tapPending)
             .setAutoCancel(true)
+            // The single response. No "Snooze"/"Not yet" — a missed cue is a non-event
+            // (MVP_User_Flow_IA.md): no response simply means not done, logged neutrally.
             .addAction(0, "Did it", responsePending(context, reminder.id, EventAction.DONE, notificationId))
-            .addAction(0, "Snooze", responsePending(context, reminder.id, EventAction.SNOOZED, notificationId))
-            .addAction(0, "Not today", responsePending(context, reminder.id, EventAction.NOT_TODAY, notificationId))
         if (body.isNotBlank()) {
             builder.setContentText(body)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(body))

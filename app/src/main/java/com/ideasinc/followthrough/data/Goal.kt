@@ -4,9 +4,10 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * A goal. Its intentions, cues, and schedules live on its [Reminder]s (a goal has
- * many); its barriers and progress notes live on [Barrier]/[ProgressNote]. The goal
- * itself carries its identity, "why it matters", ordering, and follow-through state.
+ * A goal — in the MVP, the internal container an intention belongs to (never shown to the
+ * user); its intention, cue, and schedule live on its [Reminder]s. The columns beyond
+ * id / title / timestamps are legacy and unused by the MVP UI (kept to avoid a goals-table
+ * rebuild migration).
  */
 @Entity(tableName = "goals")
 data class Goal(
@@ -34,11 +35,7 @@ data class Goal(
      * mistake — intrinsic motivation is goal-design, not a reminder input).
      */
     val wantToFraming: String = "",
-    /**
-     * Comma-separated [PassionInterest] ids this goal draws on — the About You palette
-     * connection ("what you love" feeding the goal's want-to). Goal-level; resolved to
-     * emoji + label for display. CSV is safe because ids are UUIDs (no commas).
-     */
+    /** Legacy (unused by the MVP): CSV of interest ids the goal once drew on. */
     val linkedPassionIds: String = ""
 )
 

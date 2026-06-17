@@ -33,8 +33,13 @@ object ReminderAlarmScheduler {
         cancel(context, reminder.id)
         if (reminder.status != ReminderStatus.ACTIVE) return
         val am = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        if (!canScheduleExactAlarmsCompat(context)) return
+        // No exact-alarm gate here: armDay() falls back to an inexact alarm rather than
+        // scheduling nothing, so reminders are never silently dropped.
         val (hour, minute) = parseTime(reminder.scheduleTimeLocal)
+        if (reminder.scheduleMode == ScheduleMode.ONCE) {
+            armOnce(context, am, reminder, hour, minute)
+            return
+        }
         val days = if (reminder.scheduleMode == ScheduleMode.DAILY) WeekDay.ALL else reminder.days
         for (wd in days) {
             armDay(context, am, reminder.id, calendarDay(wd), hour, minute)
@@ -55,7 +60,6 @@ object ReminderAlarmScheduler {
     fun rescheduleAfterFire(context: Context, reminder: Reminder, calendarDay: Int) {
         if (reminder.status != ReminderStatus.ACTIVE) return
         val am = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        if (!canScheduleExactAlarmsCompat(context)) return
         val (hour, minute) = parseTime(reminder.scheduleTimeLocal)
         armDay(context, am, reminder.id, calendarDay, hour, minute)
     }
@@ -63,12 +67,8 @@ object ReminderAlarmScheduler {
     /** One-shot re-fire ~1 hour out after the user taps Snooze. */
     fun snooze(context: Context, reminderId: String, delayMs: Long = 60 * 60 * 1000L) {
         val am = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        if (!canScheduleExactAlarmsCompat(context)) return
         val pi = firePendingIntent(context, reminderId, SNOOZE_DAY_SLOT)
-        try {
-            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + delayMs, pi)
-        } catch (_: SecurityException) {
-        }
+        setBestEffortAlarm(context, am, System.currentTimeMillis() + delayMs, pi)
     }
 
     /** Re-registers every active reminder's alarms — called on device boot. */
@@ -81,10 +81,54 @@ object ReminderAlarmScheduler {
     private fun armDay(context: Context, am: AlarmManager, reminderId: String, calendarDay: Int, hour: Int, minute: Int) {
         val triggerAtMs = computeNextTriggerMs(calendarDay, hour, minute)
         val pi = firePendingIntent(context, reminderId, calendarDay)
+        setBestEffortAlarm(context, am, triggerAtMs, pi)
+    }
+
+    /**
+     * Arms the single alarm for a one-off intention at its scheduled date + time. The alarm
+     * is keyed to that date's weekday slot (1..7) so cancel() — which sweeps slots 0..7 —
+     * still cleans it up; on fire, ReminderFireReceiver archives the one-off instead of
+     * re-arming. A date/time already in the past is skipped (it simply won't fire).
+     */
+    private fun armOnce(context: Context, am: AlarmManager, reminder: Reminder, hour: Int, minute: Int) {
+        val parts = (reminder.scheduleDate ?: return).split("-")
+        val year = parts.getOrNull(0)?.toIntOrNull() ?: return
+        val month = parts.getOrNull(1)?.toIntOrNull() ?: return // 1..12
+        val day = parts.getOrNull(2)?.toIntOrNull() ?: return
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.YEAR, year)
+            set(Calendar.MONTH, month - 1)
+            set(Calendar.DAY_OF_MONTH, day)
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val triggerAtMs = cal.timeInMillis
+        if (triggerAtMs <= System.currentTimeMillis()) return
+        val pi = firePendingIntent(context, reminder.id, cal.get(Calendar.DAY_OF_WEEK))
+        setBestEffortAlarm(context, am, triggerAtMs, pi)
+    }
+
+    /**
+     * Sets a wake alarm — exact (to-the-minute) when the OS allows it, otherwise
+     * FALLING BACK to an inexact allow-while-idle alarm rather than dropping it. The
+     * reliability contract is "the reminder fires," so a missing/revoked exact-alarm
+     * permission (Android 12+) must never silently lose the reminder or a snooze.
+     */
+    private fun setBestEffortAlarm(context: Context, am: AlarmManager, triggerAtMs: Long, pi: PendingIntent) {
         try {
-            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMs, pi)
+            if (canScheduleExactAlarmsCompat(context)) {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMs, pi)
+            } else {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMs, pi)
+            }
         } catch (_: SecurityException) {
-            // Permission revoked between check and call — drop silently.
+            // Exact permission revoked between the check and the call — best-effort inexact.
+            try {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMs, pi)
+            } catch (_: SecurityException) {
+            }
         }
     }
 

@@ -32,6 +32,7 @@ object CueType {
 object ScheduleMode {
     const val DAILY = "daily"
     const val WEEKLY = "weekly"
+    const val ONCE = "once"
 }
 
 /** Lifecycle of a reminder. Stored as the lowercase string in [Reminder.status]. */
@@ -91,6 +92,7 @@ data class Reminder(
     val scheduleDays: String,        // CSV of WeekDay names; daily => all 7
     val scheduleTimeLocal: String,   // "HH:mm" 24h
     val scheduleTimezone: String,
+    val scheduleDate: String? = null, // "yyyy-MM-dd" for a one-off (ScheduleMode.ONCE); null otherwise
     val fullTextAlwaysShown: Boolean = true,
     val status: String = ReminderStatus.ACTIVE,
     val createdAt: Long,

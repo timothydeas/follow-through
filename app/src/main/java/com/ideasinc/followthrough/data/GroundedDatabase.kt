@@ -1100,28 +1100,64 @@ internal val MIGRATION_36_37 = object : Migration(36, 37) {
     }
 }
 
+internal val MIGRATION_37_38 = object : Migration(37, 38) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Learnings move from person-level to goal-scoped (FK to goals, CASCADE),
+        // matching barriers / progress notes. Old rows had no goal to attach to, so the
+        // table is recreated empty. Column order + FK + index mirror the goal-scoped
+        // tables above so Room's schema validation matches.
+        db.execSQL("DROP TABLE IF EXISTS learnings")
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS learnings (
+                id TEXT NOT NULL PRIMARY KEY,
+                goalId TEXT NOT NULL,
+                text TEXT NOT NULL,
+                createdAt INTEGER NOT NULL,
+                FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_learnings_goalId ON learnings(goalId)")
+    }
+}
+
+internal val MIGRATION_38_39 = object : Migration(38, 39) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // One-off intentions (ScheduleMode.ONCE): add a nullable target date (yyyy-MM-dd).
+        // Additive + nullable, so existing reminders are untouched.
+        db.execSQL("ALTER TABLE reminders ADD COLUMN scheduleDate TEXT")
+    }
+}
+
+internal val MIGRATION_39_40 = object : Migration(39, 40) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Schema cleanup: drop the tables for features removed in the MVP IA replacement —
+        // the interests palette, per-goal barriers / progress notes / learnings, and the
+        // old check-in question labels. Nothing reads or writes them anymore. The goals,
+        // reminders, and reminder_events tables are unchanged.
+        db.execSQL("DROP TABLE IF EXISTS passions_interests")
+        db.execSQL("DROP TABLE IF EXISTS learnings")
+        db.execSQL("DROP TABLE IF EXISTS barriers")
+        db.execSQL("DROP TABLE IF EXISTS progress_notes")
+        db.execSQL("DROP TABLE IF EXISTS question_labels")
+    }
+}
+
 @Database(
     entities = [
         Goal::class,
-        QuestionLabel::class,
         Reminder::class,
-        ReminderEvent::class,
-        PassionInterest::class,
-        Learning::class,
-        Barrier::class,
-        ProgressNote::class
+        ReminderEvent::class
     ],
-    version = 37,
+    version = 40,
     exportSchema = true
 )
 abstract class GroundedDatabase : RoomDatabase() {
 
     abstract fun goalDao(): GoalDao
-    abstract fun questionLabelDao(): QuestionLabelDao
     abstract fun reminderDao(): ReminderDao
     abstract fun reminderEventDao(): ReminderEventDao
-    abstract fun paletteDao(): PaletteDao
-    abstract fun goalContentDao(): GoalContentDao
 
     companion object {
         @Volatile private var INSTANCE: GroundedDatabase? = null
@@ -1144,7 +1180,8 @@ abstract class GroundedDatabase : RoomDatabase() {
                         MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28,
                         MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31,
                         MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34,
-                        MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37
+                        MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37,
+                        MIGRATION_37_38, MIGRATION_38_39, MIGRATION_39_40
                     )
                     .build().also { INSTANCE = it }
             }
