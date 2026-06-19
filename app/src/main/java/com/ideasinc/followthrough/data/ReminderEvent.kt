@@ -6,14 +6,18 @@ import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 
 /**
- * Response actions stored as the lowercase string in [ReminderEvent.action]. The MVP UI
- * surfaces only [DONE] ("Did it"); [SNOOZED] / [NOT_TODAY] are retained for data and
- * history compatibility. A missed cue is a non-event — never punitive.
+ * Actions stored as the lowercase string in [ReminderEvent.action]. The user-facing
+ * response is only [DONE] ("Did it"); [SNOOZED] / [NOT_TODAY] are retained for data and
+ * history compatibility. [DELIVERED] is a non-response marker written when a cue fires,
+ * so a follow-through opportunity that was never acted on can be reconciled into a miss
+ * for the forgiving streak (CLAUDE.md rule #5). A miss is logged neutrally — never punitive.
  */
 object EventAction {
     const val DONE = "done"
     const val SNOOZED = "snoozed"
     const val NOT_TODAY = "not_today"
+    /** Written at fire time, not a response. Powers local miss detection; never shown in What worked. */
+    const val DELIVERED = "delivered"
 }
 
 /** Default reason recorded when a user undoes an action via the 8s snackbar. */

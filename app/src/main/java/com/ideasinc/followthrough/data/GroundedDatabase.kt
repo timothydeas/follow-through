@@ -1144,13 +1144,36 @@ internal val MIGRATION_39_40 = object : Migration(39, 40) {
     }
 }
 
+internal val MIGRATION_40_41 = object : Migration(40, 41) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Direction check-ins: the periodic "is this direction working?" log for an intention's
+        // goal (direction text reuses the existing goals.whyItMatters column). Additive; nothing
+        // is dropped. Local-only.
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS direction_check_ins (
+                id TEXT NOT NULL PRIMARY KEY,
+                goalId TEXT NOT NULL,
+                askedAt INTEGER NOT NULL,
+                answeredAt INTEGER NOT NULL,
+                feeling TEXT NOT NULL,
+                noteText TEXT,
+                FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_direction_check_ins_goalId ON direction_check_ins(goalId)")
+    }
+}
+
 @Database(
     entities = [
         Goal::class,
         Reminder::class,
-        ReminderEvent::class
+        ReminderEvent::class,
+        DirectionCheckIn::class
     ],
-    version = 40,
+    version = 41,
     exportSchema = true
 )
 abstract class GroundedDatabase : RoomDatabase() {
@@ -1158,6 +1181,7 @@ abstract class GroundedDatabase : RoomDatabase() {
     abstract fun goalDao(): GoalDao
     abstract fun reminderDao(): ReminderDao
     abstract fun reminderEventDao(): ReminderEventDao
+    abstract fun directionCheckInDao(): DirectionCheckInDao
 
     companion object {
         @Volatile private var INSTANCE: GroundedDatabase? = null
@@ -1181,7 +1205,8 @@ abstract class GroundedDatabase : RoomDatabase() {
                         MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31,
                         MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34,
                         MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37,
-                        MIGRATION_37_38, MIGRATION_38_39, MIGRATION_39_40
+                        MIGRATION_37_38, MIGRATION_38_39, MIGRATION_39_40,
+                        MIGRATION_40_41
                     )
                     .build().also { INSTANCE = it }
             }

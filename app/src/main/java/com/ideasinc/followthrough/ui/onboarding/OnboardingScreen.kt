@@ -1,7 +1,6 @@
 package com.ideasinc.followthrough.ui.onboarding
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -36,7 +35,6 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -64,7 +62,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ideasinc.followthrough.R
-import com.ideasinc.followthrough.ui.settings.LocalReduceMotion
 import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.theme.CoralLight
 
@@ -150,14 +147,10 @@ fun OnboardingScreen(
             modifier = Modifier.fillMaxWidth().weight(1f).navigationBarsPadding().padding(horizontal = 24.dp).padding(bottom = 16.dp)
         ) {
             Box(modifier = Modifier.weight(1f)) {
-                // Honor the Reduce motion setting (vestibular accessibility): snap
-                // instantly between panes instead of cross-fading when it's on.
-                val reduceMotion = LocalReduceMotion.current
                 AnimatedContent(
                     targetState = pane,
                     transitionSpec = {
-                        if (reduceMotion) fadeIn(snap()) togetherWith fadeOut(snap())
-                        else fadeIn(tween(FADE_MS)) togetherWith fadeOut(tween(FADE_MS))
+                        fadeIn(tween(FADE_MS)) togetherWith fadeOut(tween(FADE_MS))
                     },
                     label = "welcome-body",
                     modifier = Modifier.fillMaxSize()
@@ -220,7 +213,7 @@ private fun SegmentedProgress(currentIndex: Int, total: Int, modifier: Modifier 
 @Composable
 private fun PanePremise() {
     CenteredScrollPane {
-        Text("Remember what you meant to do.", style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.semantics { heading() })
+        Text("Follow through, in the moment.", style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.semantics { heading() })
         Text(
             "People mostly forget at the moment they could act — it's not a willpower problem. FollowThru ties each intention to one vivid cue from your own life, so the moment itself reminds you. And when you miss — everyone does — nothing breaks: the cue just brings you back next time.",
             style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -254,10 +247,11 @@ private fun CenteredScrollPane(
 
 @Composable
 private fun PaneIdea() {
-    // Top-aligned (not centered): the cards can exceed the viewport on small screens,
-    // where centering a scrollable column would push the top out of reach.
-    // The four beats mirror the create-cue flow's steps in order (what → when → cue → Did
-    // it), so the example previews exactly what the user is asked next.
+    // Top-aligned (not centered): the cards can exceed the viewport on small screens, where
+    // centering a scrollable column would push the top out of reach. Three tight beats mirror
+    // the create-cue flow: the plan (Milkman's "When ___, I'll ___"), one vivid cue, then Did
+    // it. The optional goal rides along in the first beat instead of its own row, keeping the
+    // pane short.
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(
             "How it works",
@@ -265,10 +259,9 @@ private fun PaneIdea() {
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.semantics { heading() }
         )
-        IdeaRow(Icons.AutoMirrored.Rounded.DirectionsRun, "What you want to remember to do", "\"Go for a run after work\" — the thing you keep meaning to do, then forget on the couch.")
-        IdeaRow(Icons.Rounded.Home, "When you'll do it", "\"When I get home and change out of my work clothes.\"")
-        IdeaRow(Icons.Rounded.Bolt, "One vivid cue", "👟 Your running shoes by the door — the one thing you can't miss walking in.")
-        IdeaRow(Icons.Rounded.Check, "Then tap Did it", "When the moment comes, the reminder shows your cue and your words. Tap Did it — and a missed day is no big deal.")
+        IdeaRow(Icons.AutoMirrored.Rounded.DirectionsRun, "Make a plan", "\"When I get home, I'll go for a run.\" What you'll do, pinned to the moment — and a bigger goal if you want one.")
+        IdeaRow(Icons.Rounded.Bolt, "Add one vivid cue", "👟 Your running shoes by the door — the one thing you can't miss.")
+        IdeaRow(Icons.Rounded.Check, "Tap Did it", "In the moment, your cue and words appear. Tap Did it — and a missed day is no big deal.")
     }
 }
 

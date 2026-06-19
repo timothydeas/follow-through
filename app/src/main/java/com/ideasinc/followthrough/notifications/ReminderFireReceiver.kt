@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.ideasinc.followthrough.InTheMomentActivity
 import com.ideasinc.followthrough.R
 import com.ideasinc.followthrough.data.CueType
@@ -23,8 +24,9 @@ import java.util.Calendar
  * Cue-fire for the new Reminder model. Two responsibilities:
  *  - ACTION_REMINDER_FIRE: post a high-priority notification carrying the cue PLUS
  *    the full intention text (the text always carries complete meaning — WCAG
- *    1.1.1 / 1.4.1 and the brief's multi-sense principle), with three equal,
- *    judgment-free actions: Done · Snooze · Not today. Then re-arm next week.
+ *    1.1.1 / 1.4.1 and the brief's multi-sense principle), with the single
+ *    judgment-free action: Did it. Log a 'delivered' marker (the follow-through
+ *    opportunity, for the forgiving streak), then re-arm next week.
  *  - ACTION_REMINDER_RESPONSE: append a ReminderEvent for the tapped action,
  *    re-fire ~1h out on Snooze, and dismiss the notification.
  *
@@ -38,6 +40,7 @@ class ReminderFireReceiver : BroadcastReceiver() {
         when (intent.action) {
             ACTION_REMINDER_FIRE -> handleFire(appContext, intent)
             ACTION_REMINDER_RESPONSE -> handleResponse(appContext, intent)
+            ACTION_REMINDER_UNDO -> handleUndo(appContext, intent)
         }
     }
 
@@ -50,7 +53,11 @@ class ReminderFireReceiver : BroadcastReceiver() {
                 ensureReminderChannel(appContext)
                 val db = GroundedDatabase.getInstance(appContext)
                 val reminder = db.reminderDao().getReminderById(reminderId) ?: return@launch
-                postReminderNotification(appContext, reminder)
+                val posted = postReminderNotification(appContext, reminder)
+                // Log the follow-through opportunity ONLY if the cue was actually shown. Never
+                // count a miss against the streak for a reminder the user couldn't see (e.g.
+                // notifications off) — that would be dishonest and unfair (rules #5/#6).
+                if (posted) recordDelivered(db.reminderEventDao(), reminderId, System.currentTimeMillis())
                 if (reminder.scheduleMode == ScheduleMode.ONCE) {
                     // One-off: the moment has passed — archive it so it drops off the
                     // Intentions list. Don't re-arm. The user can still tap Did it on the
@@ -72,37 +79,98 @@ class ReminderFireReceiver : BroadcastReceiver() {
         val action = intent.getStringExtra(EXTRA_RESPONSE)
         if (!isValidResponse(action)) return
         val notificationId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, reminderNotificationId(reminderId))
-        val deliveredAt = intent.getLongExtra(EXTRA_FIRE_DAY, System.currentTimeMillis())
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val db = GroundedDatabase.getInstance(appContext)
-                recordReminderEvent(
+                val eventId = recordReminderEvent(
                     eventDao = db.reminderEventDao(),
                     reminderId = reminderId,
                     action = action!!,
                     deliveredAt = System.currentTimeMillis()
                 )
-                if (action == EventAction.SNOOZED) {
-                    ReminderAlarmScheduler.snooze(appContext, reminderId)
-                    // Confirm it worked: the notification is about to disappear and the
-                    // re-fire is ~1h out, so without this it looks like nothing happened.
-                    android.os.Handler(android.os.Looper.getMainLooper()).post {
-                        android.widget.Toast.makeText(
-                            appContext, "Snoozed — back in about an hour", android.widget.Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                if (action == EventAction.DONE) {
+                    // Replace the reminder with an undoable confirmation so a mistaken shade tap
+                    // is recoverable (CLAUDE.md rule #3) — the parallel to the in-app undo.
+                    postDoneConfirmation(appContext, eventId, notificationId)
+                } else {
+                    val nm = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                    nm?.cancel(notificationId)
                 }
-                val nm = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-                nm?.cancel(notificationId)
             } finally {
                 pendingResult.finish()
             }
         }
     }
 
-    private fun postReminderNotification(context: Context, reminder: Reminder) {
+    /** Undo a shade "Did it": remove the logged DONE event and clear the confirmation. */
+    private fun handleUndo(appContext: Context, intent: Intent) {
+        val eventId = intent.getStringExtra(EXTRA_EVENT_ID) ?: return
+        val notificationId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, -1)
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val db = GroundedDatabase.getInstance(appContext)
+                undoReminderEvent(db.reminderEventDao(), eventId)
+                if (notificationId != -1) {
+                    val nm = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                    nm?.cancel(notificationId)
+                }
+            } finally {
+                pendingResult.finish()
+            }
+        }
+    }
+
+    /** A quiet confirmation that replaces the fired notification after a shade "Did it", carrying
+     *  an Undo action. Times out on its own (like the in-app undo snackbar) so it never lingers. */
+    private fun postDoneConfirmation(context: Context, eventId: String, notificationId: Int) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+        val undoIntent = Intent(context, ReminderFireReceiver::class.java).apply {
+            action = ACTION_REMINDER_UNDO
+            putExtra(EXTRA_EVENT_ID, eventId)
+            putExtra(EXTRA_NOTIFICATION_ID, notificationId)
+        }
+        val undoPending = PendingIntent.getBroadcast(
+            context, eventId.hashCode() and 0x00FFFFFF, undoIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val builder = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setColor(0xFFB5402C.toInt())
+            .setContentTitle("Followed through")
+            .setContentText("Tap undo if that wasn't right.")
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setAutoCancel(true)
+            .setTimeoutAfter(30_000)
+            .addAction(0, "Undo", undoPending)
+        try {
+            nm.notify(notificationId, builder.build())
+        } catch (_: SecurityException) {
+            // POST_NOTIFICATIONS not granted — the DONE is still recorded; just no confirmation.
+        }
+    }
+
+    private fun responsePending(context: Context, reminderId: String, action: String, notificationId: Int): PendingIntent {
+        val intent = Intent(context, ReminderFireReceiver::class.java).apply {
+            this.action = ACTION_REMINDER_RESPONSE
+            putExtra(EXTRA_REMINDER_ID, reminderId)
+            putExtra(EXTRA_RESPONSE, action)
+            putExtra(EXTRA_NOTIFICATION_ID, notificationId)
+        }
+        val rc = (reminderId.hashCode() and 0x000FFFFF) * 8 + action.hashCode().and(0x7)
+        return PendingIntent.getBroadcast(
+            context, rc, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    /** Returns true only if the notification was actually shown (so the caller can decide whether
+     *  to log a follow-through opportunity). */
+    private fun postReminderNotification(context: Context, reminder: Reminder): Boolean {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return false
+        // Notifications blocked (permission off on 13+, or the channel disabled) → nothing is shown.
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return false
         val notificationId = reminderNotificationId(reminder.id)
 
         // Keep the notification short: the cue alone is the title, the full intention
@@ -136,8 +204,11 @@ class ReminderFireReceiver : BroadcastReceiver() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(tapPending)
             .setAutoCancel(true)
-            // The single response. No "Snooze"/"Not yet" — a missed cue is a non-event
-            // (MVP_User_Flow_IA.md): no response simply means not done, logged neutrally.
+            // The single response, available from the shade for convenience. It's UNDOABLE
+            // (CLAUDE.md rule #3): tapping it replaces this notification with a "Followed
+            // through · Undo" confirmation, so an accidental tap is reversible. Tapping the
+            // notification body instead opens the in-the-moment screen (also undoable). No
+            // "Snooze"/"Not yet" — no response simply means not done, logged neutrally.
             .addAction(0, "Did it", responsePending(context, reminder.id, EventAction.DONE, notificationId))
         if (body.isNotBlank()) {
             builder.setContentText(body)
@@ -170,26 +241,13 @@ class ReminderFireReceiver : BroadcastReceiver() {
             .getBoolean("notification_sound_enabled", true)
         if (!soundOn) builder.setSilent(true)
 
-        try {
+        return try {
             nm.notify(notificationId, builder.build())
+            true
         } catch (_: SecurityException) {
-            // POST_NOTIFICATIONS not granted on Android 13+ — drop silently.
+            // POST_NOTIFICATIONS not granted on Android 13+ — dropped; report not-shown.
+            false
         }
     }
 
-    private fun responsePending(context: Context, reminderId: String, action: String, notificationId: Int): PendingIntent {
-        val intent = Intent(context, ReminderFireReceiver::class.java).apply {
-            this.action = ACTION_REMINDER_RESPONSE
-            putExtra(EXTRA_REMINDER_ID, reminderId)
-            putExtra(EXTRA_RESPONSE, action)
-            putExtra(EXTRA_NOTIFICATION_ID, notificationId)
-        }
-        // Distinct request code per (reminder, action) so the three actions don't
-        // collide.
-        val rc = (reminderId.hashCode() and 0x000FFFFF) * 8 + action.hashCode().and(0x7)
-        return PendingIntent.getBroadcast(
-            context, rc, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-    }
 }

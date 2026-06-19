@@ -1,6 +1,7 @@
 package com.ideasinc.followthrough.di
 
 import android.content.Context
+import com.ideasinc.followthrough.data.DirectionCheckInDao
 import com.ideasinc.followthrough.data.GoalDao
 import com.ideasinc.followthrough.data.GroundedDatabase
 import com.ideasinc.followthrough.data.ReminderDao
@@ -11,4 +12,5 @@ class AppContainer(context: Context) {
     val goalDao: GoalDao = database.goalDao()
     val reminderDao: ReminderDao = database.reminderDao()
     val reminderEventDao: ReminderEventDao = database.reminderEventDao()
+    val directionCheckInDao: DirectionCheckInDao = database.directionCheckInDao()
 }

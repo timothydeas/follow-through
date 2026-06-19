@@ -1,10 +1,9 @@
 ﻿package com.ideasinc.followthrough
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.fragment.app.FragmentActivity
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,16 +15,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import com.ideasinc.followthrough.navigation.AppNavigation
 import com.ideasinc.followthrough.navigation.CURRENT_ONBOARDING_VERSION
-import com.ideasinc.followthrough.navigation.KEY_BIOMETRIC_ENABLED
 import com.ideasinc.followthrough.navigation.KEY_ONBOARDING_VERSION
 import com.ideasinc.followthrough.navigation.PREFS_NAME
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
-import com.ideasinc.followthrough.ui.settings.LocalReduceMotion
 import com.ideasinc.followthrough.ui.settings.SettingsPreferences
 import com.ideasinc.followthrough.ui.theme.GroundedTheme
 
@@ -40,8 +34,13 @@ class MainActivity : FragmentActivity() {
         // Edge-to-edge so app backgrounds paint under the status and navigation bars.
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        // Display preferences (reduce motion) load once here. Text size is honored
-        // straight from the OS font-scale setting — no in-app override.
+        // With the app lock on, keep intention content out of screenshots and the recents preview.
+        if (AppLock.isEnabled(this)) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+
+        // Notification preferences load once here. Text size is honored straight from
+        // the OS font-scale setting — no in-app override.
         SettingsPreferences.load(this)
 
         val container = (application as GroundedApplication).container
@@ -49,10 +48,11 @@ class MainActivity : FragmentActivity() {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val savedVersion = prefs.getInt(KEY_ONBOARDING_VERSION, 0)
         val onboardingComplete = savedVersion >= CURRENT_ONBOARDING_VERSION
-        val biometricEnabled = prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false)
         val alreadyAuthenticated = savedInstanceState?.getBoolean(KEY_AUTH_DONE, false) == true
 
-        val needsBiometric = onboardingComplete && biometricEnabled && !alreadyAuthenticated
+        // shouldGate() is false when no credential is enrolled, so a user who turned the lock on and
+        // later removed their PIN/biometric is never locked out of the app that holds the toggle.
+        val needsBiometric = onboardingComplete && AppLock.shouldGate(this) && !alreadyAuthenticated
         authCleared = !needsBiometric
 
         setContent {
@@ -70,61 +70,33 @@ class MainActivity : FragmentActivity() {
                 val widthClass = windowSizeClass.widthSizeClass
                 val useNavRail = widthClass != WindowWidthSizeClass.Compact
                 val isExpandedWidth = widthClass == WindowWidthSizeClass.Expanded
-                // Text size follows the OS font-scale setting via the default
-                // LocalDensity; expose reduce-motion to composables.
-                val reduceMotion by SettingsPreferences.reduceMotion.collectAsState()
-                CompositionLocalProvider(
-                    LocalReduceMotion provides reduceMotion
+                // Text size follows the OS font-scale setting via the default LocalDensity.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.background)
-                    ) {
-                        if (authCleared) {
-                            AppNavigation(
-                                container = container,
-                                isExpandedWidth = isExpandedWidth,
-                                useNavRail = useNavRail
-                            )
-                        }
+                    if (authCleared) {
+                        AppNavigation(
+                            container = container,
+                            isExpandedWidth = isExpandedWidth,
+                            useNavRail = useNavRail
+                        )
                     }
                 }
             }
         }
 
         if (!authCleared) {
-            showBiometricPrompt()
+            // A genuine deny (cancel / negative button / lockout) closes the app; a missing-
+            // credential error fails open inside AppLock so the user is never permanently locked out.
+            AppLock.prompt(this) { ok -> if (ok) authCleared = true else finish() }
         }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBoolean(KEY_AUTH_DONE, authCleared)
-    }
-
-    private fun showBiometricPrompt() {
-        val executor = ContextCompat.getMainExecutor(this)
-        val callback = object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                authCleared = true
-            }
-
-            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                finish()
-            }
-        }
-
-        val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Unlock FollowThru")
-            .setSubtitle("confirm your identity to continue")
-            .setAllowedAuthenticators(
-                BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                    BiometricManager.Authenticators.DEVICE_CREDENTIAL
-            )
-            .build()
-
-        BiometricPrompt(this, executor, callback).authenticate(promptInfo)
     }
 
     companion object {

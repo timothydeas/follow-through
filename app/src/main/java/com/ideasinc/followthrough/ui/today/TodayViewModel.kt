@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.ideasinc.followthrough.data.EventAction
+import com.ideasinc.followthrough.data.GoalDao
 import com.ideasinc.followthrough.data.Reminder
 import com.ideasinc.followthrough.data.ReminderDao
 import com.ideasinc.followthrough.data.ReminderEventDao
@@ -13,6 +14,7 @@ import com.ideasinc.followthrough.data.ScheduleMode
 import com.ideasinc.followthrough.notifications.ReminderAlarmScheduler
 import com.ideasinc.followthrough.notifications.recordReminderEvent
 import com.ideasinc.followthrough.notifications.undoReminderEvent
+import com.ideasinc.followthrough.ui.progress.computeProgress
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -20,7 +22,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
-data class IntentionItem(val reminder: Reminder)
+data class IntentionItem(val reminder: Reminder, val direction: String = "")
 
 /** Forgiving, positive progress (Milkman): this week's follow-throughs + a never-resetting
  *  lifetime total. It only counts up — a miss never breaks or resets it. */
@@ -29,6 +31,8 @@ data class WeeklyProgress(val weeklyDone: Int = 0, val lifetimeDone: Int = 0)
 data class TodayUiState(
     val items: List<IntentionItem> = emptyList(),
     val progress: WeeklyProgress = WeeklyProgress(),
+    /** Current streak (two-miss reserve, CLAUDE.md rule #5) — the flame on the home streak chip. */
+    val streak: Int = 0,
     val loaded: Boolean = false
 )
 
@@ -40,19 +44,35 @@ data class TodayUiState(
 class TodayViewModel(
     private val appContext: Context,
     private val reminderDao: ReminderDao,
-    private val eventDao: ReminderEventDao
+    private val eventDao: ReminderEventDao,
+    private val goalDao: GoalDao
 ) : ViewModel() {
 
     val uiState: StateFlow<TodayUiState> =
-        combine(reminderDao.getActiveReminders(), eventDao.getLiveEvents()) { reminders, events ->
-            val monday = mondayStart(System.currentTimeMillis())
-            val done = events.filter { it.action == EventAction.DONE }
+        combine(
+            reminderDao.getActiveReminders(),
+            eventDao.getLiveEvents(),
+            goalDao.getAllGoals()
+        ) { reminders, events, goals ->
+            val now = System.currentTimeMillis()
+            val monday = mondayStart(now)
+            // Count one follow-through per (intention, day) — matching the streak — so a double-tap
+            // or the shade-plus-in-app paths can't inflate these the way raw row counts would.
+            val doneDays = events.filter { it.action == EventAction.DONE }
+                .map { it.reminderId to startOfDay(it.deliveredAt) }
+                .toSet()
+            // Map each intention to the direction it serves (goal.whyItMatters), for the card line.
+            val directionByGoal = goals.associate { it.id to it.whyItMatters }
+            // Reminderless intentions (ScheduleMode.NONE) don't count toward the streak.
+            val excluded = reminders.filter { it.scheduleMode == ScheduleMode.NONE }.map { it.id }.toSet()
             TodayUiState(
-                items = reminders.sortedBy { it.scheduleTimeLocal }.map { IntentionItem(it) },
+                items = reminders.sortedBy { it.scheduleTimeLocal }
+                    .map { IntentionItem(it, direction = directionByGoal[it.goalId].orEmpty()) },
                 progress = WeeklyProgress(
-                    weeklyDone = done.count { it.deliveredAt >= monday },
-                    lifetimeDone = done.size
+                    weeklyDone = doneDays.count { it.second >= monday },
+                    lifetimeDone = doneDays.size
                 ),
+                streak = computeProgress(events, now, excluded).currentStreak,
                 loaded = true
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TodayUiState())
@@ -89,12 +109,20 @@ class TodayViewModel(
     class Factory(
         private val appContext: Context,
         private val reminderDao: ReminderDao,
-        private val eventDao: ReminderEventDao
+        private val eventDao: ReminderEventDao,
+        private val goalDao: GoalDao
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            TodayViewModel(appContext, reminderDao, eventDao) as T
+            TodayViewModel(appContext, reminderDao, eventDao, goalDao) as T
     }
+}
+
+/** Device-local start-of-day for [ts] — the (intention, day) bucket key for de-duping counts. */
+private fun startOfDay(ts: Long): Long {
+    val c = Calendar.getInstance().apply { timeInMillis = ts }
+    c.set(Calendar.HOUR_OF_DAY, 0); c.set(Calendar.MINUTE, 0); c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0)
+    return c.timeInMillis
 }
 
 /** Start of the current week (Monday 00:00, device-local). Recomputed on read. */

@@ -22,13 +22,23 @@ that are free now and expensive once production data exists.
 - `Reminder` — the intention (`whenMoment` + `iWill`), the one cue (`cueType`/`cueValue`),
   schedule (incl. one-off `scheduleDate`), and cue lineage fields (`cueSourcePaletteId`,
   `cueIsPaletteDrawn`).
-- `ReminderEvent` — **DONE** responses (`deliveredAt`, `actedAt`, `undone`).
+- `ReminderEvent` — **DONE** responses (`deliveredAt`, `actedAt`, `undone`), plus
+  **DELIVERED** markers logged at fire time (`EventAction.DELIVERED`, `actedAt = 0`). The
+  delivered/done pair is what makes a *miss* derivable locally — the foundation the streak and
+  any future timing model both read from.
+- `Goal.whyItMatters` — the optional **direction** an intention serves (what it's *for*).
+- `DirectionCheckIn` — the periodic "is this direction working?" log: `feeling` (getting_there /
+  not_really / learned / dismissed) over time + own-words `noteText` learnings. This is the
+  outcome/meaning signal beyond raw counts, and a seed bank of user-authored learnings — exactly
+  what the AI tier needs to learn what works *for this person* (see Direction_Feature_Spec.md §10).
 
 ## Gaps to close BEFORE the AI phase (cheap now, costly later)
-1. **Event richness for timing.** Today we log only "Did it." To learn *timing* and *misses*,
-   start logging (locally) when a cue actually **fires/delivered** and when the user **defers**
-   ("Remind me later"), plus a **`scheduledForAt`** snapshot on each event. Without "fired but
-   not acted," the AI can't learn timing accuracy or miss patterns. (Additive, low-risk.)
+1. **Event richness for timing.** **Partly done:** cue fires are now logged locally as
+   `EventAction.DELIVERED` markers, so "fired but not acted" (a miss) is derivable — this powers
+   the flexible streak today and is the same signal a timing model will train on. *Still open:*
+   log the **defer** ("Remind me later") as its own event, and add a **`scheduledForAt`** snapshot
+   on each event (planned vs actual fire time) so the AI can learn timing *accuracy*, not just
+   hit/miss. (Additive, low-risk — do before production data piles up.)
 2. **Behavioral-history durability.** `ReminderEvent` CASCADE-deletes with its `Reminder`,
    which CASCADE-deletes with its `Goal` — so deleting an intention erases its follow-through
    history. For a long-lived "what's worked for me" corpus, decide a retention approach
@@ -39,6 +49,25 @@ that are free now and expensive once production data exists.
 4. **Context signals.** None captured today (intentionally). Any future context (time-of-day
    actuals, routine, opt-in location/activity) must be **on-device + consented** (Calboli + XAI),
    never automatic.
+
+## Behavioral-science basis for progress & nudging (carry into the AI tier)
+The MVP's forgiving streak encodes two findings the AI tier should *deepen*, not discard:
+- **Milkman — flexibility beats rigidity.** Rigid, specific-day adherence triggers the
+  "what-the-hell effect" (one miss → quit); a flexible *frequency* goal ("~3x/week, whenever")
+  is more durable. The MVP approximates each user's cadence as **≥ ~half the intention-days they
+  were nudged that week**, with a one-off-week reserve. The AI tier can do far better: **learn each
+  user's actual sustainable rhythm** (per intention and overall) and personalize the cadence
+  target and the reserve, instead of the fixed ~half/one-week heuristic.
+- **Fishbach — honest feedback prevents the ostrich problem.** Being *too* gentle backfires:
+  people put their head in the sand and stop course-correcting. So progress must **surface the
+  real follow-through ratio and name a slip plainly and actionably** — information, never guilt.
+  The AI tier should make this feedback *smarter and better-timed* (detect genuine drift vs. a
+  normal off-week, and surface the honest nudge + a concrete course-correction — e.g. "make this
+  cue easier to act on" — at a moment the user can act on it), while keeping the no-guilt rule.
+- **Reference:** the standing rule is CLAUDE.md rule #5; the rationale lives in the
+  `project_streak_philosophy` memory. The streak math is `ui/progress/ProgressViewModel.kt`
+  (`computeProgress`) — a deliberately simple heuristic that is the obvious thing for the AI to
+  personalize once it has the user's own history.
 
 ## Guardrails the AI phase must keep
 - On-device / open-source model; no automatic transmission; "no tracking" stays literally true.

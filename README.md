@@ -16,10 +16,20 @@ The product loop, in one line:
 Three tabs:
 
 - **Intentions** — your active intentions; create new ones; respond in one tap (**Did it**, undoable). A missed cue is simply not done — never held against you.
-- **What worked** — the cues that actually drove your follow-through, so you can see what works for you and reuse it. No streaks, no scores — a miss is a non-event.
+- **Progress** — how you're doing: a forgiving weekly-cadence streak (flexibility beats rigidity), an honest "this week" ratio, a Mon–Sun grid, and below it the cues that actually drove your follow-through so you can see what works and reuse it. Flexible and forgiving, but honest — never guilt.
 - **Settings** — theme (light/dark/system), notifications, app lock, privacy.
 
 Creating an intention is a short **create-cue flow**: name the intention → pin the moment (daily, weekly, or just once) → design the cue → review. When the moment arrives, a high-priority notification surfaces the cue plus the full intention text; tapping it opens a focused **in-the-moment** screen with the single **Did it** response.
+
+## Screenshots
+
+<p align="center">
+  <img src="assets/screenshots/01-onboarding.jpeg" width="180" alt="Onboarding — Follow through, in the moment.">
+  <img src="assets/screenshots/02-how-it-works.jpeg" width="180" alt="How it works — make a plan, add one vivid cue, tap Did it">
+  <img src="assets/screenshots/03-intentions.jpeg" width="180" alt="Intentions tab with the follow-through streak">
+  <img src="assets/screenshots/04-progress.jpeg" width="180" alt="Progress tab — forgiving streak, honest weekly ratio, day-by-day grid">
+  <img src="assets/screenshots/05-settings.jpeg" width="180" alt="Settings — appearance, app lock, notifications">
+</p>
 
 ## Tech
 

@@ -33,6 +33,13 @@ object ScheduleMode {
     const val DAILY = "daily"
     const val WEEKLY = "weekly"
     const val ONCE = "once"
+
+    /**
+     * No reminder — the user kept the intention but didn't want a notification (autonomy-first;
+     * not everyone wants alarms on their phone). It shows on the Intentions list, "Did it" still
+     * works, but nothing is ever scheduled or fired. A reminder can be added later by editing.
+     */
+    const val NONE = "none"
 }
 
 /** Lifecycle of a reminder. Stored as the lowercase string in [Reminder.status]. */
@@ -100,7 +107,7 @@ data class Reminder(
 ) {
     /** The full intention sentence that always travels with the cue. */
     val intentionText: String
-        get() = "When ${whenMoment.trim()}, I will ${iWill.trim()}"
+        get() = "When ${whenMoment.trim()}, I'll ${iWill.trim()}"
 
     val days: List<WeekDay> get() = WeekDay.parseCsv(scheduleDays)
 }

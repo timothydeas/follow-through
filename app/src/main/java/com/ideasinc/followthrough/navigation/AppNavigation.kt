@@ -1,6 +1,7 @@
 package com.ideasinc.followthrough.navigation
 
 import android.content.Context
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -50,7 +51,9 @@ import com.ideasinc.followthrough.ui.theme.AppColors
 import com.ideasinc.followthrough.ui.today.TodayScreen
 import com.ideasinc.followthrough.ui.worked.WhatWorkedScreen
 
-// Primary destinations — the three MVP tabs (Intentions · What worked · Settings).
+// Primary destinations — the three MVP tabs (Intentions · Progress · Settings). The Progress
+// tab keeps the internal route id "what_worked": it still hosts the what's-working cues, now
+// led by the streak/stats block (see WhatWorkedScreen). User-facing label is "Progress".
 private const val ROUTE_INTENTIONS = "intentions"
 private const val ROUTE_WHAT_WORKED = "what_worked"
 private const val ROUTE_SETTINGS = "settings"
@@ -59,10 +62,17 @@ private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_CREATE = "create"
 private const val ROUTE_CREATE_EDIT = "create_edit/{reminderId}"
 private const val ARG_REMINDER_ID = "reminderId"
+// Create a new intention pre-seeded from a learning ("make this an intention"). Query arg so
+// free-text (with spaces/slashes) round-trips safely; Navigation decodes it for us.
+private const val ROUTE_CREATE_SEEDED = "create_seeded?seed={seed}&dir={dir}"
+private const val ARG_SEED = "seed"
+// The parent direction a learning came from, so a learning→intention pre-fills it (not blank).
+private const val ARG_DIR = "dir"
 
 internal const val PREFS_NAME = "grounded_prefs"
 internal const val KEY_ONBOARDING_VERSION = "onboarding_version"
 internal const val KEY_BIOMETRIC_ENABLED = "biometric_enabled"
+internal const val KEY_REMINDERS_PAUSED = "reminders_paused"
 // Bumped to 200 for the MVP information-architecture replacement (MVP_User_Flow_IA.md):
 // new Intentions / What worked / Settings navigation, the create-cue flow, the in-the-
 // moment screen, and the new vocabulary throughout. Re-show the refreshed first-run on the
@@ -86,7 +96,7 @@ private data class PrimaryDestination(
 
 private val PRIMARY_DESTINATIONS = listOf(
     PrimaryDestination(ROUTE_INTENTIONS, "Intentions", Icons.Rounded.Bolt),
-    PrimaryDestination(ROUTE_WHAT_WORKED, "What worked", Icons.Rounded.Insights),
+    PrimaryDestination(ROUTE_WHAT_WORKED, "Progress", Icons.Rounded.Insights),
     PrimaryDestination(ROUTE_SETTINGS, "Settings", Icons.Rounded.Settings)
 )
 
@@ -230,13 +240,18 @@ private fun AppNavHost(
             if (isExpandedWidth) {
                 // Tablet two-pane: intention list (left) ↔ create/edit detail (right).
                 // detail: null = nothing selected, "" = new intention, otherwise a reminderId.
+                // session bumps on every open so the entry-scoped builder VM is fresh each time
+                // (right pane otherwise reuses one stale VM across intentions / after a save).
                 var detail by rememberSaveable { mutableStateOf<String?>(null) }
+                var session by rememberSaveable { mutableStateOf(0) }
                 Row(modifier = Modifier.fillMaxSize()) {
                     Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                         TodayScreen(
                             container = container,
-                            onNewReminder = { detail = "" },
-                            onEditReminder = { detail = it }
+                            onNewReminder = { detail = ""; session++ },
+                            onEditReminder = { detail = it; session++ },
+                            onOpenProgress = { navController.navigateToTab(ROUTE_WHAT_WORKED) },
+                            onOpenSettings = { navController.navigateToTab(ROUTE_SETTINGS) }
                         )
                     }
                     VerticalDivider(color = AppColors.Border)
@@ -249,7 +264,8 @@ private fun AppNavHost(
                                 container = container,
                                 reminderId = d.ifEmpty { null },
                                 onClose = { detail = null },
-                                onSaved = { detail = null }
+                                onSaved = { detail = null },
+                                viewModelKey = "builder-intentions-$session"
                             )
                         }
                     }
@@ -259,7 +275,9 @@ private fun AppNavHost(
                     TodayScreen(
                         container = container,
                         onNewReminder = { navController.navigate(ROUTE_CREATE) },
-                        onEditReminder = { reminderId -> navController.navigate("create_edit/$reminderId") }
+                        onEditReminder = { reminderId -> navController.navigate("create_edit/$reminderId") },
+                        onOpenProgress = { navController.navigateToTab(ROUTE_WHAT_WORKED) },
+                        onOpenSettings = { navController.navigateToTab(ROUTE_SETTINGS) }
                     )
                 }
             }
@@ -268,10 +286,16 @@ private fun AppNavHost(
         composable(ROUTE_WHAT_WORKED) {
             if (isExpandedWidth) {
                 // Tablet two-pane: worked-cues list (left) ↔ reuse/refine detail (right).
+                // session bumps on every open so the entry-scoped builder VM is fresh each time.
                 var detail by rememberSaveable { mutableStateOf<String?>(null) }
+                var session by rememberSaveable { mutableStateOf(0) }
                 Row(modifier = Modifier.fillMaxSize()) {
                     Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                        WhatWorkedScreen(container = container, onReuse = { detail = it })
+                        WhatWorkedScreen(
+                            container = container,
+                            onReuse = { detail = it; session++ },
+                            onMakeIntention = { seed, dir -> navController.navigate("create_seeded?seed=" + Uri.encode(seed) + "&dir=" + Uri.encode(dir)) }
+                        )
                     }
                     VerticalDivider(color = AppColors.Border)
                     Box(modifier = Modifier.weight(1.2f).fillMaxHeight()) {
@@ -283,7 +307,8 @@ private fun AppNavHost(
                                 container = container,
                                 reminderId = d,
                                 onClose = { detail = null },
-                                onSaved = { detail = null }
+                                onSaved = { detail = null },
+                                viewModelKey = "builder-worked-$session"
                             )
                         }
                     }
@@ -292,7 +317,8 @@ private fun AppNavHost(
                 CenteredPane(maxWidth = 600.dp) {
                     WhatWorkedScreen(
                         container = container,
-                        onReuse = { reminderId -> navController.navigate("create_edit/$reminderId") }
+                        onReuse = { reminderId -> navController.navigate("create_edit/$reminderId") },
+                        onMakeIntention = { seed, dir -> navController.navigate("create_seeded?seed=" + Uri.encode(seed) + "&dir=" + Uri.encode(dir)) }
                     )
                 }
             }
@@ -302,7 +328,6 @@ private fun AppNavHost(
             CenteredPane {
                 SettingsScreen(
                     container = container,
-                    onBack = { navController.navigateToTab(ROUTE_INTENTIONS) },
                     onReplayIntro = onReplayIntro
                 )
             }
@@ -318,6 +343,33 @@ private fun AppNavHost(
                     onSaved = {
                         navController.navigate(ROUTE_INTENTIONS) {
                             popUpTo(ROUTE_CREATE) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+        }
+
+        // Create a new intention pre-seeded from a learning. Lands back on Intentions.
+        composable(
+            route = ROUTE_CREATE_SEEDED,
+            arguments = listOf(
+                navArgument(ARG_SEED) { type = NavType.StringType; defaultValue = "" },
+                navArgument(ARG_DIR) { type = NavType.StringType; defaultValue = "" }
+            )
+        ) { backStackEntry ->
+            val seed = backStackEntry.arguments?.getString(ARG_SEED).orEmpty()
+            val dir = backStackEntry.arguments?.getString(ARG_DIR).orEmpty()
+            CenteredPane {
+                ReminderBuilderScreen(
+                    container = container,
+                    reminderId = null,
+                    seedIWill = seed,
+                    seedDirection = dir,
+                    onClose = { navController.popBackStack() },
+                    onSaved = {
+                        navController.navigate(ROUTE_INTENTIONS) {
+                            popUpTo(ROUTE_CREATE_SEEDED) { inclusive = true }
                             launchSingleTop = true
                         }
                     }

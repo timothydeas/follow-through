@@ -14,20 +14,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -37,7 +34,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,8 +41,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -79,21 +73,20 @@ import com.ideasinc.followthrough.ui.theme.PoppinsFontFamily
 import com.ideasinc.followthrough.ui.theme.ThemeMode
 import com.ideasinc.followthrough.ui.theme.ThemePreferences
 import com.ideasinc.followthrough.navigation.KEY_BIOMETRIC_ENABLED
+import com.ideasinc.followthrough.navigation.KEY_REMINDERS_PAUSED
 import com.ideasinc.followthrough.navigation.PREFS_NAME
 
 
 @Composable
 fun SettingsScreen(
     container: AppContainer,
-    onBack: () -> Unit,
     onReplayIntro: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
     val prefs = remember { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
     var biometricEnabled by remember { mutableStateOf(prefs.getBoolean(KEY_BIOMETRIC_ENABLED, false)) }
-    val backFocus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { backFocus.requestFocus() } }
+    var remindersPaused by remember { mutableStateOf(prefs.getBoolean(KEY_REMINDERS_PAUSED, false)) }
     val scope = rememberCoroutineScope()
     var showDeleteData by remember { mutableStateOf(false) }
 
@@ -126,39 +119,7 @@ fun SettingsScreen(
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .statusBarsPadding()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier.focusRequester(backFocus)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = "Go back",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Text(
-                    text = "Settings",
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontFamily = PoppinsFontFamily,
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier
-                        .padding(start = 4.dp)
-                        .semantics { heading() }
-                )
-            }
-        }
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -166,6 +127,66 @@ fun SettingsScreen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
         ) {
+            // Title styled to match Intentions and Progress. Settings is a top-level tab, so
+            // there's no back arrow — the bottom bar / nav rail is the way back.
+            Text(
+                text = "Settings",
+                style = MaterialTheme.typography.displayMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 12.dp)
+                    .semantics { heading() }
+            )
+            HorizontalDivider(color = AppColors.Border)
+
+            // Pause reminders — for a real break (e.g. vacation). Stops all firing without losing
+            // the streak (paused weeks have no nudges, so the streak math skips them).
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Pause reminders",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontFamily = PoppinsFontFamily),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Going away? Stop reminders firing — your streak won't be affected. Turn back on anytime.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Switch(
+                    checked = remindersPaused,
+                    onCheckedChange = { paused ->
+                        remindersPaused = paused
+                        prefs.edit().putBoolean(KEY_REMINDERS_PAUSED, paused).apply()
+                        // Re-run schedule() for every active reminder: with the pref now set it
+                        // either re-arms (resumed) or cancels + no-ops (paused).
+                        scope.launch(Dispatchers.IO) {
+                            container.reminderDao.getActiveReminders().first()
+                                .forEach { ReminderAlarmScheduler.schedule(context, it) }
+                        }
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        uncheckedTrackColor = AppColors.SwitchUncheckedTrack,
+                        uncheckedBorderColor = Color.Transparent
+                    ),
+                    modifier = Modifier.semantics {
+                        contentDescription = "Pause reminders"
+                        stateDescription = if (remindersPaused) "On" else "Off"
+                        role = Role.Switch
+                    }
+                )
+            }
+
             HorizontalDivider(color = AppColors.Border)
 
             // Biometric section
@@ -236,25 +257,6 @@ fun SettingsScreen(
                         ThemePreferences.setMode(context, it)
                     }
                 }
-            }
-
-            HorizontalDivider(color = AppColors.Border)
-
-            // Display section — reduce motion. (Text size follows the OS font-scale
-            // setting; there is no in-app slider.)
-            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                Text(
-                    text = "Display",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontFamily = PoppinsFontFamily, fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 8.dp).semantics { heading() }
-                )
-                val reduceMotion by SettingsPreferences.reduceMotion.collectAsState()
-                SettingsSwitchRow(
-                    label = "Reduce motion",
-                    checked = reduceMotion,
-                    onCheckedChange = { SettingsPreferences.setReduceMotion(context, it) }
-                )
             }
 
             HorizontalDivider(color = AppColors.Border)

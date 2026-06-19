@@ -65,12 +65,16 @@
             android:name=".notifications.ReminderFireReceiver"
             android:exported="false" />
 
+        <!-- Re-arms alarms after a reboot AND after the app is updated: the OS cancels all
+             pending alarms on package replace, so without MY_PACKAGE_REPLACED every reminder
+             would go silent on the update itself until the next reboot or manual edit. -->
         <receiver
             android:name=".notifications.BootReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 

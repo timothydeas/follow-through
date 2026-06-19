@@ -11,8 +11,12 @@ class BootReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
+        // BOOT_COMPLETED / QUICKBOOT re-arm after a reboot; MY_PACKAGE_REPLACED re-arms after the
+        // app is updated (the OS clears pending alarms on package replace) so reminders never go
+        // silent on an update for the existing user base.
         if (action != Intent.ACTION_BOOT_COMPLETED &&
             action != Intent.ACTION_LOCKED_BOOT_COMPLETED &&
+            action != Intent.ACTION_MY_PACKAGE_REPLACED &&
             action != "android.intent.action.QUICKBOOT_POWERON"
         ) return
 

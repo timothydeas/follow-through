@@ -144,9 +144,10 @@ the rounded-optical Material 3 icon set — consistently, never a mix of styles.
 | Purpose | Material Symbols (Rounded) | Used in |
 |---|---|---|
 | Intentions (nav / home) | `bolt` | bottom bar / nav rail |
-| What worked (nav) | `insights` | bottom bar / nav rail |
+| Progress (nav) | `insights` | bottom bar / nav rail |
+| Streak (flame) | `local_fire_department` (**Outlined** variant, gold `GoldIcon` tint) | Progress streak card + home streak chip. Deliberate exception to the Rounded-only rule — the gold outlined flame matches Tim's approved screenshot. |
 | Settings (nav) | `settings` | bottom bar / nav rail |
-| Add (new intention) | `add` | Intentions FAB |
+| Add (new intention) | `add` | Intentions FAB — **circular** shape, echoing the round launcher icon (overrides the M3 default rounded-square) |
 | Edit | `edit` | Intentions card, create flow |
 | Delete | `delete` | edit (create) screen |
 | Close | `close` | create flow |

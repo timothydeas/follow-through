@@ -26,8 +26,9 @@ App
 │   ├── Intention list  (active intentions; next cue surfaced at top)
 │   ├── Empty state  (first-time: one clear "create your first cue" CTA)
 │   └── Intention detail  (view/edit intention, its cue, its timing, its history)
-├── What worked  (tab)
-│   └── History of cues × outcomes; reuse or refine the cues that drove follow-through
+├── Progress  (tab)   ← formerly "What worked"; internal route id stays `what_worked`
+│   ├── Streak (flexible weekly cadence) + honest "this week" ratio + weekly grid
+│   └── What's been working — cues × outcomes; reuse or refine the cues that drove follow-through
 ├── Settings  (tab)
 │   ├── Notifications
 │   ├── My data  (view / delete local data — no cloud, no export)
@@ -47,7 +48,7 @@ App
    3. Design a distinctive cue — the creative core; push past generic text toward a vivid, specific anchor. **Seed the step with a concrete example** ("when I pour my morning coffee → running shoes by the door") so the user isn't facing a blank, abstract prompt — this is the step most likely to stall.
    4. Review & confirm → scheduled.
 3. **In-the-moment cue** — notification fires → tap → focused full-screen with the distinctive cue + intention → a single one-tap response: **Did it**. **"Did it" is undoable** (un-mark an accidental tap — a direct beta-feedback fix). No response simply means not done: nothing is logged against the user, no nagging, no penalty.
-4. **What worked (self-discovery)** — review which cues actually led to follow-through; reuse or refine one.
+4. **Progress (review + self-discovery)** — the streak (flexible weekly cadence) + honest "this week" ratio + weekly grid, then "what's been working": which cues actually led to follow-through; reuse or refine one.
 5. **Manage an intention** — edit the cue/timing, pause, or delete from the intention detail.
 
 ---
@@ -64,7 +65,7 @@ flowchart TD
     CreateFirst --> Home
     FirstRun -- No --> Home[[Home — Intentions<br/>active intentions + next cue]]
 
-    Home --> Worked[[What worked<br/>cues and outcomes]]
+    Home --> Worked[[Progress<br/>streak + what's been working]]
     Home --> Settings[[Settings<br/>notifications, local data, privacy]]
     Worked --> Home
     Settings --> Home
@@ -101,18 +102,18 @@ flowchart TD
 | Create cue (4 steps) | The hero creation flow; step 3 seeded with an example | Per-step validation |
 | Intention detail | View/edit/pause/delete | — |
 | In-the-moment screen | Respond to a fired cue | Did it (undoable); no response = not done, logged neutrally |
-| What worked | Self-discovery history | Populated / empty |
+| Progress | Streak + honest week ratio + Mon–Sun grid, then what's-been-working cues | Populated / empty |
 | Settings | Notifications, data, privacy | — |
 
 ---
 
 ## 6. Notes for implementation
 
-- **Empty states matter** — first-run Home and first-run What-worked both need a single, warm, non-pushy CTA.
+- **Empty states matter** — first-run Home and first-run Progress both need a single, warm, non-pushy CTA.
 - **In-the-moment is the highest-value screen** — keep it to the cue, the intention, and the single Did it response. Nothing else.
 - **No guilt or failure framing** anywhere — a missed cue is never punished or called out; autonomy-first tone throughout.
-- **Flexible progress is in scope** (Katy Milkman — flexibility beats rigidity): a forgiving streak / follow-through count plus a never-resetting lifetime total may be shown to encourage return visits — **as long as it never breaks on a miss, never resets to zero, and uses no guilt / flame / "don't lose it" pressure.** Gold accent only on the celebratory state.
-- **Tablet** — Intentions and What worked become two-pane (list ↔ detail); the create flow stays a single focused column.
+- **Flexible progress is in scope** (Katy Milkman — flexibility beats rigidity): the streak is measured in **weeks of flexible cadence**, not specific days. A week is a *win* when the user followed through on ≥ ~half the intention-days they were nudged that week (target = ceil(opportunities/2), min 1) — so missing individual days never breaks it. **One off-week is absorbed; a second consecutive off-week resets the Current streak to 0** (an honest, gentle reset). Any winning week climbs again. A **Longest** record and the **Lifetime total never reset**, so a lapse never erases history. A flame (🔥, Material `LocalFireDepartment` icon — not an emoji glyph) celebrates an active run; gold accent only on the celebratory state. Per **Ayelet Fishbach** (honest feedback beats head-in-the-sand): surface the real "this week" ratio ("3 of ~5") and name a slip plainly and actionably — information, never guilt; no "don't lose it" framing. Misses are detected locally by logging delivery (`EventAction.DELIVERED`) and reconciling against follow-throughs (no telemetry). Lives on the **Progress** tab: streak · Longest · this-week/this-month counts · a neutral Mon–Sun grid where missed days show plainly (never red). See `project_streak_philosophy` memory for the rationale.
+- **Tablet** — Intentions and Progress become two-pane (list ↔ detail); the create flow stays a single focused column.
 - **Text input (recurring beta bug)** — every text field must use keyboard-aware scrolling (content scrolls clear of the keyboard), show an obvious editable affordance, and never let the keyboard or a focus/error outline overlap the prompt copy. Testers repeatedly couldn't see what they were typing, or didn't realize a field was even typable.
 - **Theme** — ship a consistent light/dark treatment that matches the store screenshots; if both are supported, expose a light/dark toggle in Settings. (Beta: the live app rendered dark while the store images were light.)
 - **Orientation** — support landscape gracefully, or lock to portrait cleanly; don't let rotation break the layout or strand the keyboard. (Beta: landscape was unusable.)

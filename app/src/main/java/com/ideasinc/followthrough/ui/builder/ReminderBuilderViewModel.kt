@@ -18,16 +18,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import java.util.TimeZone
 import java.util.UUID
 
 /**
- * Create-cue flow state. The user creates an **Intention** directly — there is no goal
- * step in the experience (MVP_User_Flow_IA.md). The four steps are:
+ * Create-cue flow state. The user creates an **Intention** directly. The five steps are:
  *   0  Name the intention   — "What do you want to remember to do?"  (the action)
- *   1  Pin the moment       — when / where you'll act + how often      (whenMoment + schedule)
- *   2  Design the cue       — one distinctive cue, seeded with an example
- *   3  Review & confirm     — restate, then it's scheduled
+ *   1  Your goal            — the bigger aim it serves (skippable)    (direction)
+ *   2  Pin the moment       — when / where you'll act + how often      (whenMoment + schedule)
+ *   3  Design the cue       — one distinctive cue, seeded with an example
+ *   4  Review & confirm     — restate, then it's scheduled
  *
  * Internally each new Intention still gets a minimal `goals` container row so the existing
  * `Reminder.goalId` foreign key stays valid (no schema change, no migration). The container
@@ -39,8 +40,12 @@ data class BuilderUiState(
     val loaded: Boolean = false,
     // Step 0 — the action ("I will …").
     val iWill: String = "",
-    // Step 1 — the moment + how often it recurs.
+    // Step 1 — optional "direction" this intention serves (stored on the goal's whyItMatters).
+    val direction: String = "",
+    // Step 2 — the moment + (optional) reminder. The reminder (schedule + cue + notification) is
+    // optional: the moment is part of the intention, but a user can save without a reminder.
     val whenMoment: String = "",
+    val wantsReminder: Boolean = true,
     val scheduleMode: String = ScheduleMode.WEEKLY,
     val days: Set<WeekDay> = WeekDay.ALL.toSet(),
     val onceDate: String = "", // "yyyy-MM-dd" when scheduleMode == ONCE
@@ -56,22 +61,55 @@ data class BuilderUiState(
     val saved: Boolean = false,
     val deleted: Boolean = false
 ) {
-    val step0Valid: Boolean get() = iWill.isNotBlank()
-    val step1Valid: Boolean
-        get() = whenMoment.isNotBlank() && when (scheduleMode) {
+    val nameValid: Boolean get() = iWill.isNotBlank()
+
+    /** A one-off's date+time must be in the future, or the alarm would never fire (the scheduler
+     *  skips a past trigger). True for non-ONCE modes. */
+    private val onceInFuture: Boolean
+        get() {
+            if (scheduleMode != ScheduleMode.ONCE) return true
+            if (onceDate.isBlank()) return false
+            val parts = onceDate.split("-")
+            val y = parts.getOrNull(0)?.toIntOrNull() ?: return false
+            val mo = parts.getOrNull(1)?.toIntOrNull() ?: return false
+            val d = parts.getOrNull(2)?.toIntOrNull() ?: return false
+            val cal = Calendar.getInstance().apply {
+                set(y, mo - 1, d, hour, minute); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            }
+            return cal.timeInMillis > System.currentTimeMillis()
+        }
+
+    /** A date is picked but the chosen date+time has already passed — surface a clear reason
+     *  rather than just a disabled button. */
+    val oncePastSelected: Boolean
+        get() = scheduleMode == ScheduleMode.ONCE && onceDate.isNotBlank() && !onceInFuture
+
+    private val scheduleValid: Boolean
+        get() = when (scheduleMode) {
             ScheduleMode.DAILY -> true
-            ScheduleMode.ONCE -> onceDate.isNotBlank()
+            ScheduleMode.ONCE -> onceDate.isNotBlank() && onceInFuture
             else -> days.isNotEmpty()
         }
+    // The moment is required (it's the intention). The schedule only matters with a reminder.
+    val momentValid: Boolean get() = whenMoment.isNotBlank() && (!wantsReminder || scheduleValid)
     // One cue, non-empty. Photo/sound are off at launch, so only emoji/phrase can be saved.
-    val step2Valid: Boolean
+    val cueValid: Boolean
         get() = cueValue.isNotBlank() && CueType.isEnabledAtLaunch(cueType)
 
+    /**
+     * The ordered step indices actually shown. The cue step (2) only exists when the user
+     * wants a reminder; without one the flow goes name → moment → goal → review. The goal
+     * step (3) is always present so it's reachable whether or not a reminder is set.
+     */
+    val activeSteps: List<Int> get() = if (wantsReminder) listOf(0, 1, 2, 3, 4) else listOf(0, 1, 3, 4)
+
+    val isLastStep: Boolean get() = step == activeSteps.last()
+
     fun canAdvance(s: Int): Boolean = when (s) {
-        0 -> step0Valid
-        1 -> step1Valid
-        2 -> step2Valid
-        else -> true
+        0 -> nameValid
+        1 -> momentValid
+        2 -> cueValid
+        else -> true // goal (3) is skippable; review (4) always advances to save
     }
 }
 
@@ -79,7 +117,9 @@ class ReminderBuilderViewModel(
     private val appContext: Context,
     private val goalDao: GoalDao,
     private val reminderDao: ReminderDao,
-    private val editReminderId: String?
+    private val editReminderId: String?,
+    private val seedIWill: String? = null,
+    private val seedDirection: String? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BuilderUiState())
@@ -92,6 +132,8 @@ class ReminderBuilderViewModel(
         viewModelScope.launch {
             val existing = editReminderId?.let { reminderDao.getReminderById(it) }
             if (existing != null) {
+                // Load the goal's direction (whyItMatters) so edit shows and preserves it.
+                val direction = goalDao.getGoalById(existing.goalId)?.whyItMatters ?: ""
                 editingId = existing.id
                 editingCreatedAt = existing.createdAt
                 _uiState.update {
@@ -100,8 +142,10 @@ class ReminderBuilderViewModel(
                         isEdit = true,
                         loaded = true,
                         iWill = existing.iWill,
+                        direction = direction,
                         whenMoment = existing.whenMoment,
-                        scheduleMode = existing.scheduleMode,
+                        wantsReminder = existing.scheduleMode != ScheduleMode.NONE,
+                        scheduleMode = existing.scheduleMode.takeIf { it != ScheduleMode.NONE } ?: ScheduleMode.WEEKLY,
                         onceDate = existing.scheduleDate ?: "",
                         days = existing.days.toSet().ifEmpty { WeekDay.ALL.toSet() },
                         hour = existing.scheduleTimeLocal.substringBefore(":").toIntOrNull() ?: 8,
@@ -113,17 +157,36 @@ class ReminderBuilderViewModel(
                     )
                 }
             } else {
-                _uiState.update { it.copy(loaded = true) }
+                // New intention — optionally seeded (e.g. from a "make this an intention" learning).
+                // A learning carries its parent direction, so pre-fill it instead of leaving the
+                // field blank (which read as "re-pick the goal" — Tim's feedback).
+                _uiState.update {
+                    it.copy(
+                        loaded = true,
+                        iWill = seedIWill?.trim().orEmpty(),
+                        direction = seedDirection?.trim().orEmpty()
+                    )
+                }
             }
         }
     }
 
-    // Four steps now: 0 = action, 1 = moment + schedule, 2 = cue, 3 = review.
-    fun goToStep(step: Int) = _uiState.update { it.copy(step = step.coerceIn(0, 3)) }
-    fun next() = _uiState.update { it.copy(step = (it.step + 1).coerceAtMost(3)) }
-    fun back() = _uiState.update { it.copy(step = (it.step - 1).coerceAtLeast(0)) }
+    // Five steps: 0 = action, 1 = moment + schedule, 2 = cue, 3 = goal, 4 = review.
+    // Navigation walks `activeSteps` so the cue step is skipped when there's no reminder.
+    fun goToStep(step: Int) = _uiState.update { it.copy(step = step.coerceIn(0, 4)) }
+    fun next() = _uiState.update { st ->
+        val steps = st.activeSteps
+        val i = steps.indexOf(st.step)
+        st.copy(step = steps.getOrElse(i + 1) { steps.last() })
+    }
+    fun back() = _uiState.update { st ->
+        val steps = st.activeSteps
+        val i = steps.indexOf(st.step)
+        st.copy(step = steps.getOrElse((i - 1).coerceAtLeast(0)) { steps.first() })
+    }
 
     fun onIWill(v: String) = _uiState.update { it.copy(iWill = v) }
+    fun onDirection(v: String) = _uiState.update { it.copy(direction = v) }
     fun onWhenMoment(v: String) = _uiState.update { it.copy(whenMoment = v) }
 
     // One-cue enforcement: setting a type/value replaces the prior selection wholesale.
@@ -132,6 +195,7 @@ class ReminderBuilderViewModel(
     }
     fun onCueValue(v: String) = _uiState.update { it.copy(cueValue = v, cueSourcePaletteId = null) }
 
+    fun setWantsReminder(wants: Boolean) = _uiState.update { it.copy(wantsReminder = wants) }
     fun setScheduleMode(mode: String) = _uiState.update {
         it.copy(scheduleMode = mode, days = if (mode == ScheduleMode.DAILY) WeekDay.ALL.toSet() else it.days)
     }
@@ -146,50 +210,63 @@ class ReminderBuilderViewModel(
 
     fun save() {
         val s = _uiState.value
-        if (!s.step0Valid || !s.step1Valid || !s.step2Valid) return
+        // A cue is only required when the user wants a reminder.
+        if (!s.nameValid || !s.momentValid || (s.wantsReminder && !s.cueValid)) return
         viewModelScope.launch {
             val now = System.currentTimeMillis()
             // Resolve the internal container (reuse on edit; create a minimal one otherwise).
-            // It is never shown — its title mirrors the action so any internal listing reads sensibly.
+            // It is never shown — its title mirrors the action so any internal listing reads
+            // sensibly. The optional "direction" the intention serves lives on whyItMatters.
+            val direction = s.direction.trim()
             val goalId = s.goalId ?: run {
                 val id = UUID.randomUUID().toString()
                 goalDao.insertGoal(
                     Goal(
                         id = id,
                         title = s.iWill.trim().take(80),
+                        whyItMatters = direction,
                         createdAt = now,
                         updatedAt = now
                     )
                 )
                 id
             }
+            // On edit (reused goal), keep the direction in sync.
+            if (s.goalId != null) {
+                goalDao.getGoalById(s.goalId)?.let { g ->
+                    if (g.whyItMatters != direction) goalDao.updateGoal(g.copy(whyItMatters = direction, updatedAt = now))
+                }
+            }
             val orderedDays = WeekDay.ALL.filter { it in s.days }
+            // Reminderless: store ScheduleMode.NONE with no cue; the scheduler no-ops on NONE.
+            val mode = if (s.wantsReminder) s.scheduleMode else ScheduleMode.NONE
             val reminder = Reminder(
                 id = editingId ?: UUID.randomUUID().toString(),
                 goalId = goalId,
                 whenMoment = s.whenMoment.trim(),
                 iWill = s.iWill.trim(),
                 cueType = s.cueType,
-                cueValue = s.cueValue.trim(),
+                cueValue = if (s.wantsReminder) s.cueValue.trim() else "",
                 cueAltText = null,
-                cueSourcePaletteId = s.cueSourcePaletteId,
-                cueIsPaletteDrawn = s.cueSourcePaletteId != null,
-                scheduleMode = s.scheduleMode,
-                scheduleDays = when (s.scheduleMode) {
+                cueSourcePaletteId = if (s.wantsReminder) s.cueSourcePaletteId else null,
+                cueIsPaletteDrawn = s.wantsReminder && s.cueSourcePaletteId != null,
+                scheduleMode = mode,
+                scheduleDays = when (mode) {
                     ScheduleMode.DAILY -> WeekDay.toCsv(WeekDay.ALL)
-                    ScheduleMode.ONCE -> ""
-                    else -> WeekDay.toCsv(orderedDays)
+                    ScheduleMode.WEEKLY -> WeekDay.toCsv(orderedDays)
+                    else -> "" // ONCE / NONE
                 },
                 scheduleTimeLocal = "%02d:%02d".format(s.hour, s.minute),
                 scheduleTimezone = TimeZone.getDefault().id,
-                scheduleDate = if (s.scheduleMode == ScheduleMode.ONCE) s.onceDate else null,
+                scheduleDate = if (mode == ScheduleMode.ONCE) s.onceDate else null,
                 fullTextAlwaysShown = true,
                 status = ReminderStatus.ACTIVE,
                 createdAt = editingCreatedAt.takeIf { it > 0 } ?: now,
                 updatedAt = now
             )
             reminderDao.upsert(reminder)
-            // Schedule (or reschedule, on edit) the exact alarms for this intention.
+            // (Re)schedule alarms; a no-op + cancel for ScheduleMode.NONE, so editing a reminder
+            // down to "no reminder" clears its old alarms.
             ReminderAlarmScheduler.schedule(appContext, reminder)
             _uiState.update { it.copy(saved = true) }
         }
@@ -209,10 +286,12 @@ class ReminderBuilderViewModel(
         private val appContext: Context,
         private val goalDao: GoalDao,
         private val reminderDao: ReminderDao,
-        private val editReminderId: String?
+        private val editReminderId: String?,
+        private val seedIWill: String? = null,
+        private val seedDirection: String? = null
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            ReminderBuilderViewModel(appContext, goalDao, reminderDao, editReminderId) as T
+            ReminderBuilderViewModel(appContext, goalDao, reminderDao, editReminderId, seedIWill, seedDirection) as T
     }
 }

@@ -1,8 +1,9 @@
 package com.ideasinc.followthrough
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import android.view.WindowManager
 import androidx.activity.compose.setContent
+import androidx.fragment.app.FragmentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
@@ -22,7 +23,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,7 +43,6 @@ import com.ideasinc.followthrough.data.EventAction
 import com.ideasinc.followthrough.data.Reminder
 import com.ideasinc.followthrough.di.AppContainer
 import com.ideasinc.followthrough.notifications.EXTRA_REMINDER_ID
-import com.ideasinc.followthrough.notifications.ReminderAlarmScheduler
 import com.ideasinc.followthrough.notifications.recordReminderEvent
 import com.ideasinc.followthrough.notifications.undoReminderEvent
 import com.ideasinc.followthrough.ui.theme.AppColors
@@ -56,31 +55,52 @@ import kotlinx.coroutines.launch
  * full intention text, and the single response: **Did it** (undoable). Nothing else. No
  * response simply means not done — logged neutrally, never held against the user.
  */
-class InTheMomentActivity : ComponentActivity() {
+class InTheMomentActivity : FragmentActivity() {
+
+    private var authCleared by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
+        // With the app lock on, keep the cue + intention out of screenshots and the recents preview.
+        if (AppLock.isEnabled(this)) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+
         val reminderId = intent.getStringExtra(EXTRA_REMINDER_ID)
         if (reminderId == null) { finish(); return }
         val container = (application as GroundedApplication).container
 
+        // The same lock that guards MainActivity must guard this surface too — it's reached by
+        // tapping a notification, which would otherwise reveal the most sensitive content (the cue
+        // and full intention) with no authentication. shouldGate() is false when no credential is
+        // enrolled, so a lock-on-but-credential-removed user is never locked out.
+        val alreadyAuthed = savedInstanceState?.getBoolean(KEY_AUTH_DONE, false) == true
+        authCleared = alreadyAuthed || !AppLock.shouldGate(this)
+
         setContent {
             GroundedTheme {
-                InTheMomentScreen(
-                    container = container,
-                    reminderId = reminderId,
-                    onClose = { finish() },
-                    onRemindLater = {
-                        // A neutral defer (not a Did-it / Not-done response): re-fire ~1h out.
-                        ReminderAlarmScheduler.snooze(applicationContext, reminderId)
-                        android.widget.Toast.makeText(applicationContext, "We'll remind you in about an hour.", android.widget.Toast.LENGTH_SHORT).show()
-                        finish()
-                    }
-                )
+                if (authCleared) {
+                    InTheMomentScreen(
+                        container = container,
+                        reminderId = reminderId,
+                        onClose = { finish() }
+                    )
+                }
             }
         }
+
+        if (!authCleared) {
+            AppLock.prompt(this) { ok -> if (ok) authCleared = true else finish() }
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(KEY_AUTH_DONE, authCleared)
+    }
+
+    companion object {
+        private const val KEY_AUTH_DONE = "auth_done"
     }
 }
 
@@ -88,12 +108,12 @@ class InTheMomentActivity : ComponentActivity() {
 private fun InTheMomentScreen(
     container: AppContainer,
     reminderId: String,
-    onClose: () -> Unit,
-    onRemindLater: () -> Unit
+    onClose: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     var reminder by remember { mutableStateOf<Reminder?>(null) }
     var doneEventId by remember { mutableStateOf<String?>(null) }
+    var submitting by remember { mutableStateOf(false) }
 
     LaunchedEffect(reminderId) {
         val r = container.reminderDao.getReminderById(reminderId)
@@ -147,12 +167,16 @@ private fun InTheMomentScreen(
                 )
                 Button(
                     onClick = {
+                        // Guard the in-flight gap so a fast double-tap can't fire two writes.
+                        if (submitting) return@Button
+                        submitting = true
                         scope.launch {
                             doneEventId = recordReminderEvent(
                                 container.reminderEventDao, r.id, EventAction.DONE, System.currentTimeMillis()
                             )
                         }
                     },
+                    enabled = !submitting,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
@@ -160,14 +184,6 @@ private fun InTheMomentScreen(
                     modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
                 ) {
                     Text("Did it", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
-                }
-                // Neutral defer — re-surfaces in about an hour. Understated so "Did it" stays
-                // the primary action; not a response (no event is logged).
-                TextButton(
-                    onClick = onRemindLater,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                ) {
-                    Text("Remind me later", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
                 // Follow-through confirmation — warm, brief, undoable. Gold reads as a

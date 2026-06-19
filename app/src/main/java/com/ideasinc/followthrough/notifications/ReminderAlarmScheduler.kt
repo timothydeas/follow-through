@@ -17,6 +17,9 @@ import java.util.Calendar
 // setExactAndAllowWhileIdle, re-arm after fire, re-register on boot.
 const val ACTION_REMINDER_FIRE = "com.ideasinc.followthrough.action.REMINDER_FIRE"
 const val ACTION_REMINDER_RESPONSE = "com.ideasinc.followthrough.action.REMINDER_RESPONSE"
+// Undo a shade "Did it" — removes the logged DONE event so an accidental tap is reversible.
+const val ACTION_REMINDER_UNDO = "com.ideasinc.followthrough.action.REMINDER_UNDO"
+const val EXTRA_EVENT_ID = "com.ideasinc.followthrough.extra.EVENT_ID"
 const val EXTRA_REMINDER_ID = "com.ideasinc.followthrough.extra.REMINDER_ID"
 const val EXTRA_FIRE_DAY = "com.ideasinc.followthrough.extra.FIRE_DAY"
 const val EXTRA_RESPONSE = "com.ideasinc.followthrough.extra.RESPONSE"
@@ -32,6 +35,13 @@ object ReminderAlarmScheduler {
     fun schedule(context: Context, reminder: Reminder) {
         cancel(context, reminder.id)
         if (reminder.status != ReminderStatus.ACTIVE) return
+        // A reminderless intention (ScheduleMode.NONE) never fires — also guards boot re-arm.
+        if (reminder.scheduleMode == ScheduleMode.NONE) return
+        // Reminders paused (e.g. vacation) — nothing arms; also guards boot re-arm. Resuming in
+        // Settings re-runs schedule() for every active reminder.
+        if (context.getSharedPreferences("grounded_prefs", Context.MODE_PRIVATE)
+                .getBoolean("reminders_paused", false)
+        ) return
         val am = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
         // No exact-alarm gate here: armDay() falls back to an inexact alarm rather than
         // scheduling nothing, so reminders are never silently dropped.
