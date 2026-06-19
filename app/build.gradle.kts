@@ -33,7 +33,10 @@ android {
         // now show only the check-in's implementation intention.
         // Bumped 29 → 30: adaptive tablet layout — two-pane goals-list + goal-detail
         // Home on expanded widths; single-column screens capped/centred per-screen.
-        versionCode = 30
+        // NOTE: codes 22–30 above were internal iteration only — never uploaded. The live
+        // release on Play is 1.0 (versionCode 1), so public versioning resets to 2 here to
+        // keep codes just ahead of what's actually published. Next upload must be 3+.
+        versionCode = 2
         versionName = "1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
