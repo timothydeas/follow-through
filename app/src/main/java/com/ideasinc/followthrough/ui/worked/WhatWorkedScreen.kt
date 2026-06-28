@@ -22,9 +22,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -62,8 +62,6 @@ import com.ideasinc.followthrough.data.DirectionFeeling
 import com.ideasinc.followthrough.di.AppContainer
 import com.ideasinc.followthrough.ui.progress.DirectionViewModel
 import com.ideasinc.followthrough.ui.progress.DueCheckIn
-import com.ideasinc.followthrough.ui.progress.ProgressSection
-import com.ideasinc.followthrough.ui.progress.ProgressViewModel
 import com.ideasinc.followthrough.ui.theme.AppColors
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.flow.SharingStarted
@@ -71,8 +69,30 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
+/** How many of the most recent history buckets show before the user taps "Show earlier". */
+private const val VISIBLE_HISTORY_SECTIONS = 2
+
 /** One cue that has driven follow-through, with how many times it worked. */
 data class WorkedItem(val reminder: Reminder, val followThroughs: Int)
+
+/**
+ * One follow-through in the look-back log: an intention the user actually completed on a given day.
+ * Built only from real "Did it" taps (deliberate user actions, so Doze-safe — unlike the old
+ * delivery-reconciled grid). [dayLabel] is pre-formatted for its section (weekday this week, date
+ * otherwise). Deduped per (intention, day) so a reminderless intention done five times in a day
+ * still reads as one calm line, not five.
+ */
+data class HistoryEntry(
+    val reminderId: String,
+    val intentionText: String,
+    val cueType: String,
+    val cueValue: String,
+    val dayStart: Long,
+    val dayLabel: String
+)
+
+/** A time bucket of follow-throughs — "This week", "Earlier this month", or an older month. */
+data class HistorySection(val title: String, val entries: List<HistoryEntry>)
 
 /**
  * An optional, one-tap "what's getting in the way?" reason on the Not-really check-in path — the
@@ -107,6 +127,7 @@ private val BLOCKER_REASONS = listOf(
 
 data class WhatWorkedUiState(
     val items: List<WorkedItem> = emptyList(),
+    val history: List<HistorySection> = emptyList(),
     val loaded: Boolean = false
 )
 
@@ -125,18 +146,20 @@ class WhatWorkedViewModel(
         // All reminders (not just active) so a completed one-off — archived after it's done —
         // still shows its follow-through here.
         combine(reminderDao.getAllReminders(), eventDao.getLiveEvents()) { reminders, events ->
-            // One follow-through per (cue, day) — matches the streak — so "Followed through N times"
-            // can't be inflated by a double-tap or the shade-plus-in-app paths logging two rows.
-            val doneByReminder = events
+            val byId = reminders.associateBy { it.id }
+            // One follow-through per (intention, day) — so a double-tap, the shade-plus-in-app
+            // paths, or a reminderless intention done several times in a day all read as one.
+            val doneDays = events
                 .filter { it.action == EventAction.DONE }
                 .map { it.reminderId to startOfDayMillis(it.deliveredAt) }
                 .toSet()
-                .groupingBy { it.first }
-                .eachCount()
+            val doneByReminder = doneDays.groupingBy { it.first }.eachCount()
             val items = reminders
                 .mapNotNull { r -> doneByReminder[r.id]?.let { WorkedItem(r, it) } }
                 .sortedByDescending { it.followThroughs }
-            WhatWorkedUiState(items = items, loaded = true)
+            // The look-back log: every (intention, day) the user followed through, newest first.
+            val historyEntries = doneDays.mapNotNull { (rid, day) -> byId[rid]?.let { it to day } }
+            WhatWorkedUiState(items = items, history = buildHistory(historyEntries), loaded = true)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WhatWorkedUiState())
 
     class Factory(
@@ -150,11 +173,14 @@ class WhatWorkedViewModel(
 }
 
 /**
- * The **Progress** tab — the single "how am I doing" surface (distinct from Intentions, which is
- * the "do" surface). Leads with the flexible streak + honest week ratio + weekly grid
- * ([ProgressSection]), then "What's been working" — the cues that actually drove follow-through,
- * so the user can see what works for them and reuse it. Combining the two avoids the earlier IA
- * smell of Intentions appearing as two near-identical lists.
+ * The **Progress** tab — the single "look back" surface (distinct from Intentions, the "do"
+ * surface). A **history of what you've actually followed through on** (Tim's call 2026-06-25),
+ * grouped by time, newest first — a positive log, never a streak or a calendar-with-gaps: a miss
+ * is simply absent (rule #5, no guilt/loss). Built only from real "Did it" taps, so it's reliable
+ * regardless of Doze (unlike the old delivery-reconciled grid). Topped by the one self-discovery
+ * line — the cue working best for you — and followed by the occasional direction check-in and past
+ * learnings. No running tallies (number-free). This keeps Progress distinct from Intentions, not a
+ * second list of the same intentions.
  */
 @Composable
 fun WhatWorkedScreen(
@@ -166,17 +192,15 @@ fun WhatWorkedScreen(
     val vm: WhatWorkedViewModel = viewModel(
         factory = WhatWorkedViewModel.Factory(container.reminderDao, container.reminderEventDao)
     )
-    val progressVm: ProgressViewModel = viewModel(
-        factory = ProgressViewModel.Factory(container.reminderEventDao, container.reminderDao)
-    )
     val directionVm: DirectionViewModel = viewModel(
         factory = DirectionViewModel.Factory(
             container.goalDao, container.reminderDao, container.reminderEventDao, container.directionCheckInDao
         )
     )
     val state by vm.uiState.collectAsState()
-    val progress by progressVm.uiState.collectAsState()
     val direction by directionVm.uiState.collectAsState()
+    // The log can grow long; show the most recent buckets and let the user expand to see it all.
+    var historyExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier,
@@ -197,7 +221,7 @@ fun WhatWorkedScreen(
             }
             item {
                 Text(
-                    "How you're doing — your streak and this week — and the cues that actually get you to follow through.",
+                    "A look back at what you've followed through on — and the cue that works best for you.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -216,48 +240,50 @@ fun WhatWorkedScreen(
                 }
             }
 
-            if (progress.loaded) {
-                item { ProgressSection(progress) }
+            // One honest self-discovery line (not a dashboard): the cue that's earned the most
+            // follow-throughs, so Progress opens with "what works for me". Shown when there's a
+            // genuine standout (the only cue, or one that strictly beats the runner-up).
+            // Only when there's a genuine standout to compare: two or more cues, the top strictly
+            // beating the runner-up. "Best" of a single cue would read oddly.
+            val standout = state.items
+                .takeIf { it.size >= 2 && it[0].followThroughs > it[1].followThroughs }
+                ?.first()?.reminder
+            if (standout != null) {
+                item { StandoutCard(standout) }
             }
 
-            item {
-                Text(
-                    "What's been working",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(top = 8.dp).semantics { heading() }
-                )
-            }
-
-            // One honest self-discovery line (not a dashboard): name the cue that's earned the most
-            // follow-throughs, so the section reads as "which cue works for me", not a generic log.
-            // Only when there's a genuine standout (top strictly beats the runner-up).
-            if (state.loaded && state.items.size >= 2 &&
-                state.items[0].followThroughs > state.items[1].followThroughs
-            ) {
-                item {
-                    val top = state.items.first().reminder
-                    val cueLabel = if (top.cueType == CueType.EMOJI) top.cueValue else "“${top.cueValue}”"
-                    Text(
-                        "Working best for you: $cueLabel",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-
-            if (state.loaded && state.items.isEmpty()) {
+            if (state.loaded && state.history.isEmpty()) {
                 item {
                     Text(
-                        "Once you follow through on a cue, it shows up here — so you can see what works for you and use it again.",
+                        "Once you follow through on an intention, it shows up here — a record of what you've actually done.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            items(state.items, key = { it.reminder.id }) { item ->
-                WorkedCard(item = item, onClick = { onReuse(item.reminder.id) })
+            // The look-back log, grouped by time. Only days you followed through appear — no empty
+            // days, no streak, nothing counted against you. Capped to the most recent buckets so a
+            // long-time user isn't met with an endless scroll; "Show earlier" reveals the rest.
+            val visibleHistory = if (historyExpanded) state.history else state.history.take(VISIBLE_HISTORY_SECTIONS)
+            visibleHistory.forEach { section ->
+                item(key = "history_${section.title}") { HistorySectionView(section) }
+            }
+            if (state.history.size > VISIBLE_HISTORY_SECTIONS) {
+                item {
+                    if (historyExpanded) {
+                        TextButton(
+                            onClick = { historyExpanded = false },
+                            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
+                        ) { Text("Show less", style = MaterialTheme.typography.labelLarge, color = AppColors.BrandAccentText) }
+                    } else {
+                        val hidden = state.history.drop(VISIBLE_HISTORY_SECTIONS).sumOf { it.entries.size }
+                        TextButton(
+                            onClick = { historyExpanded = true },
+                            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
+                        ) { Text("Show earlier ($hidden more)", style = MaterialTheme.typography.labelLarge, color = AppColors.BrandAccentText) }
+                    }
+                }
             }
 
             // Things you've learned — reusable insights from past check-ins, each able to spark
@@ -273,6 +299,19 @@ fun WhatWorkedScreen(
                 }
                 items(direction.learnings, key = { it.id }) { learning ->
                     LearningCard(text = learning.text, onMakeIntention = { onMakeIntention(learning.text, learning.direction) })
+                }
+            }
+
+            // A quiet, research-grounded closing note (implementation intentions / cue-linked
+            // habits) — one plain line, no jargon, no copied examples. Shown once there's a log.
+            if (state.loaded && state.history.isNotEmpty()) {
+                item {
+                    Text(
+                        "What makes these stick: tying a small action to a moment that already happens in your day.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 16.dp)
+                    )
                 }
             }
         }
@@ -467,65 +506,101 @@ private fun LearningCard(text: String, onMakeIntention: () -> Unit) {
     }
 }
 
+/** The one self-discovery callout at the top of Progress: the cue that's earned the most follow-
+ *  throughs. A calm celebration, not a section header — so it doesn't compete with the log's time
+ *  headings. Not interactive (Progress never edits). */
 @Composable
-private fun WorkedCard(item: WorkedItem, onClick: () -> Unit) {
-    val r = item.reminder
+private fun StandoutCard(reminder: Reminder) {
+    val cueLabel = if (reminder.cueType == CueType.EMOJI) reminder.cueValue else "“${reminder.cueValue}”"
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
+            .background(AppColors.GoldSurface)
             .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
-            .clickable(onClickLabel = "Open this intention", onClick = onClick)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(16.dp)
+            .semantics(mergeDescendants = true) {},
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // The CUE leads this surface (it's about which CUES work for the user), but a phrase is
-        // words: show it as a quoted line in normal text, not a big brand-coloured heading. An
-        // emoji is a visual object, so it can still be shown larger.
-        if (r.cueValue.isNotBlank()) {
-            if (r.cueType == CueType.EMOJI) {
-                Text(r.cueValue, style = MaterialTheme.typography.headlineMedium)
-            } else {
-                Text(
-                    "“${r.cueValue}”",
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
         Text(
-            r.intentionText,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            "Working best for you",
+            style = MaterialTheme.typography.labelMedium,
+            color = AppColors.OnGoldSurface
         )
-        // The whole card opens the intention (to review or refine it) — a neutral "Open"
-        // that reads correctly whether the intention is still recurring or a finished
-        // one-off, not "reuse" (which implies it's done). Count is muted; action is coral.
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                followThroughLabel(item.followThroughs),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                "Open",
-                style = MaterialTheme.typography.labelLarge,
-                color = AppColors.BrandAccentText
-            )
-            Icon(
-                Icons.Rounded.ChevronRight,
-                contentDescription = null,
-                tint = AppColors.BrandAccentText,
-                modifier = Modifier.size(18.dp)
-            )
+        Text(
+            cueLabel,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = AppColors.OnGoldSurface
+        )
+    }
+}
+
+/** One time bucket of the look-back log: a heading plus the days' follow-throughs in a grouped card. */
+@Composable
+private fun HistorySectionView(section: HistorySection) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            section.title,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(top = 8.dp).semantics { heading() }
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
+        ) {
+            section.entries.forEachIndexed { i, entry ->
+                if (i > 0) HorizontalDivider(color = AppColors.Border)
+                HistoryRow(entry)
+            }
         }
     }
 }
 
-private fun followThroughLabel(n: Int): String =
-    if (n == 1) "Followed through once" else "Followed through $n times"
+/** One follow-through line: what you did, with a quiet day label. Not interactive — Progress is
+ *  the look-back surface, never a second place to edit. Merged semantics so TalkBack reads it as
+ *  one item, e.g. "Walked after lunch, Tue". */
+@Composable
+private fun HistoryRow(entry: HistoryEntry) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .semantics(mergeDescendants = true) {},
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (entry.cueType == CueType.EMOJI && entry.cueValue.isNotBlank()) {
+            Text(entry.cueValue, style = MaterialTheme.typography.bodyLarge)
+            Spacer(Modifier.width(10.dp))
+        }
+        Column(Modifier.weight(1f)) {
+            // Show the phrase/object cue the user set, so the log reflects their own cue
+            // wording — mirroring the emoji cue already shown for emoji cues.
+            if (entry.cueType == CueType.PHRASE && entry.cueValue.isNotBlank()) {
+                Text(
+                    "“${entry.cueValue}”",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                    color = AppColors.BrandAccentText
+                )
+            }
+            Text(
+                entry.intentionText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(
+            entry.dayLabel,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
 
 /** Device-local start-of-day for [ts] — the (cue, day) bucket key for de-duping follow-throughs. */
 private fun startOfDayMillis(ts: Long): Long {
@@ -533,4 +608,55 @@ private fun startOfDayMillis(ts: Long): Long {
     c.set(java.util.Calendar.HOUR_OF_DAY, 0); c.set(java.util.Calendar.MINUTE, 0)
     c.set(java.util.Calendar.SECOND, 0); c.set(java.util.Calendar.MILLISECOND, 0)
     return c.timeInMillis
+}
+
+/**
+ * Group the user's (intention, day) follow-throughs into time buckets, newest first: "This week"
+ * (since Monday), "Earlier this month", then one section per older month. Each entry gets a section-
+ * appropriate label — weekday inside this week, "MMM d" otherwise. A bucket exists only if something
+ * happened in it: no empty weeks, no gaps, no streak. "Now" is read at compute time (fine for a
+ * foreground screen); recomputed whenever the event log changes.
+ */
+private fun buildHistory(entries: List<Pair<Reminder, Long>>): List<HistorySection> {
+    if (entries.isEmpty()) return emptyList()
+    val cal = java.util.Calendar.getInstance()
+    val startOfWeek = (cal.clone() as java.util.Calendar).apply {
+        set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
+        set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+        val dow = get(java.util.Calendar.DAY_OF_WEEK)
+        val backToMonday = if (dow == java.util.Calendar.SUNDAY) 6 else dow - java.util.Calendar.MONDAY
+        add(java.util.Calendar.DAY_OF_MONTH, -backToMonday)
+    }.timeInMillis
+    val startOfMonth = (cal.clone() as java.util.Calendar).apply {
+        set(java.util.Calendar.DAY_OF_MONTH, 1)
+        set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
+        set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+    }.timeInMillis
+    val thisYear = cal.get(java.util.Calendar.YEAR)
+    val weekdayFmt = java.text.SimpleDateFormat("EEE", java.util.Locale.getDefault())
+    val dateFmt = java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault())
+    val monthFmt = java.text.SimpleDateFormat("LLLL", java.util.Locale.getDefault())
+
+    // Bucket key = (sort order desc, title). This week / this month sort above any month; older
+    // months sort by their own year-month so the newest comes first.
+    fun bucketFor(day: Long): Pair<Int, String> = when {
+        day >= startOfWeek -> Int.MAX_VALUE to "This week"
+        day >= startOfMonth -> (Int.MAX_VALUE - 1) to "Earlier this month"
+        else -> {
+            val c = java.util.Calendar.getInstance().apply { timeInMillis = day }
+            val y = c.get(java.util.Calendar.YEAR)
+            val title = if (y == thisYear) monthFmt.format(c.time) else "${monthFmt.format(c.time)} $y"
+            (y * 12 + c.get(java.util.Calendar.MONTH)) to title
+        }
+    }
+
+    return entries
+        .map { (r, day) ->
+            val label = if (day >= startOfWeek) weekdayFmt.format(day) else dateFmt.format(day)
+            bucketFor(day) to HistoryEntry(r.id, r.intentionText, r.cueType, r.cueValue, day, label)
+        }
+        .groupBy({ it.first }, { it.second })
+        .toList()
+        .sortedByDescending { it.first.first }
+        .map { (bucket, list) -> HistorySection(bucket.second, list.sortedByDescending { it.dayStart }) }
 }

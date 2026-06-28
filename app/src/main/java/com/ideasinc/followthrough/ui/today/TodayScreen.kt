@@ -21,6 +21,7 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.FloatingActionButton
@@ -28,11 +29,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarData
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,15 +44,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ideasinc.followthrough.R
 import com.ideasinc.followthrough.data.CueType
 import com.ideasinc.followthrough.data.EventAction
 import com.ideasinc.followthrough.data.Reminder
@@ -105,7 +108,7 @@ fun TodayScreen(
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHost) },
+        snackbarHost = { SnackbarHost(snackbarHost) { data -> DidItSnackbar(data) } },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNewReminder,
@@ -144,10 +147,6 @@ fun TodayScreen(
                 item { PausedBanner(onClick = onOpenSettings) }
             }
 
-            if (state.loaded && (state.streak > 0 || state.progress.weeklyDone > 0 || state.progress.lifetimeDone > 0)) {
-                item { StreakChip(streak = state.streak, weeklyDone = state.progress.weeklyDone, onClick = onOpenProgress) }
-            }
-
             if (state.loaded && state.items.isEmpty()) {
                 item {
                     Text(
@@ -166,6 +165,56 @@ fun TodayScreen(
                     paused = remindersPaused,
                     onEdit = { onEditReminder(item.reminder.id) },
                     onDid = { onDid(item.reminder) }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The in-app "Did it" confirmation, styled to match the app's card language (gold surface,
+ * hairline border, rounded 16dp, rounded check) rather than the bare Material snackbar pill —
+ * so it reads as part of the app. Accessible: gold-on-gold-surface is AA-safe (gold is a
+ * celebratory accent on its own surface, never body text on cream); merged semantics + a polite
+ * live region so TalkBack announces it as one message; the Undo action keeps a ≥48dp target.
+ */
+@Composable
+private fun DidItSnackbar(data: SnackbarData) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(AppColors.GoldSurface)
+            .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
+            .padding(start = 20.dp, end = 8.dp, top = 6.dp, bottom = 6.dp)
+            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Decorative — the message text conveys the result; null keeps TalkBack from announcing
+        // the icon separately.
+        Icon(
+            Icons.Rounded.CheckCircle,
+            contentDescription = null,
+            tint = AppColors.OnGoldSurface,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            data.visuals.message,
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+            color = AppColors.OnGoldSurface,
+            modifier = Modifier.weight(1f)
+        )
+        data.visuals.actionLabel?.let { label ->
+            TextButton(
+                onClick = { data.performAction() },
+                modifier = Modifier.heightIn(min = 48.dp)
+            ) {
+                Text(
+                    label,
+                    color = AppColors.BrandAccentText,
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
                 )
             }
         }
@@ -222,7 +271,7 @@ private fun IntentionCard(
                 // The direction this intention serves (optional). Subtle — meaning, not a label.
                 if (direction.isNotBlank()) {
                     Text(
-                        "Toward: $direction",
+                        "Goal: $direction",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp)
@@ -238,52 +287,6 @@ private fun IntentionCard(
         ) {
             Text("Did it", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium), color = AppColors.BrandAccentText)
         }
-    }
-}
-
-/** Compact streak chip (Milkman two-miss reserve): a flame + the current follow-through streak, or
- *  a gentle nudge before one exists. Gold only on the celebratory state (active streak). Taps
- *  through to the full Progress screen (streak, honest ratio, record, weekly grid). */
-@Composable
-private fun StreakChip(streak: Int, weeklyDone: Int, onClick: () -> Unit) {
-    val celebratory = streak > 0
-    val bg = if (celebratory) AppColors.GoldSurface else MaterialTheme.colorScheme.surface
-    val fg = if (celebratory) AppColors.OnGoldSurface else MaterialTheme.colorScheme.onSurface
-    val label = when {
-        streak == 1 -> "1 follow-through streak"
-        streak > 1 -> "$streak follow-through streak"
-        weeklyDone > 0 -> "$weeklyDone this week — keep it going"
-        else -> "See your progress"
-    }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(bg)
-            .border(1.dp, AppColors.Border, RoundedCornerShape(16.dp))
-            .clickable(onClickLabel = "See your progress", onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Flame celebrates an active streak only (CLAUDE.md rule #5) — hidden in the calm,
-        // streak-0 state so it never reads as a nag or an empty trophy.
-        if (celebratory) {
-            Icon(
-                painter = painterResource(R.drawable.ic_flame),
-                contentDescription = null,
-                // Gold Feather flame (ic_flame.xml) — the exact glyph in Tim's approved screenshot.
-                tint = AppColors.GoldIcon,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(Modifier.width(10.dp))
-        }
-        Text(label, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), color = fg, modifier = Modifier.weight(1f))
-        Icon(
-            Icons.Rounded.ChevronRight,
-            contentDescription = null,
-            tint = if (celebratory) fg else AppColors.BrandAccentText,
-            modifier = Modifier.size(20.dp)
-        )
     }
 }
 
@@ -309,7 +312,7 @@ private fun NotificationOffBanner(onClick: () -> Unit) {
 }
 
 /** Shown when reminders are paused (e.g. vacation) — calm, not an alert: nothing fires until
- *  resumed, and the streak is safe. Taps through to Settings to turn them back on. */
+ *  resumed, and nothing is counted against the user. Taps through to Settings to turn them back on. */
 @Composable
 private fun PausedBanner(onClick: () -> Unit) {
     Row(
@@ -324,7 +327,7 @@ private fun PausedBanner(onClick: () -> Unit) {
     ) {
         Column(Modifier.weight(1f)) {
             Text("Reminders paused", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
-            Text("They won't fire until you turn them back on — your streak is safe. Tap to manage.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("They won't fire until you turn them back on — nothing's counted against you. Tap to manage.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = AppColors.BrandAccentText, modifier = Modifier.size(20.dp))
     }

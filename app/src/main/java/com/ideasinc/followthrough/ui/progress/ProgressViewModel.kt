@@ -7,7 +7,6 @@ import com.ideasinc.followthrough.data.EventAction
 import com.ideasinc.followthrough.data.ReminderDao
 import com.ideasinc.followthrough.data.ReminderEvent
 import com.ideasinc.followthrough.data.ReminderEventDao
-import com.ideasinc.followthrough.data.ScheduleMode
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -27,22 +26,29 @@ data class WeekDay(val dayStartMillis: Long, val state: DayState)
  * refills the reserve; the first two consecutive misses are absorbed and the streak holds; a third
  * consecutive miss resets Current to 0 (an honest, gentle reset). [reserveRemaining] (0–2) is how
  * many misses are still absorbed. [longestStreak] (the best run ever) and [lifetimeDone] never
- * reset, cushioning a reset so a lapse never erases history. Only reminders the user actually SET
- * count — reminderless intentions (ScheduleMode.NONE) are excluded (`excludeReminderIds`).
+ * reset, cushioning a reset so a lapse never erases history. Every follow-through counts toward the
+ * streak — reminder-based and reminderless (ScheduleMode.NONE) intentions alike.
  *
- * The week's true ratio ([weekDoneDistinct] of ~[weekOpportunities]) and [slippedLastWeek] are
- * surfaced honestly (Fishbach) so "gentle" never tips into ignorance-is-bliss — but framed as
- * information and course-correction, never guilt.
+ * The "this week" surface shows [weekCompletions] — the running tally of every follow-through,
+ * matching the home counter. The flexible weekly cadence ([weekDoneDistinct] vs [weekTarget],
+ * derived from [weekOpportunities]) and [slippedLastWeek] still drive the honest, encouraging
+ * sub-line and slip note (Fishbach) — framed as information and course-correction, never guilt.
  */
 data class ProgressState(
     val currentStreak: Int = 0,
     val longestStreak: Int = 0,
     val reserveRemaining: Int = 2,
+    /** Running tally of EVERY follow-through this week (each "Did it" tap), matching the home
+     *  "this week" counter. Includes reminderless completions and repeat same-day taps — unlike
+     *  [weekDoneDistinct], which counts distinct days for the streak/grid. */
+    val weekCompletions: Int = 0,
     val weekDoneDistinct: Int = 0,
     val weekOpportunities: Int = 0,
     val weekTarget: Int = 0,
     val onTrack: Boolean = false,
     val slippedLastWeek: Boolean = false,
+    /** Every "Did it" tap this month / ever — same unit as [weekCompletions], so the three tallies
+     *  always reconcile (week ≤ month ≤ all-time). Recomputed from the live log, scoped per period. */
     val monthDone: Int = 0,
     val lifetimeDone: Int = 0,
     val week: List<WeekDay> = emptyList(),
@@ -57,11 +63,11 @@ class ProgressViewModel(
 ) : ViewModel() {
 
     val uiState: StateFlow<ProgressState> =
-        combine(eventDao.getLiveEvents(), reminderDao.getAllReminders()) { events, reminders ->
-            // Only reminders the user actually SET count toward the streak — exclude reminderless
-            // (ScheduleMode.NONE) intentions ("if a reminder was set at all").
-            val excluded = reminders.filter { it.scheduleMode == ScheduleMode.NONE }.map { it.id }.toSet()
-            computeProgress(events, System.currentTimeMillis(), excluded)
+        // Reminders are still observed so the streak/grid refresh promptly when intentions change,
+        // but they no longer filter which completions count: every follow-through — reminder-based
+        // and reminderless alike — flows from the single source of truth (the live event log).
+        combine(eventDao.getLiveEvents(), reminderDao.getAllReminders()) { events, _ ->
+            computeProgress(events, System.currentTimeMillis())
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgressState())
 
     class Factory(
@@ -87,17 +93,17 @@ class ProgressViewModel(
  * The weekly grid and the in-progress "this week" ratio (≥ ~half the days you were nudged =
  * on track) are reported alongside the streak as honest context, never as the streak rule itself.
  *
- * [excludeReminderIds] drops reminderless intentions (ScheduleMode.NONE) — only reminders the
- * user actually set count. Opportunities and follow-throughs are de-duplicated per (intention,
- * day) so a snoozed re-fire or a double tap can't distort the count.
+ * Every follow-through counts — reminder-based and reminderless (ScheduleMode.NONE) alike — from
+ * the single source of truth (the live event log). Opportunities and follow-throughs are
+ * de-duplicated per (intention, day) so a snoozed re-fire or repeat taps can't distort the streak
+ * or the grid (which measure distinct days), even though every tap is logged as its own event.
  */
 fun computeProgress(
     events: List<ReminderEvent>,
-    now: Long,
-    excludeReminderIds: Set<String> = emptySet()
+    now: Long
 ): ProgressState {
-    val done = events.filter { it.action == EventAction.DONE && it.reminderId !in excludeReminderIds }
-    val delivered = events.filter { it.action == EventAction.DELIVERED && it.reminderId !in excludeReminderIds }
+    val done = events.filter { it.action == EventAction.DONE }
+    val delivered = events.filter { it.action == EventAction.DELIVERED }
 
     // weekStart -> distinct (intentionId, day) keys, for opportunities and follow-throughs.
     val doneByWeek = done.groupBy { mondayStartOf(it.deliveredAt) }
@@ -164,6 +170,9 @@ fun computeProgress(
 
     val weekOpportunities = weekOppKeys(currentWeekStart).size
     val weekDoneDistinct = doneByWeek[currentWeekStart]?.size ?: 0
+    // Every "Did it" tap this week (total events, not distinct days, incl. reminderless). No longer
+    // surfaced in the UI — Progress is number-free as of 2026-06-24 — kept for the tests/seed.
+    val weekCompletions = done.count { it.deliveredAt >= currentWeekStart }
     val weekTarget = targetFor(weekOpportunities)
     val doneDays = done.map { startOfDay(it.deliveredAt) }.toSet()
     val deliveredDays = delivered.map { startOfDay(it.deliveredAt) }.toSet()
@@ -181,19 +190,22 @@ fun computeProgress(
     }
 
     val monthStart = monthStartOf(now)
-    // Count one follow-through per (intention, day) — same de-dup the streak uses — so duplicate
-    // DONE rows (double-tap, or the shade + in-app paths) can't make these contradict the streak.
+    // This week / This month / All time all count EVERY "Did it" tap (Tim's call 2026-06-24), each
+    // scoped to its period and recomputed from the live log — so they always reconcile
+    // (week ≤ month ≤ all-time) and stay correct as weeks/months roll over. (currentStreak/longest
+    // above still de-dup per day, but they're no longer surfaced in the UI.)
     return ProgressState(
         currentStreak = current,
         longestStreak = longest,
         reserveRemaining = reserveRemaining,
+        weekCompletions = weekCompletions,
         weekDoneDistinct = weekDoneDistinct,
         weekOpportunities = weekOpportunities,
         weekTarget = weekTarget,
         onTrack = weekDoneDistinct >= weekTarget && weekDoneDistinct >= 1,
         slippedLastWeek = slipped,
-        monthDone = doneKeys.count { it.second >= monthStart },
-        lifetimeDone = doneKeys.size,
+        monthDone = done.count { it.deliveredAt >= monthStart },
+        lifetimeDone = done.size,
         week = week,
         loaded = true
     )

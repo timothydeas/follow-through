@@ -340,7 +340,16 @@ private fun StepMoment(s: BuilderUiState, vm: ReminderBuilderViewModel) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun StepCue(s: BuilderUiState, vm: ReminderBuilderViewModel) {
-    StepHeader("Pick one vivid cue", "One specific thing you'll truly see or hear in that moment — the more vivid, the harder to ignore. One beats many.")
+    StepHeader("Pick one vivid cue", "One specific thing you'll truly see, hear, or carry in that moment — the more vivid, the harder to ignore. One beats many.")
+
+    // Without a reminder there's no notification, so the cue itself is the trigger — and optional.
+    if (!s.wantsReminder) {
+        Text(
+            "Optional — with no reminder, this cue is your trigger: keep it somewhere you'll notice it (on your desk, in your bag), so seeing it brings the plan to mind.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 
     // The seeded example — show, don't tell.
     Column(
@@ -359,14 +368,14 @@ private fun StepCue(s: BuilderUiState, vm: ReminderBuilderViewModel) {
 
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Chip("Emoji", s.cueType == CueType.EMOJI) { vm.setCueType(CueType.EMOJI) }
-        Chip("Phrase", s.cueType == CueType.PHRASE) { vm.setCueType(CueType.PHRASE) }
+        Chip("Phrase or object", s.cueType == CueType.PHRASE) { vm.setCueType(CueType.PHRASE) }
     }
 
     OutlinedTextField(
         value = s.cueValue,
         onValueChange = { vm.onCueValue(if (s.cueType == CueType.EMOJI) it.take(4) else it) },
-        label = { Text(if (s.cueType == CueType.EMOJI) "Your cue (emoji)" else "Your cue (phrase)") },
-        placeholder = { Text(if (s.cueType == CueType.EMOJI) "☕" else "Headphones on means class is in") },
+        label = { Text(if (s.cueType == CueType.EMOJI) "Your cue (emoji)" else "Your cue (phrase or object)") },
+        placeholder = { Text(if (s.cueType == CueType.EMOJI) "☕" else "Running shoes by the door") },
         modifier = Modifier.fillMaxWidth()
     )
 }
@@ -384,7 +393,7 @@ private fun StepReview(s: BuilderUiState) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        if (s.wantsReminder && s.cueValue.isNotBlank()) {
+        if (s.cueValue.isNotBlank()) {
             // An emoji cue is a visual object — show it large. A phrase is words: show it
             // as a quoted line in normal text, not a brand-coloured heading.
             if (s.cueType == CueType.EMOJI) {
@@ -398,7 +407,7 @@ private fun StepReview(s: BuilderUiState) {
             style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface
         )
         if (s.direction.isNotBlank()) {
-            Text("Toward ${s.direction}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Goal: ${s.direction}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Text(
             if (s.wantsReminder) scheduleSummary(s) else "No reminder — mark it done whenever you do it.",

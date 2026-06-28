@@ -34,13 +34,16 @@ suspend fun recordReminderEvent(
     reminderId: String,
     action: String,
     deliveredAt: Long,
-    reflectionText: String? = null
+    reflectionText: String? = null,
+    dedupePerDay: Boolean = true
 ): String {
-    // A follow-through is one-per-(intention, day): if this intention already has a non-undone
-    // "Did it" logged today, return that event instead of appending a duplicate (the shade action
-    // and the in-app card, or a fast double-tap, are otherwise two rows for one opportunity). Undo
-    // still works — the caller gets the existing event id back.
-    if (action == EventAction.DONE) {
+    // For a reminder-based intention a follow-through is one-per-(intention, day): the shade action
+    // and the in-app card are two paths to the SAME fired occurrence, so if a non-undone "Did it" is
+    // already logged today, return it instead of appending a duplicate. Undo still works — the caller
+    // gets the existing event id back. A reminderless intention (ScheduleMode.NONE) is a mental cue
+    // that can legitimately be done many times a day; its callers pass dedupePerDay = false so every
+    // tap is its own completion event (the per-occasion dedupe above does not apply).
+    if (action == EventAction.DONE && dedupePerDay) {
         val dayStart = startOfDayMs(deliveredAt)
         eventDao.findDoneOnDay(reminderId, dayStart, dayStart + DAY_MS)?.let { return it.id }
     }

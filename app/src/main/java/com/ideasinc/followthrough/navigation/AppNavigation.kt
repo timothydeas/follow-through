@@ -191,6 +191,15 @@ fun AppNavigation(
     }
 }
 
+/**
+ * Pop only when there's a screen underneath. Guards against a double-tap (or a stray tap during the
+ * close transition, where the outgoing screen is briefly still touchable) popping past the start
+ * destination and leaving an empty NavHost — which would render as a blank cream screen.
+ */
+private fun NavHostController.popBackStackSafely() {
+    if (previousBackStackEntry != null) popBackStack()
+}
+
 private fun NavHostController.navigateToTab(route: String) {
     navigate(route) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
@@ -339,7 +348,7 @@ private fun AppNavHost(
                 ReminderBuilderScreen(
                     container = container,
                     reminderId = null,
-                    onClose = { navController.popBackStack() },
+                    onClose = { navController.popBackStackSafely() },
                     onSaved = {
                         navController.navigate(ROUTE_INTENTIONS) {
                             popUpTo(ROUTE_CREATE) { inclusive = true }
@@ -366,7 +375,7 @@ private fun AppNavHost(
                     reminderId = null,
                     seedIWill = seed,
                     seedDirection = dir,
-                    onClose = { navController.popBackStack() },
+                    onClose = { navController.popBackStackSafely() },
                     onSaved = {
                         navController.navigate(ROUTE_INTENTIONS) {
                             popUpTo(ROUTE_CREATE_SEEDED) { inclusive = true }
@@ -387,8 +396,8 @@ private fun AppNavHost(
                 ReminderBuilderScreen(
                     container = container,
                     reminderId = reminderId,
-                    onClose = { navController.popBackStack() },
-                    onSaved = { navController.popBackStack() }
+                    onClose = { navController.popBackStackSafely() },
+                    onSaved = { navController.popBackStackSafely() }
                 )
             }
         }

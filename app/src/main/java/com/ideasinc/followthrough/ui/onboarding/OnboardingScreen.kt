@@ -261,7 +261,7 @@ private fun PaneIdea() {
         )
         IdeaRow(Icons.AutoMirrored.Rounded.DirectionsRun, "Make a plan", "\"When I get home, I'll go for a run.\" What you'll do, pinned to the moment — and a bigger goal if you want one.")
         IdeaRow(Icons.Rounded.Bolt, "Add one vivid cue", "👟 Your running shoes by the door — the one thing you can't miss.")
-        IdeaRow(Icons.Rounded.Check, "Tap Did it", "In the moment, your cue and words appear. Tap Did it — and a missed day is no big deal.")
+        IdeaRow(Icons.Rounded.Check, "Tap Did it", "A reminder or your cue brings the plan to mind — you follow through, then tap Did it.")
     }
 }
 

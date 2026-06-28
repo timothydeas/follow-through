@@ -14,7 +14,8 @@ import java.util.Calendar
  * day): a follow-through (Did it) climbs Current and refills the reserve; the first two
  * consecutive misses (delivered, not acted) are absorbed and Current holds; a third consecutive
  * miss resets Current to 0. Longest is the best run ever and never resets. Today's not-yet-acted
- * cue is pending, never a miss. Reminderless intentions and snoozes never build a streak.
+ * cue is pending, never a miss. Snoozes never build a streak; reminderless Did-its build it over
+ * distinct days, the same as reminder-based ones.
  *
  * Anchored on real Mondays: 2024-01-01 is a Monday, so each `ts(2024, 0, dayOfMonth)` lines up
  * with the device-local calendar the production code uses. `now` is Wed 2024-01-31, so days 1–30
@@ -94,13 +95,36 @@ class ProgressComputationTest {
         assertEquals(3, s.longestStreak)
     }
 
-    @Test fun reminderlessIntentionsAreExcluded() {
-        // A reminderless intention's proactive Did it must not build a streak ("if a reminder was
-        // set at all"). Only "rNone" activity exists, and it's excluded → no streak.
-        val ev = firedAndDone("rNone", d(1)) + firedAndDone("rNone", d(2))
-        val s = computeProgress(ev, now, excludeReminderIds = setOf("rNone"))
-        assertEquals(0, s.currentStreak)
-        assertEquals(0, s.lifetimeDone)
+    @Test fun reminderlessCompletionsCountEveryTapStreakStaysPerDay() {
+        // A reminderless intention logs DONE with no DELIVERED and can be marked done many times a
+        // day. The (still-computed-but-unused) streak counts distinct days; the visible tallies
+        // (week / month / all-time) count EVERY tap. Mon ×2, Tue ×1, Wed (today) ×5.
+        val ev = listOf(
+            done("rNone", d(29)), done("rNone", d(29)),
+            done("rNone", d(30)),
+            done("rNone", d(31)), done("rNone", d(31)), done("rNone", d(31)),
+            done("rNone", d(31)), done("rNone", d(31))
+        )
+        val s = computeProgress(ev, now)
+        assertEquals(3, s.currentStreak)    // distinct days: Mon/Tue/Wed
+        assertEquals(8, s.lifetimeDone)     // every tap: 2 + 1 + 5
+        assertEquals(8, s.weekCompletions)  // every tap this week: 2 + 1 + 5
+    }
+
+    @Test fun talliesCountEveryTapScopedByPeriodAndReconcile() {
+        // Every "Did it" tap counts in all three tallies, each scoped to its period; the three
+        // always reconcile (week ≤ month ≤ all-time) and roll over correctly as time passes.
+        val ev = listOf(
+            done("r", ts(2023, 11, 15)),                          // last December — all-time only
+            done("r", d(3)), done("r", d(3)),                     // earlier in January (not this week)
+            done("r", d(31)), done("r", d(31)), done("r", d(31))  // today (this week)
+        )
+        val s = computeProgress(ev, now)
+        assertEquals(3, s.weekCompletions)  // taps this week (Wed d31)
+        assertEquals(5, s.monthDone)        // January: 2 (d3) + 3 (d31)
+        assertEquals(6, s.lifetimeDone)     // every tap ever
+        assertTrue(s.weekCompletions <= s.monthDone)
+        assertTrue(s.monthDone <= s.lifetimeDone)
     }
 
     @Test fun deliveredButNotActedNeverCredits() {

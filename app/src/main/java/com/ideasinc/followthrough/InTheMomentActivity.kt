@@ -1,10 +1,13 @@
 package com.ideasinc.followthrough
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
+import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.fragment.app.FragmentActivity
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,8 +16,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -33,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -77,13 +83,17 @@ class InTheMomentActivity : FragmentActivity() {
         val alreadyAuthed = savedInstanceState?.getBoolean(KEY_AUTH_DONE, false) == true
         authCleared = alreadyAuthed || !AppLock.shouldGate(this)
 
+        // Back / gesture-back from the in-the-moment screen must land in the app, not the launcher
+        // (same reason as closeAndReturnHome below).
+        onBackPressedDispatcher.addCallback(this) { closeAndReturnHome() }
+
         setContent {
             GroundedTheme {
                 if (authCleared) {
                     InTheMomentScreen(
                         container = container,
                         reminderId = reminderId,
-                        onClose = { finish() }
+                        onClose = { closeAndReturnHome() }
                     )
                 }
             }
@@ -92,6 +102,25 @@ class InTheMomentActivity : FragmentActivity() {
         if (!authCleared) {
             AppLock.prompt(this) { ok -> if (ok) authCleared = true else finish() }
         }
+    }
+
+    /**
+     * Leave the in-the-moment screen and make sure the user lands back in the app — not on the
+     * device launcher. The cue notification launches this activity with FLAG_ACTIVITY_NEW_TASK, so
+     * when the app wasn't already open this activity is the sole member of a fresh task: a bare
+     * finish() would empty that task and drop the user to the home screen (the reported bug). Only
+     * in that case (isTaskRoot) do we first bring up MainActivity (the Intentions home). When the
+     * app was already open, this activity is stacked on the existing task (isTaskRoot is false) and
+     * a plain finish() returns the user exactly where they were — behavior unchanged.
+     */
+    private fun closeAndReturnHome() {
+        if (isTaskRoot) {
+            startActivity(
+                Intent(this, MainActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            )
+        }
+        finish()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -186,17 +215,39 @@ private fun InTheMomentScreen(
                     Text("Did it", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
                 }
             } else {
-                // Follow-through confirmation — warm, brief, undoable. Gold reads as a
-                // celebratory accent on its own surface (AA-safe; gold is never body text on cream).
-                Box(
+                // Follow-through confirmation — warm, brief, undoable. A centered celebration card
+                // in the app's own card language (gold surface, hairline border, rounded 20dp, a
+                // rounded check, proportional type) so it reads as part of the app, not a bare
+                // banner. Gold is a celebratory accent on its own surface (AA-safe; gold is never
+                // body text on cream). Merged semantics so TalkBack reads it as one announcement.
+                Column(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
                         .background(AppColors.GoldSurface)
-                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                        .border(1.dp, AppColors.Border, RoundedCornerShape(20.dp))
+                        .padding(horizontal = 24.dp, vertical = 28.dp)
+                        .semantics(mergeDescendants = true) {},
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    // Decorative — the text below conveys the result; null keeps TalkBack from
+                    // announcing the icon separately.
+                    Icon(
+                        Icons.Rounded.CheckCircle,
+                        contentDescription = null,
+                        tint = AppColors.OnGoldSurface,
+                        modifier = Modifier.size(44.dp)
+                    )
                     Text(
-                        "Followed through. Nice.",
-                        style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.SemiBold),
+                        "Followed through",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = AppColors.OnGoldSurface,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        "Nice.",
+                        style = MaterialTheme.typography.bodyLarge,
                         color = AppColors.OnGoldSurface,
                         textAlign = TextAlign.Center
                     )

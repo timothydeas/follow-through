@@ -16,7 +16,7 @@ The product loop, in one line:
 Three tabs:
 
 - **Intentions** — your active intentions; create new ones; respond in one tap (**Did it**, undoable). A missed cue is simply not done — never held against you.
-- **Progress** — how you're doing: a forgiving weekly-cadence streak (flexibility beats rigidity), an honest "this week" ratio, a Mon–Sun grid, and below it the cues that actually drove your follow-through so you can see what works and reuse it. Flexible and forgiving, but honest — never guilt.
+- **Progress** — a look back at what you've *actually followed through on*: your "Did it" days grouped by time (this week, earlier this month, then older months), newest first. Only days you did something show up — no empty days, no gaps, nothing counted against you. It's topped by the one cue that's **working best for you**, and your past learnings sit below. A record of what worked — never a scoreboard or something to keep from breaking.
 - **Settings** — theme (light/dark/system), notifications, app lock, privacy.
 
 Creating an intention is a short **create-cue flow**: name the intention → pin the moment (daily, weekly, or just once) → design the cue → review. When the moment arrives, a high-priority notification surfaces the cue plus the full intention text; tapping it opens a focused **in-the-moment** screen with the single **Did it** response.
@@ -26,9 +26,13 @@ Creating an intention is a short **create-cue flow**: name the intention → pin
 <p align="center">
   <img src="assets/screenshots/01-onboarding.jpeg" width="180" alt="Onboarding — Follow through, in the moment.">
   <img src="assets/screenshots/02-how-it-works.jpeg" width="180" alt="How it works — make a plan, add one vivid cue, tap Did it">
-  <img src="assets/screenshots/03-intentions.jpeg" width="180" alt="Intentions tab with the follow-through streak">
-  <img src="assets/screenshots/04-progress.jpeg" width="180" alt="Progress tab — forgiving streak, honest weekly ratio, day-by-day grid">
-  <img src="assets/screenshots/05-settings.jpeg" width="180" alt="Settings — appearance, app lock, notifications">
+  <img src="assets/screenshots/03-when.jpeg" width="180" alt="Create flow — name the moment you'll act, and choose whether to be reminded">
+  <img src="assets/screenshots/04-your-plan.jpeg" width="180" alt="Create flow — review your plan: cue, the When/I'll sentence, and the goal it serves">
+</p>
+<p align="center">
+  <img src="assets/screenshots/05-intentions.jpeg" width="180" alt="Intentions tab — your active intentions, each with its cue and a one-tap Did it">
+  <img src="assets/screenshots/06-progress.jpeg" width="180" alt="Progress tab — a look back at the days you followed through, and the cue working best for you">
+  <img src="assets/screenshots/07-settings.jpeg" width="180" alt="Settings — pause reminders, app lock, appearance, notifications">
 </p>
 
 ## Tech

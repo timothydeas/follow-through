@@ -139,8 +139,8 @@ fun SettingsScreen(
             )
             HorizontalDivider(color = AppColors.Border)
 
-            // Pause reminders — for a real break (e.g. vacation). Stops all firing without losing
-            // the streak (paused weeks have no nudges, so the streak math skips them).
+            // Pause reminders — for a real break (e.g. vacation). Stops all firing; nothing is held
+            // against the user (no streak to protect — progress is positive tallies only).
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -154,7 +154,7 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Going away? Stop reminders firing — your streak won't be affected. Turn back on anytime.",
+                        text = "Going away? Stop reminders firing — nothing's counted against you. Turn back on anytime.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

@@ -97,18 +97,19 @@ data class BuilderUiState(
         get() = cueValue.isNotBlank() && CueType.isEnabledAtLaunch(cueType)
 
     /**
-     * The ordered step indices actually shown. The cue step (2) only exists when the user
-     * wants a reminder; without one the flow goes name → moment → goal → review. The goal
-     * step (3) is always present so it's reachable whether or not a reminder is set.
+     * The ordered step indices actually shown — all five, always. The cue step (2) is shown even
+     * without a reminder: a cue you carry or place is itself the trigger (RTA), so a reminderless
+     * or one-off intention can still have one — you see it, and you act. It's just optional without
+     * a reminder (see [canAdvance]); with a reminder it's required (it's what the notification shows).
      */
-    val activeSteps: List<Int> get() = if (wantsReminder) listOf(0, 1, 2, 3, 4) else listOf(0, 1, 3, 4)
+    val activeSteps: List<Int> get() = listOf(0, 1, 2, 3, 4)
 
     val isLastStep: Boolean get() = step == activeSteps.last()
 
     fun canAdvance(s: Int): Boolean = when (s) {
         0 -> nameValid
         1 -> momentValid
-        2 -> cueValid
+        2 -> !wantsReminder || cueValid // cue required only with a reminder; optional otherwise
         else -> true // goal (3) is skippable; review (4) always advances to save
     }
 }
@@ -172,7 +173,7 @@ class ReminderBuilderViewModel(
     }
 
     // Five steps: 0 = action, 1 = moment + schedule, 2 = cue, 3 = goal, 4 = review.
-    // Navigation walks `activeSteps` so the cue step is skipped when there's no reminder.
+    // Navigation walks `activeSteps` (all five; the cue is optional without a reminder).
     fun goToStep(step: Int) = _uiState.update { it.copy(step = step.coerceIn(0, 4)) }
     fun next() = _uiState.update { st ->
         val steps = st.activeSteps
@@ -238,7 +239,7 @@ class ReminderBuilderViewModel(
                 }
             }
             val orderedDays = WeekDay.ALL.filter { it in s.days }
-            // Reminderless: store ScheduleMode.NONE with no cue; the scheduler no-ops on NONE.
+            // Reminderless: store ScheduleMode.NONE (the cue, if any, is kept); scheduler no-ops on NONE.
             val mode = if (s.wantsReminder) s.scheduleMode else ScheduleMode.NONE
             val reminder = Reminder(
                 id = editingId ?: UUID.randomUUID().toString(),
@@ -246,10 +247,12 @@ class ReminderBuilderViewModel(
                 whenMoment = s.whenMoment.trim(),
                 iWill = s.iWill.trim(),
                 cueType = s.cueType,
-                cueValue = if (s.wantsReminder) s.cueValue.trim() else "",
+                // A cue is kept whether or not there's a reminder — a cue you carry or place is the
+                // trigger (RTA). Optional without a reminder, required with one.
+                cueValue = s.cueValue.trim(),
                 cueAltText = null,
-                cueSourcePaletteId = if (s.wantsReminder) s.cueSourcePaletteId else null,
-                cueIsPaletteDrawn = s.wantsReminder && s.cueSourcePaletteId != null,
+                cueSourcePaletteId = s.cueSourcePaletteId,
+                cueIsPaletteDrawn = s.cueSourcePaletteId != null,
                 scheduleMode = mode,
                 scheduleDays = when (mode) {
                     ScheduleMode.DAILY -> WeekDay.toCsv(WeekDay.ALL)

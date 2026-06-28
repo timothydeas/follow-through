@@ -48,7 +48,7 @@ App
    3. Design a distinctive cue — the creative core; push past generic text toward a vivid, specific anchor. **Seed the step with a concrete example** ("when I pour my morning coffee → running shoes by the door") so the user isn't facing a blank, abstract prompt — this is the step most likely to stall.
    4. Review & confirm → scheduled.
 3. **In-the-moment cue** — notification fires → tap → focused full-screen with the distinctive cue + intention → a single one-tap response: **Did it**. **"Did it" is undoable** (un-mark an accidental tap — a direct beta-feedback fix). No response simply means not done: nothing is logged against the user, no nagging, no penalty.
-4. **Progress (review + self-discovery)** — the streak (flexible weekly cadence) + honest "this week" ratio + weekly grid, then "what's been working": which cues actually led to follow-through; reuse or refine one.
+4. **Progress (look back + self-discovery)** — a positive history of what you've actually followed through on, grouped by time (newest first, only days you did something — no streak, no grid, no tallies), topped by the one cue "working best for you"; past learnings below. Read-only — never a second place to edit. _(Superseded the original streak/grid model — see note in §6.)_
 5. **Manage an intention** — edit the cue/timing, pause, or delete from the intention detail.
 
 ---
@@ -65,7 +65,7 @@ flowchart TD
     CreateFirst --> Home
     FirstRun -- No --> Home[[Home — Intentions<br/>active intentions + next cue]]
 
-    Home --> Worked[[Progress<br/>streak + what's been working]]
+    Home --> Worked[[Progress<br/>follow-through history + what's working]]
     Home --> Settings[[Settings<br/>notifications, local data, privacy]]
     Worked --> Home
     Settings --> Home
@@ -87,7 +87,6 @@ flowchart TD
     Home -- Tap intention --> Detail[[Intention detail<br/>edit cue, timing, history]]
     Detail -- Edit --> S2
     Detail -- Pause / delete --> Home
-    Worked -- Reuse / refine --> S3
     Settings -- Manage my data --> Data[View / delete local data<br/>no cloud, no export]
 ```
 
@@ -102,7 +101,7 @@ flowchart TD
 | Create cue (4 steps) | The hero creation flow; step 3 seeded with an example | Per-step validation |
 | Intention detail | View/edit/pause/delete | — |
 | In-the-moment screen | Respond to a fired cue | Did it (undoable); no response = not done, logged neutrally |
-| Progress | Streak + honest week ratio + Mon–Sun grid, then what's-been-working cues | Populated / empty |
+| Progress | Follow-through history grouped by time + "working best for you" callout + learnings (read-only, non-interactive cards) | Populated / empty |
 | Settings | Notifications, data, privacy | — |
 
 ---
@@ -112,7 +111,7 @@ flowchart TD
 - **Empty states matter** — first-run Home and first-run Progress both need a single, warm, non-pushy CTA.
 - **In-the-moment is the highest-value screen** — keep it to the cue, the intention, and the single Did it response. Nothing else.
 - **No guilt or failure framing** anywhere — a missed cue is never punished or called out; autonomy-first tone throughout.
-- **Flexible progress is in scope** (Katy Milkman — flexibility beats rigidity): the streak is measured in **weeks of flexible cadence**, not specific days. A week is a *win* when the user followed through on ≥ ~half the intention-days they were nudged that week (target = ceil(opportunities/2), min 1) — so missing individual days never breaks it. **One off-week is absorbed; a second consecutive off-week resets the Current streak to 0** (an honest, gentle reset). Any winning week climbs again. A **Longest** record and the **Lifetime total never reset**, so a lapse never erases history. A flame (🔥, Material `LocalFireDepartment` icon — not an emoji glyph) celebrates an active run; gold accent only on the celebratory state. Per **Ayelet Fishbach** (honest feedback beats head-in-the-sand): surface the real "this week" ratio ("3 of ~5") and name a slip plainly and actionably — information, never guilt; no "don't lose it" framing. Misses are detected locally by logging delivery (`EventAction.DELIVERED`) and reconciling against follow-throughs (no telemetry). Lives on the **Progress** tab: streak · Longest · this-week/this-month counts · a neutral Mon–Sun grid where missed days show plainly (never red). See `project_streak_philosophy` memory for the rationale.
+- **Progress is a positive look-back history (the streak/grid/tallies model below was SUPERSEDED through 2026-06 — Tim's calls).** What ships: Progress shows **what you've actually followed through on** — your "Did it" days grouped by time (This week / Earlier this month / older months), newest first, deduped per (intention, day), **only days you did something: no empty days, no streak, no grid, no running tallies, nothing counted against you**; capped to the recent buckets with a "Show earlier" expander. Built **only from real "Did it" taps** (deliberate user actions → reliable under Doze; never from `delivered` markers, whose reconciliation fought delivery reliability, rule #7). Topped by a single "Working best for you" callout (the cue with the most follow-throughs) and one plain, no-jargon research-grounded line (implementation intentions / cue-linked habits); past learnings + the occasional direction check-in below. **Cards are read-only** — Progress never edits. No guilt/loss framing anywhere. See `project_streak_philosophy` + `project_mvp` memories. _Historical (NOT built): the original flexible-weekly-cadence streak, Longest/Lifetime, flame, Mon–Sun grid, and this-week/month/all-time tallies — retained as a seed only (`computeProgress` math kept for tests / a possible future paid tier; count distinct days if ever revived)._
 - **Tablet** — Intentions and Progress become two-pane (list ↔ detail); the create flow stays a single focused column.
 - **Text input (recurring beta bug)** — every text field must use keyboard-aware scrolling (content scrolls clear of the keyboard), show an obvious editable affordance, and never let the keyboard or a focus/error outline overlap the prompt copy. Testers repeatedly couldn't see what they were typing, or didn't realize a field was even typable.
 - **Theme** — ship a consistent light/dark treatment that matches the store screenshots; if both are supported, expose a light/dark toggle in Settings. (Beta: the live app rendered dark while the store images were light.)
