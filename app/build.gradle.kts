@@ -37,7 +37,7 @@ android {
         // release on Play is 1.0 (versionCode 1), so public versioning resets to 2 here to
         // keep codes just ahead of what's actually published. Next upload must be 3+.
         versionCode = 3
-        versionName = "1.1.1"
+        versionName = "1.0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
